@@ -34,9 +34,9 @@
 		{/if}
 	</div>
 
-	<form class="input-group mb-3 w-100" on:submit|preventDefault={handleSubmit}>
-		<input type="text" style="width: auto;" class="form-control" aria-label="Sizing example input"
-			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text">
+	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit}>
+		<textarea style="width: auto;" class="form-control" aria-label="Sizing example input"
+			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
 		<div id="send-btn-listener">
 			<button style="width: auto; height: 100%;" class="btn btn-primary" type="button"
 				id="send-btn">Send</button>
