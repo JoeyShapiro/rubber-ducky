@@ -8,7 +8,7 @@
 	<Header />
 	<Sidebar />
 
-	<main class="d-flex flex-fill">
+	<main class="d-flex flex-fill align-self-stretch">
 		<slot />
 	</main>
 </div>
