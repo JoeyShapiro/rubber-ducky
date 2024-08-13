@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from "svelte";
+
 	let messages: string[] = ["", "", "", "", "", "", "", "", "", "", "", ""];
 
 	function handleSubmit(event: Event) {
@@ -9,6 +11,24 @@
 		messages = [...messages, input.value];
 		input.value = '';
 	}
+
+	function autoResize(this: HTMLElement) {
+		this.style.height = 'auto';
+		this.style.height = this.scrollHeight + 'px';
+	}
+
+	onMount(() => {
+		const textarea = document.getElementById('send-text');
+		if (!textarea) {
+			console.error('Textarea not found');
+			return;
+		}
+
+		textarea.addEventListener('input', autoResize);
+
+		// Initial call to set the correct height
+		autoResize.call(textarea);
+	});
 </script>
 
 <svelte:head>
@@ -35,7 +55,7 @@
 	</div>
 
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit}>
-		<textarea style="width: auto;" class="form-control" aria-label="Sizing example input"
+		<textarea style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
 		<div id="send-btn-listener">
 			<button style="width: auto; height: 100%;" class="btn btn-primary" type="button"
@@ -45,4 +65,8 @@
 </section>
 
 <style>
+	.auto-resize {
+		resize: none;
+		max-height: 33vh;
+	}
 </style>
