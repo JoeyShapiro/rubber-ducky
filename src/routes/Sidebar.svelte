@@ -5,7 +5,23 @@
 		}
 	}
 
-	let badlings: { [id: string] : [Duck] } = {};
+    // just make a class. it might be useful later
+    class Badling {
+        ducks: Duck[];
+
+        constructor(public name: string) {
+            this.name = name;
+            this.ducks = [];
+        }
+    }
+
+	let badlings: Badling[] = [];
+
+    let badling = new Badling("Projects");
+    badling.ducks.push(new Duck("rubber-ducky"));
+    badling.ducks.push(new Duck("coca"));
+    badling.ducks.push(new Duck("quake"));
+    badlings.push(badling);
 </script>
 
 <div class="flex-shrink-0 p-3" style="width: 280px;">
@@ -17,34 +33,28 @@
 		<span class="fs-5 fw-semibold">Ducks</span>
 	</a>
 	<ul class="list-unstyled ps-0">
-		<li class="mb-1">
+        {#each badlings as badling}
+        <li class="mb-1">
 			<button
 				class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed"
 				data-bs-toggle="collapse"
 				data-bs-target="#home-collapse"
 			>
-				Home
+				{badling.name}
 			</button>
 			<div class="collapse show" id="home-collapse">
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                    {#each badling.ducks as duck}
 					<li>
 						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded"
-							>Overview</a
+							>{duck.name}</a
 						>
 					</li>
-					<li>
-						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded"
-							>Updates</a
-						>
-					</li>
-					<li>
-						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded"
-							>Reports</a
-						>
-					</li>
+                    {/each}
 				</ul>
 			</div>
 		</li>
+        {/each}
 	</ul>
 </div>
 
