@@ -47,9 +47,10 @@
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                     {#each badling.ducks as duck}
 					<li>
-						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded"
-							>{duck.name}</a
-						>
+						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
+                            <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
+                            {duck.name}
+                        </a>
 					</li>
                     {/each}
 				</ul>

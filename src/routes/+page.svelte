@@ -53,7 +53,8 @@
 		{/each}
 		{/if}
 	</div>
-
+	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
+	
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit}>
 		<textarea style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
@@ -69,4 +70,18 @@
 		resize: none;
 		max-height: 33vh;
 	}
+
+	.btn-toggle {
+  padding: .25rem .5rem;
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
+  background-color: transparent;
+  width: 48px !important;
+  height: 48px !important;
+}
+.btn-toggle:hover,
+.btn-toggle:focus {
+  color: rgba(var(--bs-emphasis-color-rgb), .85);
+  background-color: var(--bs-secondary-bg);
+}
 </style>
