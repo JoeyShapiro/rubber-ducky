@@ -1,5 +1,17 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { duck } from './stores.js';
+
+	class Duck {
+		constructor(public name: string) {
+			this.name = name;
+		}
+	}
+
+	let duck_v: Duck;
+	duck.subscribe((value: Duck) => {
+		duck_v = value;
+	});
 
 	let messages: string[] = []; // if not declared, some stuff will not work. but will partly with js
 
@@ -51,6 +63,7 @@ background-color: rgb(230, 230, 220);
 -->
 
 <section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
+	<h1 class="text-center">{duck_v.name}</h1>
 	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
 		{#if messages.length > 0}
 		{#each messages as message}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+    import * as store from './stores.js';
 
    class Duck {
 		constructor(public name: string) {
@@ -18,6 +19,10 @@
     }
 
 	let badlings: Badling[] = [];
+
+    function loadDuck(duck: Duck) {
+        store.duck.set(duck);
+    }
 
     onMount(() => {
         fetch('/ducks')
@@ -45,16 +50,16 @@
 			<button
 				class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed"
 				data-bs-toggle="collapse"
-				data-bs-target="#home-collapse"
+				data-bs-target="#{badling.name}-collapse"
                 aria-expanded="true"
 			>
 				{badling.name}
 			</button>
-			<div class="collapse show" id="home-collapse">
+			<div class="collapse show" id="{badling.name}-collapse">
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                     {#each badling.ducks as duck}
 					<li>
-						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
+						<a href="#" on:click={() => loadDuck(duck)} class="link-body-emphasis d-inline-flex text-decoration-none rounded">
                             <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
                             {duck.name}
                         </a>
