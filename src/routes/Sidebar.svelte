@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from "svelte";
+
    class Duck {
 		constructor(public name: string) {
 			this.name = name;
@@ -17,11 +19,16 @@
 
 	let badlings: Badling[] = [];
 
-    let badling = new Badling("Projects");
-    badling.ducks.push(new Duck("rubber-ducky"));
-    badling.ducks.push(new Duck("coca"));
-    badling.ducks.push(new Duck("quake"));
-    badlings.push(badling);
+    onMount(() => {
+        fetch('/ducks')
+			.then(res => res.json())
+			.then(data => {
+				badlings = data.badlings;
+			})
+			.catch(err => {
+				console.error(err);
+			});
+    });
 </script>
 
 <div class="flex-shrink-0 p-3" style="width: 280px;">

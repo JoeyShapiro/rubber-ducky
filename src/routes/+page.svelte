@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 
-	let messages: string[] = ["", "", "", "", "", "", "", "", "", "", "", ""];
+	let messages: string[] = []; // if not declared, some stuff will not work. but will partly with js
 
 	function handleSubmit(event: Event) {
 		console.log('submit');
@@ -28,6 +28,15 @@
 
 		// Initial call to set the correct height
 		autoResize.call(textarea);
+
+		fetch('/messages')
+			.then(res => res.json())
+			.then(data => {
+				messages = data.messages;
+			})
+			.catch(err => {
+				console.error(err);
+			});
 	});
 </script>
 
@@ -35,6 +44,11 @@
 	<title>Home</title>
 	<meta name="description" content="Svelte demo app" />
 </svelte:head>
+
+<!-- 
+style="background-color: rgb(240, 240, 230);"
+background-color: rgb(230, 230, 220);
+-->
 
 <section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
 	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
