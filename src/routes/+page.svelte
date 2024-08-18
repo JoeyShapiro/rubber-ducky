@@ -8,10 +8,7 @@
 		}
 	}
 
-	let duck_v: Duck;
-	duck.subscribe((value: Duck) => {
-		duck_v = value;
-	});
+	let duck_v = new Duck('');
 
 	let messages: string[] = []; // if not declared, some stuff will not work. but will partly with js
 
@@ -40,15 +37,20 @@
 
 		// Initial call to set the correct height
 		autoResize.call(textarea);
+		
+		// has to be here, because "eagerly loaded" components are not loaded yet
+		duck.subscribe((value: Duck) => {
+			duck_v = value;
 
-		fetch('/messages')
-			.then(res => res.json())
-			.then(data => {
-				messages = data.messages;
-			})
-			.catch(err => {
-				console.error(err);
-			});
+			fetch(`/messages?duck=${duck_v.name}`)
+				.then(res => res.json())
+				.then(data => {
+					messages = data.messages;
+				})
+				.catch(err => {
+					console.error(err);
+				});
+		});
 	});
 </script>
 
