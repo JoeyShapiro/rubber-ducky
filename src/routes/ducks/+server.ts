@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import weaviate from 'weaviate-client'
 
 class Duck {
 	constructor(public name: string) {
@@ -16,20 +17,27 @@ class Badling {
 	}
 }
 
-export function GET() {
+export async function GET() {
 	let badlings: Badling[] = [];
 
-    let badling = new Badling("Projects");
-    badling.ducks.push(new Duck("rubber-ducky"));
-    badling.ducks.push(new Duck("coca"));
-    badling.ducks.push(new Duck("quake"));
-    badlings.push(badling);
+	const client = await weaviate.connectToLocal();
+	const myCollection = client.collections.get("Badling");
 
-	badling = new Badling("Games");
-	badling.ducks.push(new Duck("dota"));
-	badling.ducks.push(new Duck("csgo"));
-	badling.ducks.push(new Duck("valorant"));
-	badlings.push(badling);
+	for await (let item of myCollection.iterator()) {
+		let name = item.properties.name?.toString();
+		if (name === undefined) continue;
+
+		badlings.push(new Badling(name));
+
+		const ducks = client.collections.get('Duck');
+		const results = await ducks.query.fetchObjects({
+			filters: ducks.filter.byRef('belongsTo').byProperty("name").like(name),
+			returnProperties: ['name']
+		})
+		for (const duck of results.objects) {
+			badlings[badlings.length - 1].ducks.push(new Duck(duck.properties.name?.toString() || ""));
+		}
+	}
 
 	return json({ badlings });
 }

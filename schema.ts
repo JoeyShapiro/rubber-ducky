@@ -126,4 +126,5 @@ for (const m of messages) {
             'belongsTo': uuid_this,
         }
     });
+    console.log('message: ', uuid);
 }
