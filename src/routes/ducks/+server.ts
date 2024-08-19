@@ -21,11 +21,11 @@ export async function GET() {
 	let badlings: Badling[] = [];
 
 	const client = await weaviate.connectToLocal();
-	const myCollection = client.collections.get("Badling");
+	const badlingsCollection = client.collections.get("Badling");
 
-	for await (let item of myCollection.iterator()) {
+	for await (let item of badlingsCollection.iterator()) {
 		let name = item.properties.name?.toString();
-		if (name === undefined) continue;
+		if (name === undefined || name === '') continue;
 
 		badlings.push(new Badling(name));
 
