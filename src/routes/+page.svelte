@@ -96,7 +96,6 @@ background-color: rgb(230, 230, 220);
 -->
 
 <section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
-	<h1 class="text-center">{duck_v.name}</h1>
 	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
 		{#if messages.length > 0}
 		{#each messages as message}

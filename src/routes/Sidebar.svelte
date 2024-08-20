@@ -19,9 +19,11 @@
     }
 
 	let badlings: Badling[] = [];
+  let duck_v = new Duck('');
 
     function loadDuck(duck: Duck) {
         store.duck.set(duck);
+        duck_v = duck;
     }
 
     onMount(() => {
@@ -45,8 +47,8 @@
 		<span class="fs-5 fw-semibold">Ducks</span>
 	</a>
 	<ul class="list-unstyled ps-0">
-        {#each badlings as badling}
-        <li class="mb-1">
+      {#each badlings as badling}
+      <li class="mb-1">
 			<button
 				class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed"
 				data-bs-toggle="collapse"
@@ -57,18 +59,18 @@
 			</button>
 			<div class="collapse show" id="{badling.name}-collapse">
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                    {#each badling.ducks as duck}
+          {#each badling.ducks as duck}
 					<li>
-						<a href="#" on:click={() => loadDuck(duck)} class="link-body-emphasis d-inline-flex text-decoration-none rounded">
-                            <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
-                            {duck.name}
-                        </a>
+						<a href="#" on:click={() => loadDuck(duck)} class="{duck.name == duck_v.name ? 'active' : ''} link-body-emphasis d-inline-flex text-decoration-none rounded">
+                <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
+                {duck.name}
+            </a>
 					</li>
-                    {/each}
+          {/each}
 				</ul>
 			</div>
 		</li>
-        {/each}
+    {/each}
 	</ul>
 </div>
 
@@ -112,5 +114,9 @@
 .btn-toggle-nav a:hover,
 .btn-toggle-nav a:focus {
   background-color: var(--bs-tertiary-bg);
+}
+.btn-toggle-nav a.active {
+  color: var(--bs-emphasis-color);
+  background-color: var(--bs-warning-bg-subtle);
 }
 </style>
