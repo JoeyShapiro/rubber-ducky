@@ -10,15 +10,38 @@
 
 	let duck_v = new Duck('');
 
+	let text = '';
 	let messages: string[] = []; // if not declared, some stuff will not work. but will partly with js
 
+	// TODO use actions
 	function handleSubmit(event: Event) {
-		console.log('submit');
 		event.preventDefault();
-		const input = (event.target as HTMLFormElement)?.querySelector('input') as HTMLInputElement;
+		console.log('submit', text);
+		
+		if (text === '' || duck_v.name === '') {
+			return;
+		}
 
-		messages = [...messages, input.value];
-		input.value = '';
+		fetch('/messages', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				duck: duck_v.name,
+				message: text
+			})
+		})
+			.then(res => res.json())
+			.then(data => {
+				if (data.success) {
+					messages.push(text);
+					text = '';
+				}
+			})
+			.catch(err => {
+				console.error(err);
+			});
 	}
 
 	function autoResize(this: HTMLElement) {
@@ -34,6 +57,14 @@
 		}
 
 		textarea.addEventListener('input', autoResize);
+		// submit on enter, shift+enter for newline
+		textarea.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Enter' && !e.shiftKey) {
+				e.preventDefault();
+				let form = (<HTMLFormElement>document.getElementById('form'));
+				form.dispatchEvent(new Event('submit'));
+			}
+		});
 
 		// Initial call to set the correct height
 		autoResize.call(textarea);
@@ -84,12 +115,12 @@ background-color: rgb(230, 230, 220);
 	</div>
 	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
 	
-	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit}>
-		<textarea style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
+	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
+		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
-		<div id="send-btn-listener">
-			<button style="width: auto; height: 100%;" class="btn btn-primary" type="button"
-				id="send-btn">Send</button>
+		<div id="send-btn-listener"> <!-- not sure im keeping the button -->
+			<input style="width: auto; height: 100%;" class="btn btn-primary" type="submit"
+				id="send-btn" value="Send" />
 		</div>
 	</form>
 </section>

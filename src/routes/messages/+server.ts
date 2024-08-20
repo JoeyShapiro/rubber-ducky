@@ -20,3 +20,28 @@ export async function GET({ url }) {
 
 	return json({ messages });
 }
+
+export async function POST({ request, cookies }) {
+	const data = await request.json();
+
+	const client = await weaviate.connectToLocal();
+
+	const ducks = client.collections.get('Duck');
+	const results = await ducks.query.fetchObjects({
+		filters: ducks.filter.byProperty("name").equal(data.duck),
+		returnProperties: ['name']
+	});
+
+	const messagesCollection = client.collections.get("Message");
+	let uuid = await messagesCollection.data.insert({
+        properties: {
+            'content': data.message,
+            'timestamp': new Date(),
+        },
+        references: {
+            'belongsTo': results.objects[0].uuid,
+        }
+    });
+
+	return json({ uuid });
+}
