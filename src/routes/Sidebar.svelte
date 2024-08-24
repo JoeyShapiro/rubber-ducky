@@ -115,6 +115,8 @@
 .btn-toggle-nav a:focus {
   background-color: var(--bs-tertiary-bg);
 }
+
+/* https://oklch-palette.vercel.app/#84.1,0.169,92.385,100 */
 .btn-toggle-nav a.active {
   color: var(--bs-emphasis-color);
   background-color: var(--bs-warning-bg-subtle);

@@ -49,6 +49,16 @@
 		this.style.height = this.scrollHeight + 'px';
 	}
 
+	// scroll to the botton of the chat log
+	function scrollToBottom() {
+		var chatbox = document.getElementById('chatbox');
+		
+		if (chatbox.lastElementChild !== null) {
+			// Scroll to the bottom with smooth animation
+			chatbox.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
+
 	onMount(() => {
 		const textarea = document.getElementById('send-text');
 		if (!textarea) {
@@ -77,6 +87,8 @@
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;
+					scrollToBottom(); // TODO run messages html are updated
+					// maybe not, what about scrolling up
 				})
 				.catch(err => {
 					console.error(err);
@@ -97,6 +109,16 @@ background-color: rgb(230, 230, 220);
 
 <section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
 	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
+		<div class="offcanvas offcanvas-end" style="height: 50vh;" data-bs-scroll="true" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+		<div class="offcanvas-header">
+			<h5 class="offcanvas-title" id="offcanvasRightLabel">Offcanvas right</h5>
+			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body">
+			...
+		</div>
+		</div>
+
 		{#if messages.length > 0}
 		{#each messages as message}
 			<div class="toast fade show m-2 w-50" role="alert" aria-live="assertive" aria-atomic="true">
@@ -112,7 +134,7 @@ background-color: rgb(230, 230, 220);
 		{/each}
 		{/if}
 	</div>
-	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
+	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
 	
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
 		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
