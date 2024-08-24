@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { duck } from './stores.js';
+	import type { Message } from '$lib/Message'; // TODO $lib/types
 
 	class Duck {
 		constructor(public name: string) {
@@ -11,7 +12,7 @@
 	let duck_v = new Duck('');
 
 	let text = '';
-	let messages: string[] = []; // if not declared, some stuff will not work. but will partly with js
+	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
 
 	// TODO use actions
 	function handleSubmit(event: Event) {
@@ -127,10 +128,10 @@ background-color: rgb(230, 230, 220);
 				<div class="toast-header">
 					<!-- <svg class="bd-placeholder-img rounded mr-2" width="20" height="20" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img"><rect fill="#007aff" width="100%" height="100%"></rect></svg> -->
 					<strong class="mr-auto m-1" style="">username</strong>
-					<small id="date" class="text-muted">time</small>
+					<small id="date" class="text-muted">{message.timestamp}</small>
 				</div>
 				<div class="toast-body text-body">
-					{message}
+					{message.content}
 				</div>
 			</div>
 		{/each}
