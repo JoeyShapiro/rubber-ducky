@@ -34,14 +34,16 @@
 		})
 			.then(res => res.json())
 			.then(data => {
-				if (data.success) {
-					messages.push(text);
-					text = '';
-				}
+				messages = [...messages, data.message]; // force update
+				text = '';
 			})
 			.catch(err => {
 				console.error(err);
 			});
+	}
+
+	function onLoadMessage(node: HTMLElement) {
+		scrollToBottom();
 	}
 
 	function autoResize(this: HTMLElement) {
@@ -53,9 +55,9 @@
 	function scrollToBottom() {
 		var chatbox = document.getElementById('chatbox');
 		
-		if (chatbox.lastElementChild !== null) {
+		if (chatbox?.lastElementChild !== null) {
 			// Scroll to the bottom with smooth animation
-			chatbox.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+			chatbox!.lastElementChild.scrollIntoView({ behavior: 'smooth' });
 		}
 	}
 
@@ -87,7 +89,7 @@
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;
-					scrollToBottom(); // TODO run messages html are updated
+					scrollToBottom();
 					// maybe not, what about scrolling up
 				})
 				.catch(err => {
@@ -121,7 +123,7 @@ background-color: rgb(230, 230, 220);
 
 		{#if messages.length > 0}
 		{#each messages as message}
-			<div class="toast fade show m-2 w-50" role="alert" aria-live="assertive" aria-atomic="true">
+			<div use:onLoadMessage class="toast fade show m-2 w-50" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-header">
 					<!-- <svg class="bd-placeholder-img rounded mr-2" width="20" height="20" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img"><rect fill="#007aff" width="100%" height="100%"></rect></svg> -->
 					<strong class="mr-auto m-1" style="">username</strong>

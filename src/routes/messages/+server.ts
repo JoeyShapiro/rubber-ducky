@@ -43,5 +43,5 @@ export async function POST({ request, cookies }) {
         }
     });
 
-	return json({ uuid });
+	return json({ uuid, message: data.message });
 }
