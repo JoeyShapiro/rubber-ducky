@@ -48,6 +48,7 @@
 	</a>
 	<ul class="list-unstyled ps-0">
       {#each badlings as badling}
+      <div class="position-relative">
       <li class="mb-1">
 			<button
 				class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed"
@@ -70,6 +71,9 @@
 				</ul>
 			</div>
 		</li>
+    <button class="btn btn-hidden rounded border-0 position-absolute top-0 end-0">
+    </button>
+    </div>
     {/each}
 	</ul>
 </div>
@@ -120,5 +124,36 @@
 .btn-toggle-nav a.active {
   color: var(--bs-emphasis-color);
   background-color: var(--bs-warning-bg-subtle);
+}
+
+.btn-hidden {
+  padding: .25rem .5rem;
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
+  background-color: transparent;
+}
+.btn-hidden:hover,
+.btn-hidden:focus {
+  color: rgba(var(--bs-emphasis-color-rgb), .85);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.btn-hidden::before {
+  width: 1.25em;
+  line-height: 0;
+  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
+  transition: transform .35s ease;
+  transform-origin: .5em 50%;
+}
+
+div .btn-hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+div:hover > .btn-hidden {
+  opacity: 1;
+  visibility: visible;
 }
 </style>

@@ -9,6 +9,16 @@
 		}
 	}
 
+	// clean up classes
+	// add badlings
+	// limit messages
+	// window size
+	// images
+	// videos
+	// markdown
+	// glitter ai button
+	// better log design
+
 	let duck_v = new Duck('');
 
 	let text = '';
@@ -143,7 +153,7 @@ background-color: rgb(230, 230, 220);
 		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
 		<div id="send-btn-listener"> <!-- not sure im keeping the button -->
-			<input style="width: auto; height: 100%;" class="btn btn-primary" type="submit"
+			<input style="width: auto; height: 100%;" class="btn btn-warning" type="submit"
 				id="send-btn" value="Send" />
 		</div>
 	</form>
