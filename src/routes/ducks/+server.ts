@@ -41,3 +41,35 @@ export async function GET() {
 
 	return json({ badlings });
 }
+
+export async function POST({ request }) {
+	const data = await request.json();
+	console.log(data);
+
+	const client = await weaviate.connectToLocal();
+
+	// get the badling
+	const badlings = client.collections.get('Badling');
+	const results = await badlings.query.fetchObjects({
+		filters: badlings.filter.byProperty("name").equal(data.badling),
+		returnProperties: ['name']
+	});
+
+	// TODO check if duck already exists
+
+	// create the duck
+	const ducks = client.collections.get('Duck');
+	let uuid = await ducks.data.insert({
+		properties: {
+			'name': data.duck,
+			'createdOn': new Date(),
+			'description': '',
+		},
+		references: {
+			'belongsTo': results.objects[0].uuid,
+		}
+	});
+
+	// TODO return whole duck
+	return json({ uuid });
+}

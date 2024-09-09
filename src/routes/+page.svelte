@@ -18,6 +18,7 @@
 	// markdown
 	// glitter ai button
 	// better log design
+	// use duck structure and uuid
 
 	let duck_v = new Duck('');
 
