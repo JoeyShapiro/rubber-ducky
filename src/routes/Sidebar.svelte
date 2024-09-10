@@ -21,6 +21,7 @@
 	let badlings: Badling[] = [];
   let duck_v = new Duck('');
   let newDuckTo: string = '';
+  let newBadling: boolean = false;
 
     function loadDuck(duck: Duck) {
         store.duck.set(duck);
@@ -64,6 +65,34 @@
             });
     }
 
+    function addBadling() {
+        let badlingName = (document.getElementById('new-badling') as HTMLInputElement).value;
+        if (badlingName == '') {
+            return;
+        }
+        
+        fetch('/badlings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                badling: badlingName
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                // remove 'new-badling' input
+                newBadling = false;
+                // add new badling
+                badlings.push(new Badling(badlingName));
+                badlings = [...badlings];
+            })
+            .catch(err => {
+                console.error(err);
+            });
+    }
+
     onMount(() => {
         fetch('/ducks')
 			.then(res => res.json())
@@ -76,7 +105,7 @@
     });
 </script>
 
-<div class="flex-shrink-0 p-3" style="width: 280px;">
+<div class="flex-shrink-0 p-3 position-relative" style="width: 280px;">
 	<a
 		href="/"
 		class="d-flex align-items-center pb-3 mb-3 link-body-emphasis text-decoration-none border-bottom"
@@ -122,7 +151,18 @@
     </button>
     </div>
     {/each}
+    {#if newBadling}
+      <li class="">
+        <a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
+            <img alt="duck" class="me-2 chevron" width="16" height="16" />
+            <input id="new-badling" type="text" class="form-control p-0" placeholder="New Badling" on:keydown={(e) => e.key == 'Enter' && addBadling()} on:focusout={() => newBadling = false} />
+        </a>
+      </li>
+      {/if}
 	</ul>
+  <button class="btn-hidden rounded border-0 m-3 position-absolute bottom-0" on:click={() => newBadling = true}>
+    <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />
+  </button>
 </div>
 
 <style>
@@ -144,6 +184,10 @@
   content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
   transition: transform .35s ease;
   transform-origin: .5em 50%;
+}
+
+.chevron {
+  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
 }
 
 [data-bs-theme="dark"] .btn-toggle::before {
