@@ -73,6 +73,28 @@
 		}
 	}
 
+	function formatDate(date: Date): string {
+		date = new Date(date); // shrug
+		const now = new Date();
+		const hours = date.getHours();
+		const minutes = date.getMinutes();
+		const ampm = hours >= 12 ? 'PM' : 'AM';
+		const formattedHours = hours % 12 || 12;
+		const formattedMinutes = minutes.toString().padStart(2, '0');
+
+		if (date.toDateString() === now.toDateString()) {
+			return `today at ${formattedHours}:${formattedMinutes} ${ampm}`;
+		} else if (date.getTime() - now.getTime() < 24 * 60 * 60 * 1000 && 
+					date.getTime() > now.getTime()) {
+			return `tomorrow at ${formattedHours}:${formattedMinutes} ${ampm}`;
+		} else if (now.getTime() - date.getTime() < 24 * 60 * 60 * 1000 && 
+					date.getTime() < now.getTime()) {
+			return `yesterday at ${formattedHours}:${formattedMinutes} ${ampm}`;
+		} else {
+			return date.toLocaleDateString() + ` at ${formattedHours}:${formattedMinutes} ${ampm}`;
+		}
+	}
+
 	onMount(() => {
 		const textarea = document.getElementById('send-text');
 		if (!textarea) {
@@ -135,15 +157,11 @@ background-color: rgb(230, 230, 220);
 
 		{#if messages.length > 0}
 		{#each messages as message}
-			<div use:onLoadMessage class="toast fade show m-2 w-50" role="alert" aria-live="assertive" aria-atomic="true">
-				<div class="toast-header">
-					<!-- <svg class="bd-placeholder-img rounded mr-2" width="20" height="20" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img"><rect fill="#007aff" width="100%" height="100%"></rect></svg> -->
-					<strong class="mr-auto m-1" style="">username</strong>
-					<small id="date" class="text-muted">{message.timestamp}</small>
-				</div>
-				<div class="toast-body text-body">
+			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
+				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 					{message.content}
 				</div>
+				<small id="date" class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
 			</div>
 		{/each}
 		{/if}
