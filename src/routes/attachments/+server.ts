@@ -7,7 +7,6 @@ export async function POST({ request, cookies }) {
 
 	const client = await weaviate.connectToLocal();
 
-    console.log('attachment:', data);
 	const collection = client.collections.get("Attachment");
 	let uuid = await collection.data.insert({
         properties: {

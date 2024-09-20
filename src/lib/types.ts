@@ -22,4 +22,13 @@ export class Attachment {
     static fromJSON(json: any): Attachment {
         return new Attachment(json.uuid, json.type, json.name, json.content);
     }
+
+    static fromWeaviate(a: any): Attachment {
+        let uuid = a.uuid;
+        let name = a.properties.name?.toString() || "";
+        let type = a.properties.type?.toString() || "";
+        let content = a.properties.content?.toString() || "";
+
+        return new Attachment(uuid, type, name, content);
+    }
 }

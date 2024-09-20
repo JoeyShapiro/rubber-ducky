@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
 import { Message } from '$lib/Message';
+import { Attachment } from '$lib/types.js';
 
 export async function GET({ url }) {
 	// get the params from url
@@ -15,8 +16,20 @@ export async function GET({ url }) {
 	const results = await messagesCollection.query.fetchObjects({
 		filters: messagesCollection.filter.byRef('belongsTo').byProperty("name").like(duck)
 	})
+
+	const attachmentsCollection = client.collections.get("Attachment");
 	for (const m of results.objects) {
-		messages.push(Message.fromWeaviate(m));
+		let message = Message.fromWeaviate(m);
+		// get the possible attachments of the message
+		const attachments = await attachmentsCollection.query.fetchObjects({
+			filters: attachmentsCollection.filter.byRef('belongsTo').byId().equal(message.uuid),
+			returnProperties: [ 'name', 'type' ]
+		})
+		for (const a of attachments.objects) {
+			message.attachments.push(Attachment.fromWeaviate(a));
+		}
+
+		messages.push(message);
 	}
 
 	return json({ messages });
