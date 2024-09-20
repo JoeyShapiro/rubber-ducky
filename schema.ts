@@ -10,6 +10,7 @@ await client.collections.create({
     properties: [
         { name: 'name', dataType: dataType.TEXT },
         { name: 'description', dataType: dataType.TEXT },
+        { name: 'createdOn', dataType: dataType.DATE },
     ],
 });
 console.log('badling')
@@ -18,8 +19,8 @@ await client.collections.create({
     name: 'Duck',
     properties: [
         { name: 'name', dataType: dataType.TEXT },
-        { name: 'createdOn', dataType: dataType.DATE },
         { name: 'description', dataType: dataType.TEXT },
+        { name: 'createdOn', dataType: dataType.DATE },
     ],
     references: [{
         name: 'belongsTo',
@@ -64,15 +65,25 @@ const badling = client.collections.get('Badling')
 let uuid_projects = await badling.data.insert({
   'name': 'Projects',
   'description': 'My projects',
+  'createdOn': new Date(),
 });
 console.log('projects: ', uuid_projects)
 
 let uuid_games = await badling.data.insert({
     'name': 'Games',
     'description': 'shrug',
+    'createdOn': new Date(),
 });
 
 console.log('games: ', uuid_games)
+
+let uuid_misc = await badling.data.insert({
+    'name': 'Misc',
+    'description': 'Misc (however you spell it) ideas and thoughts',
+    'createdOn': new Date(),
+});
+
+console.log('misc: ', uuid_misc)
 
 // Ducks
 const duck = client.collections.get('Duck')
@@ -124,6 +135,30 @@ uuid = await duck.data.insert({
     }
 });
 console.log('dota: ', uuid)
+
+uuid = await duck.data.insert({
+    properties: {
+        'name': 'Ideas',
+        'createdOn': new Date(),
+        'description': 'random ideas i have',
+    },
+    references: {
+        'belongsTo': uuid_misc,
+    }
+});
+console.log('ideas: ', uuid)
+
+uuid = await duck.data.insert({
+    properties: {
+        'name': 'talk',
+        'createdOn': new Date(),
+        'description': 'random things to talk about',
+    },
+    references: {
+        'belongsTo': uuid_misc,
+    }
+});
+console.log('talk: ', uuid)
 
 // Messages
 const message = client.collections.get('Message')
