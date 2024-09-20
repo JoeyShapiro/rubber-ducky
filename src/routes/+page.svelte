@@ -2,6 +2,7 @@
 	import { onMount } from "svelte";
 	import { duck } from './stores.js';
 	import type { Message } from '$lib/Message'; // TODO $lib/types
+	import { Attachment } from "$lib/types";
 
 	class Duck {
 		constructor(public name: string) {
@@ -24,9 +25,10 @@
 
 	let text = '';
 	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
+	let attachments: Attachment[] = [];
 
 	// TODO use actions
-	function handleSubmit(event: Event) {
+	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		console.log('submit', text);
 		
@@ -48,6 +50,44 @@
 			.then(data => {
 				messages = [...messages, data.message]; // force update
 				text = '';
+				let promises = [];
+
+				for (let i = 0; i < attachments.length; i++) {
+					promises.push(fetch('/attachments', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							message: data.message.uuid,
+							attachment: attachments[i]
+						})
+					})
+						.then(res => res.json())
+						.then(data => {
+							attachments[i].uuid = data.attachment.uuid;
+							if (!attachments[i].type.startsWith('image')) {
+								attachments[i].content = '';
+							}
+
+							// link to message
+							messages = messages.map(m => {
+								if (m.uuid === data.message) {
+									m.attachments.push(attachments[i]);
+								}
+								return m;
+							});
+						})
+						.catch(err => {
+							console.error(err);
+						})
+					);
+				}
+
+				Promise.all(promises)
+					.then(() => {
+						attachments = [];
+					});
 			})
 			.catch(err => {
 				console.error(err);
@@ -95,7 +135,41 @@
 		}
 	}
 
+	function handleFileSelect(event: Event) {
+		const files = (event.target as HTMLInputElement)?.files;
+		console.log(files);
+	}
+
 	onMount(() => {
+		document.onpaste = function (event) {
+		var items = (event.clipboardData || event.originalEvent.clipboardData).items;
+		console.log(JSON.stringify(items)); // might give you mime types
+		for (var index in items) {
+			var item = items[index];
+			if (item.kind === 'file') {
+				console.log(item);
+
+				var blob = item.getAsFile();
+				var reader = new FileReader();
+				reader.onload = function (event) {
+					// console.log(event.target.result); // data url!
+
+					// split data url
+					var parts = (event.target?.result as string).split(';');
+
+					attachments.push(new Attachment('', parts[0], blob.name, parts[1]));
+					// image - data:image/png;base64,
+					// src file - data:application/octet-stream;base64,
+					// docx - data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,
+				}; 
+				reader.readAsDataURL(blob);
+
+				// prevent pasting image in contenteditable
+				event.preventDefault();
+			}
+		}
+	};
+
 		const textarea = document.getElementById('send-text');
 		if (!textarea) {
 			console.error('Textarea not found');
@@ -160,6 +234,15 @@ background-color: rgb(230, 230, 220);
 			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 					{message.content}
+					{#if message.attachments.length > 0}
+						{#each message.attachments as attachment}
+							{#if attachment.type.startsWith('image')}
+								<img src={attachment.content} alt={attachment.name} class="img-thumbnail" />
+							{:else}
+								 <a href="/attachments/{attachment.uuid}">{attachment.name}</a>
+							{/if}
+						{/each}
+					{/if}
 				</div>
 				<small id="date" class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
 			</div>
@@ -169,8 +252,12 @@ background-color: rgb(230, 230, 220);
 	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
 	
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
+		<button type="button" class="btn btn-outline-secondary" on:click={() => document.getElementById('input-file')?.click()}>
+			<img src="/attachment.svg" alt="attachment" class="me-2" width="16" height="16" />
+		</button>
 		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
+		<input type="file" id="input-file" accept="*" on:change={handleFileSelect} style="display: none;">
 		<div id="send-btn-listener"> <!-- not sure im keeping the button -->
 			<input style="width: auto; height: 100%;" class="btn btn-warning" type="submit"
 				id="send-btn" value="Send" />

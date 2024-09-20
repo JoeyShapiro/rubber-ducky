@@ -42,6 +42,21 @@ await client.collections.create({
 });
 console.log('messages')
 
+await client.collections.create({
+    name: 'Attachment',
+    vectorizers: vectorizer.text2VecTransformers(),
+    properties: [
+        { name: 'name', dataType: dataType.TEXT },
+        { name: 'type', dataType: dataType.TEXT },
+        { name: 'content', dataType: dataType.TEXT },
+    ],
+    references: [{
+        name: 'belongsTo',
+        targetCollection: 'Message',
+    }]
+});
+console.log('attachments')
+
 // Data
 // Badlings
 const badling = client.collections.get('Badling')

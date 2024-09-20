@@ -1,7 +1,10 @@
+import type { Attachment } from "./types";
+
 export class Message {
     uuid: string;
     content: string;
     timestamp: Date;
+    attachments: Attachment[] = [];
 
     constructor(uuid: string, content: string, timestamp: Date) {
         this.uuid = uuid;
