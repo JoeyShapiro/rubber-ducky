@@ -137,7 +137,19 @@
 
 	function handleFileSelect(event: Event) {
 		const files = (event.target as HTMLInputElement)?.files;
-		console.log(files);
+		if (!files) {
+			return;
+		}
+
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			const reader = new FileReader();
+			reader.onload = function (e) {
+				attachments.push(new Attachment('', e.target?.result as string, file.name, file.type));
+				attachments = [...attachments];
+			};
+			reader.readAsDataURL(file);
+		}
 	}
 
 	onMount(() => {
@@ -161,6 +173,7 @@
 					// image - data:image/png;base64,
 					// src file - data:application/octet-stream;base64,
 					// docx - data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,
+					attachments = [...attachments];
 				}; 
 				reader.readAsDataURL(blob);
 
@@ -239,7 +252,12 @@ background-color: rgb(230, 230, 220);
 							{#if attachment.type.startsWith('image')}
 								<img src={attachment.content} alt={attachment.name} class="img-thumbnail" />
 							{:else}
-								 <a href="/attachments/{attachment.uuid}">{attachment.name}</a>
+							<div class="card acrylic m-1 flip-card-inner">
+								<div class="card-body">
+									<img src="/cute-doc.svg" alt="duck" class="me-2" width="32" height="32" />
+									<a href="/attachments/{attachment.uuid}">{attachment.name}</a>
+								</div>
+							</div>
 							{/if}
 						{/each}
 					{/if}
@@ -252,8 +270,13 @@ background-color: rgb(230, 230, 220);
 	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
 	
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
-		<button type="button" class="btn btn-outline-secondary" on:click={() => document.getElementById('input-file')?.click()}>
+		<button type="button" class="btn btn-outline-secondary position-relative" on:click={() => document.getElementById('input-file')?.click()}>
 			<img src="/attachment.svg" alt="attachment" class="me-2" width="16" height="16" />
+			{#if attachments.length > 0}
+				<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+					{attachments.length}
+				</span>
+			{/if}
 		</button>
 		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
@@ -283,5 +306,11 @@ background-color: rgb(230, 230, 220);
 .btn-toggle:focus {
   color: rgba(var(--bs-emphasis-color-rgb), .85);
   background-color: var(--bs-secondary-bg);
+}
+
+.acrylic {
+	background: rgba(212, 212, 250, 0.3);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
 }
 </style>
