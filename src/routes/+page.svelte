@@ -255,7 +255,7 @@ background-color: rgb(230, 230, 220);
 							<div class="card acrylic m-1 flip-card-inner">
 								<div class="card-body">
 									<img src="/cute-doc.svg" alt="duck" class="me-2" width="32" height="32" />
-									<a href="/attachments/{attachment.uuid}">{attachment.name}</a>
+									<a href="/attachments?uuid={attachment.uuid}">{attachment.name}</a>
 								</div>
 							</div>
 							{/if}
