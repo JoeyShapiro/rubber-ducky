@@ -3,6 +3,13 @@
 	import { duck } from './stores.js';
 	import type { Message } from '$lib/Message'; // TODO $lib/types
 	import { Attachment } from "$lib/types";
+	import hljs from 'highlight.js/lib/core';
+	import python from 'highlight.js/lib/languages/python';
+	import c from 'highlight.js/lib/languages/c';
+	import 'highlight.js/styles/default.css'; // need to get the styles
+
+	hljs.registerLanguage('python', python);
+	hljs.registerLanguage('c', c);
 
 	class Duck {
 		constructor(public name: string) {
@@ -96,6 +103,9 @@
 	}
 
 	function onLoadMessage(node: HTMLElement) {
+		// TODO i could just get each thing here, and modify the node
+		hljs.highlightAll();
+
 		scrollToBottom();
 	}
 
@@ -151,6 +161,15 @@
 			};
 			reader.readAsDataURL(file);
 		}
+	}
+
+	function escapeHtml(unsafe: string): string {
+		return unsafe
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#039;");
 	}
 
 	onMount(() => {
@@ -211,6 +230,14 @@
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;
+
+					// add precode to any code block
+					messages.forEach(m => {
+						m.content = m.content.replace(/```(.*?)```/gs, (p1) => {
+							return `<pre><code>${escapeHtml(p1.trim())}</code></pre>`;
+						});
+					});
+
 					scrollToBottom();
 					// maybe not, what about scrolling up
 				})
@@ -247,7 +274,7 @@ background-color: rgb(230, 230, 220);
 		{#each messages as message}
 			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
-					{message.content}
+					{@html message.content}
 					{#if message.attachments.length > 0}
 						{#each message.attachments as attachment}
 							{#if attachment.type.startsWith('image')}
