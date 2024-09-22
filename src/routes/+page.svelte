@@ -20,6 +20,7 @@
 	// glitter ai button
 	// better log design
 	// use duck structure and uuid
+	// small font
 
 	let duck_v = new Duck('');
 

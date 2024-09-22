@@ -6,6 +6,17 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
 	</head>
+
+	<style>
+		@font-face {
+			font-family: "GG Sans";
+			src: url("/gg-sans-2/gg\ sans\ Regular.ttf") format("truetype");
+		}
+		body { 
+			font-family: "GG Sans", Verdana, Tahoma !important;
+		}
+	</style>
+
 	<body data-sveltekit-preload-data="hover" style="height: 100%">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
