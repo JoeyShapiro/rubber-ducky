@@ -28,6 +28,7 @@
 	// better log design
 	// use duck structure and uuid
 	// small font
+	// inline code
 
 	let duck_v = new Duck('');
 
@@ -103,8 +104,12 @@
 	}
 
 	function onLoadMessage(node: HTMLElement) {
-		// TODO i could just get each thing here, and modify the node
-		hljs.highlightAll();
+		// add precode to any code block
+		node.innerHTML = node.innerHTML.replace(/```(.*?)```/gs, (p1) => {
+			let language = p1.split('\n')[0].replace('```', '');
+
+			return `<pre><code>${hljs.highlight(p1, { language }).value}</code></pre>`;
+		});
 
 		scrollToBottom();
 	}
@@ -161,15 +166,6 @@
 			};
 			reader.readAsDataURL(file);
 		}
-	}
-
-	function escapeHtml(unsafe: string): string {
-		return unsafe
-			.replace(/&/g, "&amp;")
-			.replace(/</g, "&lt;")
-			.replace(/>/g, "&gt;")
-			.replace(/"/g, "&quot;")
-			.replace(/'/g, "&#039;");
 	}
 
 	onMount(() => {
@@ -230,14 +226,6 @@
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;
-
-					// add precode to any code block
-					messages.forEach(m => {
-						m.content = m.content.replace(/```(.*?)```/gs, (p1) => {
-							return `<pre><code>${escapeHtml(p1.trim())}</code></pre>`;
-						});
-					});
-
 					scrollToBottom();
 					// maybe not, what about scrolling up
 				})
