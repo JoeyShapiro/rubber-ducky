@@ -36,6 +36,9 @@
 	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
 	let attachments: Attachment[] = [];
 
+	let loading = false;
+	let offset = 0;
+
 	// TODO use actions
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -168,6 +171,30 @@
 		}
 	}
 
+	async function loadMoreData() {
+		loading = true;
+		offset = messages.length;
+		fetch(`/messages?duck=${duck_v.name}&offset=${offset}`)
+		.then(res => res.json())
+			.then(data => {
+				messages = [...data.messages, ...messages];
+			})
+			.catch(err => {
+				console.error(err);
+			})
+			.finally(() => {
+				loading = false;
+			});
+	}
+
+	function handleScroll() {
+		const doomScroll = window.innerHeight + window.scrollY <= (document.body.offsetHeight - 10); // threshold of 10
+		if (doomScroll && !loading) { // window.scrollY === 0
+			loadMoreData();
+			console.log('loading more data');
+		}
+	}
+
 	onMount(() => {
 		document.onpaste = function (event) {
 		var items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -233,6 +260,12 @@
 					console.error(err);
 				});
 		});
+
+		window.addEventListener('scroll', handleScroll);
+
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+		};
 	});
 </script>
 
@@ -258,8 +291,12 @@ background-color: rgb(230, 230, 220);
 		</div>
 		</div>
 
+		{#if loading}
+			<div class="alert alert-info mt-2">Loading...</div>
+		{/if}
 		{#if messages.length > 0}
-		{#each messages as message}
+		<!-- need the uuid to stop list oddness -->
+		{#each messages as message (message.uuid)}
 			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 					{@html message.content}

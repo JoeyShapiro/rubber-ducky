@@ -7,6 +7,7 @@ export async function GET({ url }) {
 	// get the params from url
 	let messages: Message[] = [];
 	let duck = url.searchParams.get('duck');
+	let offset = parseInt(url.searchParams.get('offset') || '0', 10);
 	if (duck ===  null || duck === '') return json({ messages });
 
     // let messages = [ '', '', '', '', '', '', '', '', '', '', '', '' ];
@@ -14,8 +15,11 @@ export async function GET({ url }) {
 	const client = await weaviate.connectToLocal();
 	const messagesCollection = client.collections.get("Message");
 	const results = await messagesCollection.query.fetchObjects({
-		filters: messagesCollection.filter.byRef('belongsTo').byProperty("name").like(duck)
-	})
+		filters: messagesCollection.filter.byRef('belongsTo').byProperty("name").like(duck),
+		sort: messagesCollection.sort.byCreationTime(false),
+		limit: 10,
+		offset
+	});
 
 	const attachmentsCollection = client.collections.get("Attachment");
 	for (const m of results.objects) {
@@ -31,6 +35,10 @@ export async function GET({ url }) {
 
 		messages.push(message);
 	}
+
+	// reverse the messages so the newest is first
+	// i feel like sql handles this better
+	messages = messages.reverse();
 
 	return json({ messages });
 }
