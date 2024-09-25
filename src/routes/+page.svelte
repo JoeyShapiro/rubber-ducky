@@ -114,10 +114,17 @@
 		});
 
 		// add code to any inline code block (shrug)
-		// TODO add acrylic. doesnt work because this is after svelte
 		node.innerHTML = node.innerHTML.replace(/(?<!`)`[^`\n]+`(?!`)/gs, (p1) => {
 			return `<code>${p1}</code>`;
 		});
+
+		// do markdown stuff because i cant be bothered to use lib
+		// ai overlords did it :P
+		node.innerHTML = node.innerHTML.replace(/(?<!\\)\*\*(.*?)\*\*/gs, '<strong>$1</strong>');
+		node.innerHTML = node.innerHTML.replace(/(?<!\\)\*(.*?)\*/gs, '<em>$1</em>');
+		node.innerHTML = node.innerHTML.replace(/(?<!\\)~~(.*?)~~/gs, '<del>$1</del>');
+		node.innerHTML = node.innerHTML.replace(/(?<!\\)__(.*?)__/gs, '<u>$1</u>');
+		node.innerHTML = node.innerHTML.replace(/(?<!\\)\[(.*?)\]\((.*?)\)/gs, '<a href="$2">$1</a>');
 
 		scrollToBottom();
 	}
