@@ -19,7 +19,6 @@
 
 	// clean up classes
 	// add badlings
-	// limit messages
 	// window size
 	// images
 	// videos
@@ -111,7 +110,13 @@
 		node.innerHTML = node.innerHTML.replace(/```(.*?)```/gs, (p1) => {
 			let language = p1.split('\n')[0].replace('```', '');
 
-			return `<pre><code>${hljs.highlight(p1, { language }).value}</code></pre>`;
+			return `<pre class="card p-2 d-inline-block" style="background: rgba(212, 212, 250, 0.3);"><code>${hljs.highlight(p1, { language }).value}</code></pre>`;
+		});
+
+		// add code to any inline code block (shrug)
+		// TODO add acrylic. doesnt work because this is after svelte
+		node.innerHTML = node.innerHTML.replace(/(?<!`)`[^`\n]+`(?!`)/gs, (p1) => {
+			return `<code>${p1}</code>`;
 		});
 
 		scrollToBottom();
