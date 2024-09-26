@@ -77,7 +77,7 @@
 						.then(res => res.json())
 						.then(data => {
 							attachments[i].uuid = data.attachment.uuid;
-							if (!attachments[i].type.startsWith('image')) {
+							if (!attachments[i].type.includes('image')) {
 								attachments[i].content = '';
 							}
 
@@ -265,6 +265,36 @@
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;
+					
+					// if a message contains an image, fetch the data
+					for (let i = 0; i < messages.length; i++) {
+						for (let j = 0; j < messages[i].attachments.length; j++) {
+							if (messages[i].attachments[j].type.includes('image')) {
+								fetch(`/attachments?uuid=${messages[i].attachments[j].uuid}`)
+									.then(data => {
+										return data.blob();
+									})
+									.then(blob => {
+										messages[i].attachments[j].content = URL.createObjectURL(blob);
+
+										// best i can think of
+										// find the image and set the src
+										let img = document.getElementById(messages[i].attachments[j].uuid) as HTMLImageElement;
+										if (img) {
+											img.src = messages[i].attachments[j].content;
+											// Remember to revoke the URL when you're done with the image
+											img.onload = () => URL.revokeObjectURL(messages[i].attachments[j].content);
+										} else {
+											console.error(`Image ${messages[i].attachments[j].uuid} not found`);
+										}
+									})
+									.catch(err => {
+										console.error(err);
+									});
+							}
+						}
+					}
+
 					scrollToBottom();
 					// maybe not, what about scrolling up
 				})
@@ -314,8 +344,8 @@ background-color: rgb(230, 230, 220);
 					{@html message.content}
 					{#if message.attachments.length > 0}
 						{#each message.attachments as attachment}
-							{#if attachment.type.startsWith('image')}
-								<img src={attachment.content} alt={attachment.name} class="img-thumbnail" />
+							{#if attachment.type.includes('image')}
+								<img id={attachment.uuid} src={attachment.content} alt={attachment.name} />
 							{:else}
 							<div class="card acrylic m-1 flip-card-inner">
 								<div class="card-body">

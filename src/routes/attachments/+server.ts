@@ -38,19 +38,22 @@ export async function GET({ url }) {
     if (results.objects.length === 0) return json({ attachment });
     attachment = Attachment.fromWeaviate(results.objects[0]);
 
+    // remove data prefix from type cause idk
+    attachment.type = attachment.type.replace('data:', '');
+
     const headers = new Headers();
     headers.set("Content-Disposition", "attachment; filename="+attachment.name);
     headers.set("Content-Type", attachment.type);
 
-    // convert base64 to binary
-    attachment.content = atob(attachment.content.split(',')[1]);
+    // Convert base64 to Uint8Array
+    const base64 = attachment.content.split(',')[1];
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
 
-    return new Response(new ReadableStream({
-        start(controller) {
-            controller.enqueue(attachment.content);
-            controller.close();
-        }
-    }), {
+    return new Response(bytes, {
         status: 200,
         headers: headers
     });
