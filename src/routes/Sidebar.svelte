@@ -114,6 +114,7 @@
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
           {#each badling.ducks as duck}
 					<li>
+						<!-- svelte-ignore a11y-invalid-attribute -->
 						<a href="#" on:click={() => loadDuck(duck)} class="{duck.name == duck_v.name ? 'active' : ''} link-body-emphasis d-inline-flex text-decoration-none rounded">
                 <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
                 {duck.name}
@@ -122,6 +123,7 @@
           {/each}
           {#if newDuckTo == badling.name}
           <li class="">
+            <!-- svelte-ignore a11y-invalid-attribute -->
 						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
                 <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
                 <input id="new-duck" type="text" class="form-control p-0" placeholder="New Duck" on:keydown={(e) => e.key == 'Enter' && addDuck(badling.name)} on:focusout={() => newDuckTo=''} />
@@ -138,6 +140,7 @@
     {/each}
     {#if newBadling}
       <li class="">
+        <!-- svelte-ignore a11y-invalid-attribute -->
         <a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
             <img alt="duck" class="me-2 chevron" width="16" height="16" />
             <input id="new-badling" type="text" class="form-control p-0" placeholder="New Badling" on:keydown={(e) => e.key == 'Enter' && addBadling()} on:focusout={() => newBadling = false} />
@@ -173,10 +176,6 @@
 
 .chevron {
   content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
-}
-
-[data-bs-theme="dark"] .btn-toggle::before {
-  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%28255,255,255,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
 }
 
 .btn-toggle[aria-expanded="true"] {
