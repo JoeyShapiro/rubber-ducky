@@ -32,6 +32,10 @@ console.log('ducks')
 await client.collections.create({
     name: 'Message',
     vectorizers: vectorizer.text2VecTransformers(),
+    generative: weaviate.configure.generative.ollama({
+        apiEndpoint: 'http://host.docker.internal:11434',  // If using Docker, use this to contact your local Ollama instance
+        model: 'llama3',  // The model to use, e.g. 'phi3', or 'mistral', 'command-r-plus', 'gemma'
+    }),
     properties: [
         { name: 'content', dataType: dataType.TEXT },
         { name: 'timestamp', dataType: dataType.DATE },

@@ -12,6 +12,9 @@
 	// functionize
 	// tasks
 	// session
+	// rag
+	// reply
+	// docker
 
 	let duck_v = new Duck('', '');
 
