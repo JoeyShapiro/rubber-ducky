@@ -32,3 +32,50 @@ export class Attachment {
         return new Attachment(uuid, type, name, content);
     }
 }
+
+export class Message {
+    uuid: string;
+    content: string;
+    timestamp: Date;
+    attachments: Attachment[] = [];
+
+    constructor(uuid: string, content: string, timestamp: Date) {
+        this.uuid = uuid;
+        this.content = content;
+        this.timestamp = timestamp;
+    }
+
+    static fromJSON(json: any): Message {
+        return new Message(json.uuid, json.content, json.timestamp);
+    }
+
+    static fromWeaviate(m: any): Message {
+        let uuid = m.uuid;
+        let content = m.properties.content?.toString() || "";
+        let timestamp = new Date(m.properties.timestamp?.toString() || "");
+
+        return new Message(uuid, content, timestamp);
+    }
+}
+
+export class Duck {
+    uuid: string;
+    name: string;
+
+    constructor(uuid: string, name: string) {
+        this.uuid = uuid;
+        this.name = name;
+    }
+}
+
+export class Badling {
+    uuid: string;
+    name: string;
+    ducks: Duck[];
+
+    constructor(uuid: string, name: string) {
+        this.uuid = uuid;
+        this.name = name;
+        this.ducks = [];
+    }
+}

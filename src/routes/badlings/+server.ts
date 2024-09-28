@@ -1,22 +1,6 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
 
-class Duck {
-	constructor(public name: string) {
-		this.name = name;
-	}
-}
-
-// just make a class. it might be useful later
-class Badling {
-	ducks: Duck[];
-
-	constructor(public name: string) {
-		this.name = name;
-		this.ducks = [];
-	}
-}
-
 export async function POST({ request }) {
 	const data = await request.json();
 

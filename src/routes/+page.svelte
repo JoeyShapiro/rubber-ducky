@@ -1,19 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { duck } from './stores.js';
-	import type { Message } from '$lib/Message'; // TODO $lib/types
-	import { Attachment } from "$lib/types";
+	import { Attachment, Message, Duck } from "$lib/types";
 	import hljs from 'highlight.js/lib/core';
 	import 'highlight.js/styles/default.css'; // need to get the styles
 
-	class Duck {
-		constructor(public name: string) {
-			this.name = name;
-		}
-	}
-
-	// clean up classes
-	// add badlings
 	// window size
 	// videos
 	// glitter ai button
@@ -22,7 +13,7 @@
 	// functionize
 	// tasks
 
-	let duck_v = new Duck('');
+	let duck_v = new Duck('', '');
 
 	let text = '';
 	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
@@ -175,6 +166,7 @@
 		// i might want to use an #await, but this seems more fitting
 		async function markdown() {
 			// add precode to any code block
+			// could just await this in html. but that would require a more complex class
 			await replaceAsync(node.innerHTML, /```(.*?)```/gs, async (p1) => {
 				let language = p1.split('\n')[0].replace('```', '');
 

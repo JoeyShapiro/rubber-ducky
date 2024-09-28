@@ -1,21 +1,6 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
-
-class Duck {
-	constructor(public name: string) {
-		this.name = name;
-	}
-}
-
-// just make a class. it might be useful later
-class Badling {
-	ducks: Duck[];
-
-	constructor(public name: string) {
-		this.name = name;
-		this.ducks = [];
-	}
-}
+import { Duck, Badling } from '$lib/types';
 
 export async function GET() {
 	let badlings: Badling[] = [];
@@ -27,7 +12,7 @@ export async function GET() {
 		let name = item.properties.name?.toString();
 		if (name === undefined || name === '') continue;
 
-		badlings.push(new Badling(name));
+		badlings.push(new Badling(item.uuid, name));
 
 		const ducks = client.collections.get('Duck');
 		const results = await ducks.query.fetchObjects({
@@ -35,7 +20,7 @@ export async function GET() {
 			returnProperties: ['name']
 		})
 		for (const duck of results.objects) {
-			badlings[badlings.length - 1].ducks.push(new Duck(duck.properties.name?.toString() || ""));
+			badlings[badlings.length - 1].ducks.push(new Duck(duck.uuid, duck.properties.name?.toString() || ""));
 		}
 	}
 
@@ -53,8 +38,6 @@ export async function POST({ request }) {
 		filters: badlings.filter.byProperty("name").equal(data.badling),
 		returnProperties: ['name']
 	});
-
-	// TODO check if duck already exists
 
 	// create the duck
 	const ducks = client.collections.get('Duck');

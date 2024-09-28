@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
-import { Message } from '$lib/Message';
-import { Attachment } from '$lib/types.js';
+import { Attachment, Message } from '$lib/types.js';
 
 export async function GET({ url }) {
 	// get the params from url

@@ -1,25 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-    import * as store from './stores.js';
-
-   class Duck {
-		constructor(public name: string) {
-			this.name = name;
-		}
-	}
-
-    // just make a class. it might be useful later
-    class Badling {
-        ducks: Duck[];
-
-        constructor(public name: string) {
-            this.name = name;
-            this.ducks = [];
-        }
-    }
+  import * as store from './stores.js';
+    import { Duck, Badling } from '$lib/types';
 
 	let badlings: Badling[] = [];
-  let duck_v = new Duck('');
+  let duck_v = new Duck('', '');
   let newDuckTo: string = '';
   let newBadling: boolean = false;
 
@@ -51,7 +36,7 @@
                 // add new duck to badling
                 badlings = badlings.map(b => {
                     if (b.name == badling) {
-                        b.ducks.push(new Duck(duckName));
+                        b.ducks.push(new Duck(data.uuid, duckName));
                     }
                     return b;
                 });
@@ -85,7 +70,7 @@
                 // remove 'new-badling' input
                 newBadling = false;
                 // add new badling
-                badlings.push(new Badling(badlingName));
+                badlings.push(new Badling(data.uuid, badlingName));
                 badlings = [...badlings];
             })
             .catch(err => {
