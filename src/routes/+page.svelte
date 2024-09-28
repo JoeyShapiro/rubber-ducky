@@ -8,10 +8,10 @@
 	// window size
 	// videos
 	// glitter ai button
-	// use duck structure and uuid
 	// small font
 	// functionize
 	// tasks
+	// session
 
 	let duck_v = new Duck('', '');
 
@@ -96,7 +96,7 @@
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
-				duck: duck_v.name,
+				duck: duck_v.uuid,
 				message: text
 			})
 		})
@@ -268,7 +268,7 @@
 	async function loadMoreData() {
 		loading = true;
 		offset = messages.length;
-		fetch(`/messages?duck=${duck_v.name}&offset=${offset}`)
+		fetch(`/messages?duck=${duck_v.uuid}&offset=${offset}`)
 		.then(res => res.json())
 			.then(data => {
 				messages = [...data.messages, ...messages];
@@ -348,7 +348,7 @@
 		duck.subscribe((value: Duck) => {
 			duck_v = value;
 
-			fetch(`/messages?duck=${duck_v.name}`)
+			fetch(`/messages?duck=${duck_v.uuid}`)
 				.then(res => res.json())
 				.then(data => {
 					messages = data.messages;

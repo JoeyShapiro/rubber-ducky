@@ -14,7 +14,7 @@ export async function GET({ url }) {
 	const client = await weaviate.connectToLocal();
 	const messagesCollection = client.collections.get("Message");
 	const results = await messagesCollection.query.fetchObjects({
-		filters: messagesCollection.filter.byRef('belongsTo').byProperty("name").like(duck),
+		filters: messagesCollection.filter.byRef('belongsTo').byId().equal(duck),
 		sort: messagesCollection.sort.byCreationTime(false),
 		limit: 10,
 		offset
@@ -49,7 +49,7 @@ export async function POST({ request, cookies }) {
 
 	const ducks = client.collections.get('Duck');
 	const results = await ducks.query.fetchObjects({
-		filters: ducks.filter.byProperty("name").equal(data.duck),
+		filters: ducks.filter.byId().equal(data.duck),
 		returnProperties: ['name']
 	});
 

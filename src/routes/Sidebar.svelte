@@ -35,7 +35,7 @@
                 newDuckTo = '';
                 // add new duck to badling
                 badlings = badlings.map(b => {
-                    if (b.name == badling) {
+                    if (b.uuid == badling) {
                         b.ducks.push(new Duck(data.uuid, duckName));
                     }
                     return b;
@@ -121,19 +121,19 @@
             </a>
 					</li>
           {/each}
-          {#if newDuckTo == badling.name}
+          {#if newDuckTo == badling.uuid}
           <li class="">
             <!-- svelte-ignore a11y-invalid-attribute -->
 						<a href="#" class="link-body-emphasis d-inline-flex text-decoration-none rounded">
                 <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
-                <input id="new-duck" type="text" class="form-control p-0" placeholder="New Duck" on:keydown={(e) => e.key == 'Enter' && addDuck(badling.name)} on:focusout={() => newDuckTo=''} />
+                <input id="new-duck" type="text" class="form-control p-0" placeholder="New Duck" on:keydown={(e) => e.key == 'Enter' && addDuck(badling.uuid)} on:focusout={() => newDuckTo=''} />
             </a>
 					</li>
           {/if}
 				</ul>
 			</div>
 		</li>
-    <button class="btn btn-hidden rounded border-0 position-absolute top-0 end-0" on:click={() => newDuckTo = badling.name}>
+    <button class="btn btn-hidden rounded border-0 position-absolute top-0 end-0" on:click={() => newDuckTo = badling.uuid}>
       <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />
     </button>
     </div>

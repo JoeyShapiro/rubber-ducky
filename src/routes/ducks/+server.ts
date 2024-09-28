@@ -11,12 +11,13 @@ export async function GET() {
 	for await (let item of badlingsCollection.iterator()) {
 		let name = item.properties.name?.toString();
 		if (name === undefined || name === '') continue;
+		let uuid = item.uuid;
 
 		badlings.push(new Badling(item.uuid, name));
 
 		const ducks = client.collections.get('Duck');
 		const results = await ducks.query.fetchObjects({
-			filters: ducks.filter.byRef('belongsTo').byProperty("name").like(name),
+			filters: ducks.filter.byRef('belongsTo').byId().equal(uuid),
 			returnProperties: ['name']
 		})
 		for (const duck of results.objects) {
@@ -35,7 +36,7 @@ export async function POST({ request }) {
 	// get the badling
 	const badlings = client.collections.get('Badling');
 	const results = await badlings.query.fetchObjects({
-		filters: badlings.filter.byProperty("name").equal(data.badling),
+		filters: badlings.filter.byId().equal(data.badling),
 		returnProperties: ['name']
 	});
 
