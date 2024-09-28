@@ -291,7 +291,7 @@
 
 	onMount(() => {
 		document.onpaste = function (event) {
-		var items = (event.clipboardData || event.originalEvent.clipboardData).items;
+		var items = event.clipboardData?.items as DataTransferItemList; // readd if errors `event.originalEvent.clipboardData`
 		console.log(JSON.stringify(items)); // might give you mime types
 		for (var index in items) {
 			var item = items[index];
@@ -299,6 +299,11 @@
 				console.log(item);
 
 				var blob = item.getAsFile();
+				if (!blob) {
+					console.error('No blob');
+					return;
+				}
+				
 				var reader = new FileReader();
 				reader.onload = function (event) {
 					// console.log(event.target.result); // data url!
@@ -306,7 +311,7 @@
 					// split data url
 					var parts = (event.target?.result as string).split(';');
 
-					attachments.push(new Attachment('', parts[0], blob.name, parts[1]));
+					attachments.push(new Attachment('', parts[0], blob!.name, parts[1]));
 					// image - data:image/png;base64,
 					// src file - data:application/octet-stream;base64,
 					// docx - data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,
