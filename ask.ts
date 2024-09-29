@@ -3,11 +3,11 @@ import weaviate from 'weaviate-client';
 const client = await weaviate.connectToLocal()
 const messages = client.collections.get('Message');
 
-let result = await messages.generate.fetchObjects({
-    groupedTask: `what do i use`
-},{
-limit: 2,
-});
+// let result = await messages.generate.fetchObjects({
+//     groupedTask: `what do i use`
+// },{
+// limit: 2,
+// });
 
 /*
 {
@@ -35,7 +35,7 @@ So, it seems like you used the following commands:
 Note that the timestamps are in ISO 8601 format, which is a standard way of representing dates and times in computers.
 */
 
-result = await messages.generate.nearText('what do i use', {
+let result = await messages.generate.nearText('what do i use', {
     groupedTask: `what do i use`
 },{
     limit: 2,
@@ -69,9 +69,11 @@ So, in summary:
 Let me know if there's anything else I can help with!
 */
 
-result.objects.forEach(item => {
-  console.log(JSON.stringify(item.properties, null, 2))
-  console.log(item.metadata?.distance)
-})
+// result.objects.forEach(item => {
+//   console.log(JSON.stringify(item.properties, null, 2))
+//   console.log(item.metadata?.distance)
+// })
+const conns = result.objects.map(item => ({ 'uuid': item.uuid, 'dist': item.metadata?.distance }));
+console.log(conns);
 
 console.log(result.generated)

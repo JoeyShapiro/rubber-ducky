@@ -35,26 +35,29 @@ export class Attachment {
 
 export class Message {
     uuid: string;
+    from: string;
     content: string;
     timestamp: Date;
     attachments: Attachment[] = [];
 
-    constructor(uuid: string, content: string, timestamp: Date) {
+    constructor(uuid: string, from: string, content: string, timestamp: Date) {
         this.uuid = uuid;
+        this.from = from;
         this.content = content;
         this.timestamp = timestamp;
     }
 
     static fromJSON(json: any): Message {
-        return new Message(json.uuid, json.content, json.timestamp);
+        return new Message(json.uuid, json.from, json.content, json.timestamp);
     }
 
     static fromWeaviate(m: any): Message {
         let uuid = m.uuid;
+        let from = m.properties.from?.toString() || "";
         let content = m.properties.content?.toString() || "";
         let timestamp = new Date(m.properties.timestamp?.toString() || "");
 
-        return new Message(uuid, content, timestamp);
+        return new Message(uuid, from, content, timestamp);
     }
 }
 

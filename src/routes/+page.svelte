@@ -25,6 +25,7 @@
 	let loading = false;
 	let offset = 0;
 	let languages: string[] = [];
+	let question = false;
 
 	async function metaRegisterLanguage(name: string) {
 		try {
@@ -91,6 +92,29 @@
 		
 		if (text === '' || duck_v.name === '') {
 			return;
+		}
+
+		if (question) {
+			console.log('question', text);
+			fetch('/qna', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					duck: duck_v.uuid,
+					prompt: text
+				})
+			})
+				.then(res => res.json())
+				.then(data => {
+					messages = [...messages, data.message]; // force update
+				})
+				.catch(err => {
+					console.error(err);
+				});
+
+			question = false;
 		}
 
 		fetch('/messages', {
@@ -413,16 +437,6 @@ background-color: rgb(230, 230, 220);
 
 <section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
 	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
-		<div class="offcanvas offcanvas-end" style="height: 50vh;" data-bs-scroll="true" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
-		<div class="offcanvas-header">
-			<h5 class="offcanvas-title" id="offcanvasRightLabel">Offcanvas right</h5>
-			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-		</div>
-		<div class="offcanvas-body">
-			...
-		</div>
-		</div>
-
 		{#if loading}
 			<div class="alert alert-info mt-2">Loading...</div>
 		{/if}
@@ -431,7 +445,7 @@ background-color: rgb(230, 230, 220);
 		{#each messages as message (message.uuid)}
 			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
-					{@html message.content}
+					{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
 					{#if message.attachments.length > 0}
 						{#each message.attachments as attachment}
 							{#if attachment.type.includes('image')}
@@ -452,7 +466,7 @@ background-color: rgb(230, 230, 220);
 		{/each}
 		{/if}
 	</div>
-	<button class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
+	<button on:click={() => question = !question} class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
 	
 	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
 		<button type="button" class="btn btn-outline-secondary position-relative" on:click={() => document.getElementById('input-file')?.click()}>

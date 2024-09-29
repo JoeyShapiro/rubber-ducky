@@ -35,10 +35,24 @@ export async function GET({ url }) {
 		messages.push(message);
 	}
 
-	// reverse the messages so the newest is first
-	// i feel like sql handles this better
-	messages = messages.reverse();
+	// get ai messages
+	const answers = client.collections.get('Answer');
+	const aiResults = await answers.query.fetchObjects({
+		sort: answers.sort.byCreationTime(false),
+		limit: 10,
+		offset
+	});
 
+	for (const m of aiResults.objects) {
+		let message = new Message(m.uuid, m.properties.from?.toString() || '', m.properties.content?.toString() || '', new Date(m.properties.timestamp?.toString() || ""));
+
+		messages.push(message);
+	}
+
+	// sort the messages by timestamp
+	// i feel like sql handles this better
+	messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+	
 	return json({ messages });
 }
 
@@ -57,6 +71,7 @@ export async function POST({ request, cookies }) {
 	const timestamp = new Date();
 	let uuid = await messagesCollection.data.insert({
         properties: {
+			'from': 'user',
             'content': data.message,
             'timestamp': timestamp,
         },
@@ -65,5 +80,5 @@ export async function POST({ request, cookies }) {
         }
     });
 
-	return json({ message: new Message(uuid, data.message, timestamp) });
+	return json({ message: new Message(uuid, 'user', data.message, timestamp) });
 }

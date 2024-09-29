@@ -37,6 +37,7 @@ await client.collections.create({
         model: 'llama3',  // The model to use, e.g. 'phi3', or 'mistral', 'command-r-plus', 'gemma'
     }),
     properties: [
+        { name: 'from', dataType: dataType.TEXT },
         { name: 'content', dataType: dataType.TEXT },
         { name: 'timestamp', dataType: dataType.DATE },
     ],
@@ -61,6 +62,17 @@ await client.collections.create({
     }]
 });
 console.log('attachments')
+
+await client.collections.create({
+    name: 'Answer',
+    properties: [
+        { name: 'promt', dataType: dataType.TEXT },
+        { name: 'content', dataType: dataType.TEXT },
+        { name: 'timestamp', dataType: dataType.DATE },
+        { name: 'messages', dataType: dataType.TEXT }, // cant do one to many
+    ]
+});
+console.log('answers')
 
 // Data
 // Badlings
@@ -173,6 +185,7 @@ let messages = [ 'Hello world', 'vecdb', 'svelte',
 for (const m of messages) {
     uuid = await message.data.insert({
         properties: {
+            'from': 'user',
             'content': m,
             'timestamp': new Date(),
         },
