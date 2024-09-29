@@ -43,8 +43,21 @@ export async function GET({ url }) {
 		offset
 	});
 
+	// find oldest message date
+	let oldest = new Date();
+	for (const m of messages) {
+		if (m.timestamp.getTime() < oldest.getTime()) {
+			oldest = m.timestamp;
+		}
+	}
+	
 	for (const m of aiResults.objects) {
-		let message = new Message(m.uuid, m.properties.from?.toString() || '', m.properties.content?.toString() || '', new Date(m.properties.timestamp?.toString() || ""));
+		let timestamp = new Date(m.properties.timestamp?.toString() || "");
+		if (timestamp.getTime() < oldest.getTime()) {
+			continue; // cant confirm order
+		}
+
+		let message = new Message(m.uuid, m.properties.from?.toString() || '', m.properties.content?.toString() || '', timestamp);
 
 		messages.push(message);
 	}
@@ -52,7 +65,7 @@ export async function GET({ url }) {
 	// sort the messages by timestamp
 	// i feel like sql handles this better
 	messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-	
+
 	return json({ messages });
 }
 

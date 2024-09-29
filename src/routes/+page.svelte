@@ -7,14 +7,13 @@
 
 	// window size
 	// videos
-	// glitter ai button
 	// small font
 	// functionize
 	// tasks
 	// session
-	// rag
 	// reply
 	// docker
+	// spoi.er / blur
 
 	let duck_v = new Duck('', '');
 
@@ -481,7 +480,7 @@ background-color: rgb(230, 230, 220);
 			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
 		<input type="file" id="input-file" accept="*" on:change={handleFileSelect} style="display: none;">
 		<div id="send-btn-listener"> <!-- not sure im keeping the button -->
-			<input style="width: auto; height: 100%;" class="btn btn-warning" type="submit"
+			<input style="width: auto; height: 100%; { question ? 'background-color: #ba34eb !important;' : '' }" class="btn btn-warning" type="submit"
 				id="send-btn" value="Send" />
 		</div>
 	</form>

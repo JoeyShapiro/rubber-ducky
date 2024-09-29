@@ -8,24 +8,33 @@ export async function POST({ request, cookies }) {
 	const client = await weaviate.connectToLocal()
     const messages = client.collections.get('Message');
 
-	const result = await messages.generate.nearText(data.prompt, {
-        groupedTask: data.prompt
-    },{
-        limit: 3,
-    });
-
-	const conns = JSON.stringify(result.objects.map(item => ({ 'uuid': item.uuid, 'dist': item.metadata?.distance })));
-
-    const timestamp = new Date();
-    const answers = client.collections.get('Answer');
-    let uuid = await answers.data.insert({
-        properties: {
-            'prompt': data.prompt,
-            'content': result.generated || '',
-            'timestamp': timestamp,
-            'messages': conns
-        }
-    });
+    let uuid = '';
+    let timestamp = new Date(0);
+    let result = { generated: '' };
+    try {
+        const result = await messages.generate.nearText(data.prompt, {
+            groupedTask: data.prompt
+        },{
+            limit: 3,
+        });
+    
+        const conns = JSON.stringify(result.objects.map(item => ({ 'uuid': item.uuid, 'dist': item.metadata?.distance })));
+    
+        const timestamp = new Date();
+        const answers = client.collections.get('Answer');
+        uuid = await answers.data.insert({
+            properties: {
+                'prompt': data.prompt,
+                'content': result.generated || '',
+                'timestamp': timestamp,
+                'messages': conns
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        result.generated = `Error: ${error}`;
+        timestamp = new Date();
+    }
 
 	return json({ message: new Message(uuid, 'ai', result.generated || '', timestamp) });
 }

@@ -194,4 +194,7 @@ for (const m of messages) {
         }
     });
     console.log('message: ', uuid);
+
+    // sleep for a bit
+    await new Promise(r => setTimeout(r, 1000));
 }
