@@ -6,6 +6,15 @@ console.log('client')
 
 // Schema
 await client.collections.create({
+    name: 'Session',
+    properties: [
+        { name: 'createdOn', dataType: dataType.DATE },
+        { name: 'expiresOn', dataType: dataType.DATE },
+    ],
+});
+console.log('session')
+
+await client.collections.create({
     name: 'Badling',
     properties: [
         { name: 'name', dataType: dataType.TEXT },

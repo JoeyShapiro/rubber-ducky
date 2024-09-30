@@ -14,6 +14,7 @@
 	// reply
 	// docker
 	// spoi.er / blur
+	// add colors to login
 
 	let duck_v = new Duck('', '');
 
@@ -25,6 +26,12 @@
 	let offset = 0;
 	let languages: string[] = [];
 	let question = false;
+
+	function getCookie(name: string): string | undefined {
+		const value = `; ${document.cookie}`;
+		const parts = value.split(`; ${name}=`);
+		if (parts.length === 2) return parts.pop().split(';').shift();
+	}
 
 	async function metaRegisterLanguage(name: string) {
 		try {
@@ -94,7 +101,6 @@
 		}
 
 		if (question) {
-			console.log('question', text);
 			fetch('/qna', {
 				method: 'POST',
 				headers: {
@@ -102,7 +108,8 @@
 				},
 				body: JSON.stringify({
 					duck: duck_v.uuid,
-					prompt: text
+					prompt: text,
+					session: getCookie('session') || ''
 				})
 			})
 				.then(res => res.json())

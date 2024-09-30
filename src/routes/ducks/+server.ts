@@ -1,12 +1,28 @@
-import { json } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
 import { Duck, Badling } from '$lib/types';
 
-export async function GET() {
+export async function GET({ request }) {
 	let badlings: Badling[] = [];
 
 	const client = await weaviate.connectToLocal();
 	const badlingsCollection = client.collections.get("Badling");
+
+	const session = request.headers.get('session');
+	const sesssions = client.collections.get('Session');
+	if (session === null || session === '') {
+		return error(401, { message: 'Unauthorized' });
+	}
+
+	const sessionResults = await sesssions.query.fetchObjects({
+		filters: sesssions.filter.byId().equal(session)
+	});
+	if (sessionResults.objects.length === 0) {
+		return error(401, { message: 'Unauthorized' });
+	}
+	if (sessionResults.objects[0]?.properties?.expiresOn && sessionResults.objects[0].properties.expiresOn < new Date()) {
+		return error(401, { message: 'Unauthorized' });
+	}
 
 	for await (let item of badlingsCollection.iterator()) {
 		let name = item.properties.name?.toString();

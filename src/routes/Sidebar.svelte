@@ -1,12 +1,18 @@
 <script lang="ts">
 	import { onMount } from "svelte";
   import * as store from './stores.js';
-    import { Duck, Badling } from '$lib/types';
+  import { Duck, Badling } from '$lib/types';
 
 	let badlings: Badling[] = [];
   let duck_v = new Duck('', '');
   let newDuckTo: string = '';
   let newBadling: boolean = false;
+
+  function getCookie(name: string): string | undefined {
+		const value = `; ${document.cookie}`;
+		const parts = value.split(`; ${name}=`);
+		if (parts.length === 2) return parts.pop().split(';').shift();
+	}
 
     function loadDuck(duck: Duck) {
         store.duck.set(duck);
@@ -22,7 +28,8 @@
         fetch('/ducks', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Session': getCookie('session') || ''
             },
             body: JSON.stringify({
                 badling: badling,
@@ -59,7 +66,8 @@
         fetch('/badlings', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Session': getCookie('session') || ''
             },
             body: JSON.stringify({
                 badling: badlingName
@@ -79,7 +87,13 @@
     }
 
     onMount(() => {
-        fetch('/ducks')
+
+
+        fetch('/ducks', {
+          headers: {
+            'Session': getCookie('session') || ''
+          }
+        })
 			.then(res => res.json())
 			.then(data => {
 				badlings = data.badlings;
