@@ -10,7 +10,7 @@
 	// small font
 	// functionize
 	// tasks
-	// session
+	// redirect on no session
 	// reply
 	// docker
 	// spoi.er / blur
@@ -118,6 +118,11 @@
 				})
 				.catch(err => {
 					console.error(err);
+					// check the status code
+					// if 401, redirect to login
+					if (err.status === 401) {
+						window.location.href = `${window.location.origin}/login`;
+					}
 				});
 
 			question = false;
@@ -178,6 +183,11 @@
 			})
 			.catch(err => {
 				console.error(err);
+				// check the status code
+				// if 401, redirect to login
+				if (err.status === 401) {
+					window.location.href = `${window.location.origin}/login`;
+				}
 			});
 	}
 
@@ -308,6 +318,11 @@
 			})
 			.catch(err => {
 				console.error(err);
+				// check the status code
+				// if 401, redirect to login
+				if (err.status === 401) {
+					window.location.href = `${window.location.origin}/login`;
+				}
 			})
 			.finally(() => {
 				loading = false;
@@ -410,6 +425,11 @@
 									})
 									.catch(err => {
 										console.error(err);
+										// check the status code
+										// if 401, redirect to login
+										if (err.status === 401) {
+											window.location.href = `${window.location.origin}/login`;
+										}
 									});
 							}
 						}

@@ -54,6 +54,9 @@
             })
             .catch(err => {
                 console.error(err);
+                if (err.status === 401) {
+                  window.location.href = `${window.location.origin}/login`;
+                }
             });
     }
 
@@ -83,6 +86,9 @@
             })
             .catch(err => {
                 console.error(err);
+                if (err.status === 401) {
+                  window.location.href = `${window.location.origin}/login`;
+                }
             });
     }
 
@@ -100,6 +106,9 @@
 			})
 			.catch(err => {
 				console.error(err);
+        if (err.status === 401) {
+          window.location.href = `${window.location.origin}/login`;
+        }
 			});
     });
 </script>
