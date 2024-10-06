@@ -10,7 +10,6 @@
 	// small font
 	// functionize
 	// tasks
-	// redirect on no session
 	// reply
 	// docker
 	// spoi.er / blur
@@ -112,12 +111,17 @@
 					session: getCookie('session') || ''
 				})
 			})
-				.then(res => res.json())
+				.then(res => {
+					if (res.status == 200) {
+					return res.json()
+					} else {
+					throw res;
+					}
+				})
 				.then(data => {
 					messages = [...messages, data.message]; // force update
 				})
 				.catch(err => {
-					console.error(err);
 					// check the status code
 					// if 401, redirect to login
 					if (err.status === 401) {
@@ -182,7 +186,6 @@
 					});
 			})
 			.catch(err => {
-				console.error(err);
 				// check the status code
 				// if 401, redirect to login
 				if (err.status === 401) {
@@ -439,7 +442,7 @@
 					// maybe not, what about scrolling up
 				})
 				.catch(err => {
-					console.error(err);
+					console.error('messages', err);
 				});
 		});
 

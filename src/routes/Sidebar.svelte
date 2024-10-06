@@ -36,7 +36,13 @@
                 duck: duckName
             })
         })
-            .then(res => res.json())
+        .then(res => {
+        if (res.status == 200) {
+          return res.json()
+        } else {
+          throw res;
+        }
+      })
             .then(data => {
                 // remove 'new-duck' input
                 newDuckTo = '';
@@ -53,7 +59,6 @@
                 // loadDuck(new Duck(data.duck));
             })
             .catch(err => {
-                console.error(err);
                 if (err.status === 401) {
                   window.location.href = `${window.location.origin}/login`;
                 }
@@ -76,7 +81,13 @@
                 badling: badlingName
             })
         })
-            .then(res => res.json())
+        .then(res => {
+        if (res.status == 200) {
+          return res.json()
+        } else {
+          throw res;
+        }
+      })
             .then(data => {
                 // remove 'new-badling' input
                 newBadling = false;
@@ -85,7 +96,6 @@
                 badlings = [...badlings];
             })
             .catch(err => {
-                console.error(err);
                 if (err.status === 401) {
                   window.location.href = `${window.location.origin}/login`;
                 }
@@ -100,12 +110,17 @@
             'Session': getCookie('session') || ''
           }
         })
-			.then(res => res.json())
+			.then(res => {
+        if (res.status == 200) {
+          return res.json()
+        } else {
+          throw res;
+        }
+      })
 			.then(data => {
 				badlings = data.badlings;
 			})
 			.catch(err => {
-				console.error(err);
         if (err.status === 401) {
           window.location.href = `${window.location.origin}/login`;
         }
