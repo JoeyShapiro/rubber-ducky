@@ -7,6 +7,7 @@
   let duck_v = new Duck('', '');
   let newDuckTo: string = '';
   let newBadling: boolean = false;
+  let hidden = store.hidden;
 
   function getCookie(name: string): string | undefined {
 		const value = `; ${document.cookie}`;
@@ -188,6 +189,10 @@
 	</ul>
   <button class="btn-hidden rounded border-0 m-3 position-absolute bottom-0" on:click={() => newBadling = true}>
     <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />
+  </button>
+  <!-- wanted skyrim symbols for hidden/detected -->
+  <button class="btn-hidden rounded border-0 m-3 position-absolute bottom-0 end-50" on:click={() => hidden.set(!$hidden)}>
+    <img src={$hidden ? "/hidden.svg" : "/detected.svg"} alt="visibility" class="me-2" width="16" height="16" />
   </button>
 </div>
 

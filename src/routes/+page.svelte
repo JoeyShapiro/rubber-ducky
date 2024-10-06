@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { duck } from './stores.js';
+	import { duck, hidden } from './stores.js';
 	import { Attachment, Message, Duck } from "$lib/types";
 	import hljs from 'highlight.js/lib/core';
 	import 'highlight.js/styles/default.css'; // need to get the styles
@@ -12,8 +12,8 @@
 	// tasks
 	// reply
 	// docker
-	// spoi.er / blur
 	// add colors to login
+	// escape markdown
 
 	let duck_v = new Duck('', '');
 
@@ -245,6 +245,8 @@
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)~~(.*?)~~/gs, '<del>$1</del>');
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)__(.*?)__/gs, '<u>$1</u>');
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)\[(.*?)\]\((.*?)\)/gs, '<a href="$2">$1</a>');
+			// spoilers
+			node.innerHTML = node.innerHTML.replace(/(?<!\\)\|\|(.*?)\|\|/gs, '<span class="spoil">$1</span>');
 		}
 
 		markdown();
@@ -472,7 +474,7 @@ background-color: rgb(230, 230, 220);
 		{#if messages.length > 0}
 		<!-- need the uuid to stop list oddness -->
 		{#each messages as message (message.uuid)}
-			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative" role="alert" aria-live="assertive" aria-atomic="true">
+			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
 				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 					{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
 					{#if message.attachments.length > 0}

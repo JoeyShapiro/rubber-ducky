@@ -25,6 +25,15 @@
 		code {
 			font-family: "GG Mono", monospace !important;
 		}
+
+		.spoil {
+			filter: blur(5px);
+		}
+		.spoil:hover,
+		.spoil:focus {
+			filter: none;
+			transition: filter 0.5s;
+		}
 	</style>
 
 	<body data-sveltekit-preload-data="hover" style="height: 100%">
