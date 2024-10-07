@@ -1,11 +1,18 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
 import { Message } from '$lib/types.js';
+import { env } from '$lib/env';
 
 export async function POST({ request, cookies }) {
 	const data = await request.json();
 
-	const client = await weaviate.connectToLocal()
+	const client = await weaviate.connectToLocal(
+    {
+        host: env.WEAVIATE,   // URL only, no http prefix
+        port: 50080,
+        grpcPort: 50051,     // Default is 50051, WCD uses 443
+    });
+    
     const messages = client.collections.get('Message');
 
     let uuid = '';

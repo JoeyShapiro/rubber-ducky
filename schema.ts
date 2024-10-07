@@ -1,7 +1,12 @@
 import { vectorizer, dataType } from 'weaviate-client';
 import weaviate from 'weaviate-client';
 
-const client = await weaviate.connectToLocal()
+const client = await weaviate.connectToLocal(
+{
+    host: 'localhost',   // URL only, no http prefix
+    port: 50080,
+    grpcPort: 50051,     // Default is 50051, WCD uses 443
+});
 console.log('client')
 
 // Schema

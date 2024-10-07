@@ -1,11 +1,18 @@
 import { json, error } from '@sveltejs/kit';
 import weaviate from 'weaviate-client'
 import { Duck, Badling } from '$lib/types';
+import { env } from '$lib/env';
 
 export async function GET({ request }) {
 	let badlings: Badling[] = [];
 
-	const client = await weaviate.connectToLocal();
+	const client = await weaviate.connectToLocal(
+	{
+		host: env.WEAVIATE,   // URL only, no http prefix
+		port: 50080,
+		grpcPort: 50051,     // Default is 50051, WCD uses 443
+	});
+	
 	const badlingsCollection = client.collections.get("Badling");
 
 	const session = request.headers.get('session');
