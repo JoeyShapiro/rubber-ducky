@@ -6,3 +6,4 @@ docer exec -it rubber-ducky-ollama-1 ollama pull llama3
 
 # build
 bun run build
+echo -n password | sha512sum

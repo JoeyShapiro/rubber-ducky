@@ -13,6 +13,7 @@
 	// reply
 	// docker
 	// add colors to login
+	// hash password
 	// escape markdown
 
 	let duck_v = new Duck('', '');

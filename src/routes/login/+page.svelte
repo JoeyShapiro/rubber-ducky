@@ -1,8 +1,12 @@
 <script lang="ts">
     let password = '';
 
-    function handleSubmit(event: Event) {
+    async function handleSubmit(event: Event) {
         event.preventDefault();
+
+        const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode('nowicanthink'));
+        const hashArray = Array.from(new Uint8Array(hash));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
         fetch('/login', {
             method: 'POST',
@@ -10,8 +14,8 @@
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                password
-            })
+                  'password' : hashHex,
+                })
         })
             .then(res => res.json())
             .then(data => {
