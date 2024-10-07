@@ -11,10 +11,9 @@
 	// functionize
 	// tasks
 	// reply
-	// docker
 	// add colors to login
-	// hash password
 	// escape markdown
+	// qna get
 
 	let duck_v = new Duck('', '');
 

@@ -56,7 +56,13 @@ export async function GET({ url }) {
 
     // let messages = [ '', '', '', '', '', '', '', '', '', '', '', '' ];
 
-	const client = await weaviate.connectToLocal();
+	const client = await weaviate.connectToLocal(
+    {
+        host: env.WEAVIATE,   // URL only, no http prefix
+        port: 50080,
+        grpcPort: 50051,     // Default is 50051, WCD uses 443
+    });
+
 	const messagesCollection = client.collections.get("Message");
 	const results = await messagesCollection.query.fetchObjects({
 		filters: messagesCollection.filter.byRef('belongsTo').byId().equal(uuid),

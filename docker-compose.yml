@@ -53,6 +53,8 @@ services:
       - PASSWORD=${PASSWORD:?}
       - PORT=${PORT:?}
       - WEAVIATE=${WEAVIATE:?}
+    depends_on:
+      - weaviate
 
 volumes:
   weaviate_data:

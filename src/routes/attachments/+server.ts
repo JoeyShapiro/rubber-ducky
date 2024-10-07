@@ -35,7 +35,13 @@ export async function GET({ url }) {
     let uuid = url.searchParams.get('uuid');
     if (uuid ===  null || uuid === '') return json({ attachment });
 
-    const client = await weaviate.connectToLocal();
+    const client = await weaviate.connectToLocal(
+    {
+        host: env.WEAVIATE,   // URL only, no http prefix
+        port: 50080,
+        grpcPort: 50051,     // Default is 50051, WCD uses 443
+    });
+    
     const collection = client.collections.get("Attachment");
     const results = await collection.query.fetchObjects({
         filters: collection.filter.byId().equal(uuid)
