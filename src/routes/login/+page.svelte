@@ -4,7 +4,7 @@
     async function handleSubmit(event: Event) {
         event.preventDefault();
 
-        const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode('nowicanthink'));
+        const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(password));
         const hashArray = Array.from(new Uint8Array(hash));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 

@@ -50,9 +50,9 @@ services:
     ports:
       - "80:80"
     environment:
-      - PASSWORD=${PASSWORD:?}
-      - PORT=${PORT:?}
-      - WEAVIATE=${WEAVIATE:?}
+      - PASSWORD=${PASSWORD:?error}
+      - PORT=${PORT:?error}
+      - WEAVIATE=${WEAVIATE:?error}
     depends_on:
       - weaviate
 
