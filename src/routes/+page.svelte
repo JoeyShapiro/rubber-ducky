@@ -14,6 +14,11 @@
 	// add colors to login
 	// escape markdown
 	// qna get
+	// import export
+	// model
+	// link
+	// attachments dont work
+	// still feels odd
 
 	let duck_v = new Duck('', '');
 
