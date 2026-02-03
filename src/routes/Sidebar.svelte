@@ -8,6 +8,7 @@
   let newDuckTo: string = '';
   let newBadling: boolean = false;
   let hidden = store.hidden;
+  let darkMode = store.darkMode;
 
   function getCookie(name: string): string | undefined {
 		const value = `; ${document.cookie}`;
@@ -193,6 +194,9 @@
   <!-- wanted skyrim symbols for hidden/detected -->
   <button class="btn-hidden rounded border-0 m-3 position-absolute bottom-0 end-50" on:click={() => hidden.set(!$hidden)}>
     <img src={$hidden ? "/hidden.svg" : "/detected.svg"} alt="visibility" class="me-2" width="16" height="16" />
+  </button>
+  <button class="btn-hidden rounded border-0 position-absolute bottom-0 start-0 mb-3 ms-3" on:click={() => darkMode.set(!$darkMode)} style="margin-left: 3.5rem !important;">
+    <img src={$darkMode ? "/sun.svg" : "/moon.svg"} alt="dark mode" class="me-2" width="16" height="16" />
   </button>
 </div>
 
