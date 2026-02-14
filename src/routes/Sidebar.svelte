@@ -197,7 +197,6 @@
     <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />
   </button>
   <!-- wanted skyrim symbols for hidden/detected -->
-   <!-- TODO make other svgs do cur fill -->
   <button class="btn-hidden rounded border-0 m-3 position-absolute bottom-0 end-50" on:click={() => hidden.set(!$hidden)}>
     <img src={$hidden ? "/hidden.svg" : "/detected.svg"} alt="visibility" class="me-2" width="16" height="16" />
   </button>

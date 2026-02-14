@@ -30,6 +30,7 @@
 	--bs-tertiary-bg-rgb: 45, 45, 43;
 	--bs-border-color: #3a3a3a;
 	--bs-border-color-translucent: rgba(58, 58, 58, 0.175);
+	--bs-warning-bg-subtle: rgb(127, 127, 50);
 	
 	/* Toast/card backgrounds for dark mode */
 	--bs-body-bg-tertiary: rgb(35, 35, 33);
@@ -63,6 +64,10 @@ body {
 	background-color: var(--bs-secondary-bg);
 	color: var(--bs-form-control-color);
 	border-color: #6c757d;
+}
+
+:root[data-theme="dark"] textarea::placeholder {
+	color: var(--text-secondary);
 }
 
 /* Dark mode toast styling */
@@ -104,4 +109,12 @@ body {
 :root[data-theme="dark"] .btn-outline-secondary:hover {
 	background-color: var(--bs-tertiary-bg);
 	color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .btn-toggle::before {
+  filter: invert(1) brightness(1.1);
+}
+
+:root[data-theme="dark"] img[src$=".svg"] {
+  filter: invert(1) brightness(1.1);
 }
