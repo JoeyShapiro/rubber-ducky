@@ -250,6 +250,10 @@
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)~~(.*?)~~/gs, '<del>$1</del>');
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)__(.*?)__/gs, '<u>$1</u>');
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)\[(.*?)\]\((.*?)\)/gs, '<a href="$2">$1</a>');
+			node.innerHTML = node.innerHTML.replace(/(?<!\\)\n/g, '<br>');
+			node.innerHTML = node.innerHTML.replace(/https?:\/\/\S+/g, (p1) => {
+				return `<a href="${p1}">${p1}</a>`;
+			});
 			// spoilers
 			node.innerHTML = node.innerHTML.replace(/(?<!\\)\|\|(.*?)\|\|/gs, '<span class="spoil">$1</span>');
 		}
