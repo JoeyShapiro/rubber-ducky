@@ -489,6 +489,7 @@ background-color: rgb(230, 230, 220);
 					{#if message.attachments.length > 0}
 						{#each message.attachments as attachment}
 							{#if attachment.type.includes('image')}
+								<!-- TODO something is wrong. first upload breaks it, but others dont. maybe different paths -->
 								<img id={attachment.uuid} src={attachment.content} alt={attachment.name} style="max-width: 100%" />
 							{:else}
 							<div class="card acrylic m-1 flip-card-inner">

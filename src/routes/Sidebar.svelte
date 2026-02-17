@@ -110,7 +110,15 @@
     }
 
     onMount(() => {
-
+      // Listen for system theme changes
+      darkMode.set(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+        if (event.matches) {
+          darkMode.set(true);
+        } else {
+          darkMode.set(false);
+        }
+      });
 
         fetch('/ducks', {
           headers: {
