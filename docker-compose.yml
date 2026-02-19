@@ -55,6 +55,7 @@ services:
       - WEAVIATE=${WEAVIATE:?error}
     depends_on:
       - weaviate
+    restart: on-failure:0
 
 volumes:
   weaviate_data:
