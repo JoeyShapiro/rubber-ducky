@@ -61,6 +61,27 @@ export class Message {
     }
 }
 
+export class Note {
+    uuid: string;
+    content: string;
+
+    constructor(uuid: string, content: string) {
+        this.uuid = uuid;
+        this.content = content;
+    }
+
+    static fromJSON(json: any): Note {
+        return new Note(json.uuid, json.content);
+    }
+
+    static fromWeaviate(n: any): Note {
+        let uuid = n.uuid;
+        let content = n.properties.content?.toString() || "";
+
+        return new Note(uuid, content);
+    }
+}
+
 export class Duck {
     uuid: string;
     name: string;

@@ -26,6 +26,7 @@
 	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
 	let attachments: Attachment[] = [];
 	let notes = '';
+	let savedNotes = ''; // Track the last saved note content
 
 	let loading = false;
 	let offset = 0;
@@ -35,7 +36,11 @@
 	function getCookie(name: string): string | undefined {
 		const value = `; ${document.cookie}`;
 		const parts = value.split(`; ${name}=`);
-		if (parts.length === 2) return parts.pop().split(';').shift();
+		if (parts.length === 2) {
+			const part = parts.pop();
+			if (!part) return undefined;
+			return part.split(';').shift();
+		}
 	}
 
 	async function metaRegisterLanguage(name: string) {
@@ -192,6 +197,32 @@
 					});
 			})
 			.catch(err => {
+				// check the status code
+				// if 401, redirect to login
+				if (err.status === 401) {
+					window.location.href = `${window.location.origin}/login`;
+				}
+			});
+	}
+
+	async function handleSaveNotes() {
+		fetch('/notes', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				duck: duck_v.uuid,
+				notes: notes
+			})
+		})
+			.then(res => res.json())
+			.then(data => {
+				savedNotes = notes;
+				console.log('Notes saved');
+			})
+			.catch(err => {
+				console.error(err);
 				// check the status code
 				// if 401, redirect to login
 				if (err.status === 401) {
@@ -411,6 +442,16 @@
 		duck.subscribe((value: Duck) => {
 			duck_v = value;
 
+			fetch(`/notes?duck=${duck_v.uuid}`)
+				.then(res => res.json())
+				.then(data => {
+					notes = data.notes ? data.notes.content : '';
+					savedNotes = notes;
+				})
+				.catch(err => {
+					console.error('notes', err);
+				});
+
 			fetch(`/messages?duck=${duck_v.uuid}`)
 				.then(res => res.json())
 				.then(data => {
@@ -534,7 +575,13 @@ background-color: rgb(230, 230, 220);
 	<!-- Right side: Notes -->
 	<!-- TODO add my own git db for this lol -->
 	<div class="d-flex flex-column w-50 p-3">
-		<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."></textarea>
+		<div class="notes-container flex-fill d-flex flex-column">
+			<div class="notes-header d-flex justify-content-between align-items-center px-3 py-2">
+				<span class="notes-title fw-semibold">Notes</span>
+				<button class="btn btn-sm btn-warning" on:click={handleSaveNotes} disabled={notes === savedNotes}>Save</button>
+			</div>
+			<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."></textarea>
+		</div>
 	</div>
 </section>
 
@@ -544,16 +591,37 @@ background-color: rgb(230, 230, 220);
 		max-height: 33vh;
 	}
 
-	.notes-area {
+	.notes-container {
 		background: rgba(248, 248, 255, 0.4);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
-		border: 1px solid rgba(212, 212, 250, 0.3) !important;
+		border: 1px solid rgba(212, 212, 250, 0.3);
 		border-radius: 8px;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.notes-header {
+		background: rgba(212, 212, 250, 0.5);
+		border-bottom: 1px solid rgba(212, 212, 250, 0.4);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+
+	.notes-title {
+		color: rgba(0, 0, 0, 0.75);
+		font-size: 0.9rem;
+		user-select: none;
+	}
+
+	.notes-area {
+		background: transparent;
+		border: none !important;
+		border-radius: 0;
 		font-size: 0.95rem;
 		line-height: 1.6;
 		transition: all 0.2s ease;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 		resize: none;
 		overflow-y: auto;
 		min-height: 0;
@@ -561,9 +629,7 @@ background-color: rgb(230, 230, 220);
 
 	.notes-area:focus {
 		outline: none;
-		background: rgba(255, 255, 255, 0.6);
-		border-color: rgba(186, 52, 235, 0.4) !important;
-		box-shadow: 0 6px 20px rgba(186, 52, 235, 0.15), 0 0 0 3px rgba(186, 52, 235, 0.05);
+		background: rgba(255, 255, 255, 0.2);
 	}
 
 	.notes-area::placeholder {
