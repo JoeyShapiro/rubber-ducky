@@ -25,6 +25,7 @@
 	let text = '';
 	let messages: Message[] = []; // if not declared, some stuff will not work. but will partly with js
 	let attachments: Attachment[] = [];
+	let notes = '';
 
 	let loading = false;
 	let offset = 0;
@@ -475,63 +476,99 @@ style="background-color: rgb(240, 240, 230);"
 background-color: rgb(230, 230, 220);
 -->
 
-<section class="d-flex flex-column bg-gradient w-100" style="max-height: 100vh;">
-	<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
-		{#if loading}
-			<div class="alert alert-info mt-2">Loading...</div>
-		{/if}
-		{#if messages.length > 0}
-		<!-- need the uuid to stop list oddness -->
-		{#each messages as message (message.uuid)}
-			<div use:onLoadMessage class="toast fade show m-2 w-50 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
-				<div class="toast-body text-body mb-2" style="min-height: 4rem;">
-					{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
-					{#if message.attachments.length > 0}
-						{#each message.attachments as attachment}
-							{#if attachment.type.includes('image')}
-								<!-- TODO something is wrong. first upload breaks it, but others dont. maybe different paths -->
-								<img id={attachment.uuid} src={attachment.content} alt={attachment.name} style="max-width: 100%" />
-							{:else}
-							<div class="card acrylic m-1 flip-card-inner">
-								<div class="card-body">
-									<img src="/cute-doc.svg" alt="duck" class="me-2" width="32" height="32" />
-									<a href="/attachments?uuid={attachment.uuid}">{attachment.name}</a>
-								</div>
-							</div>
-							{/if}
-						{/each}
-					{/if}
-				</div>
-				<small id="date" class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
-			</div>
-		{/each}
-		{/if}
-	</div>
-	<button on:click={() => question = !question} class="btn btn-toggle rounded border-0 position-fixed end-0 mb-5" style="bottom: 2em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
-	
-	<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
-		<button type="button" class="btn btn-outline-secondary position-relative" on:click={() => document.getElementById('input-file')?.click()}>
-			<img src="/attachment.svg" alt="attachment" class="me-2" width="16" height="16" />
-			{#if attachments.length > 0}
-				<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-					{attachments.length}
-				</span>
+<section class="d-flex flex-row bg-gradient w-100" style="max-height: 100vh;">
+	<!-- Left side: Chat and input -->
+	<div class="d-flex flex-column w-50 position-relative">
+		<div id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
+			{#if loading}
+				<div class="alert alert-info mt-2">Loading...</div>
 			{/if}
-		</button>
-		<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
-			aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
-		<input type="file" id="input-file" accept="*" on:change={handleFileSelect} style="display: none;">
-		<div id="send-btn-listener"> <!-- not sure im keeping the button -->
-			<input style="width: auto; height: 100%; { question ? 'background-color: #ba34eb !important;' : '' }" class="btn btn-warning" type="submit"
-				id="send-btn" value="Send" />
+			{#if messages.length > 0}
+			<!-- need the uuid to stop list oddness -->
+			{#each messages as message (message.uuid)}
+				<div use:onLoadMessage class="toast fade show m-2 w-75 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
+					<div class="toast-body text-body mb-2" style="min-height: 4rem;">
+						{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
+						{#if message.attachments.length > 0}
+							{#each message.attachments as attachment}
+								{#if attachment.type.includes('image')}
+									<!-- TODO something is wrong. first upload breaks it, but others dont. maybe different paths -->
+									<img id={attachment.uuid} src={attachment.content} alt={attachment.name} style="max-width: 100%" />
+								{:else}
+								<div class="card acrylic m-1 flip-card-inner">
+									<div class="card-body">
+										<img src="/cute-doc.svg" alt="duck" class="me-2" width="32" height="32" />
+										<a href="/attachments?uuid={attachment.uuid}">{attachment.name}</a>
+									</div>
+								</div>
+								{/if}
+							{/each}
+						{/if}
+					</div>
+					<small id="date" class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
+				</div>
+			{/each}
+			{/if}
 		</div>
-	</form>
+
+		<button on:click={() => question = !question} class="btn btn-toggle rounded border-0 position-absolute" style="bottom: 4.5em; right: 1em;" type="button" id="load-btn"><img src="/magic.svg" alt="magic" class="me-2" width="32" height="32" /></button>
+		<form class="input-group mb-2 w-100 p-1" on:submit|preventDefault={handleSubmit} id="form">
+			<button type="button" class="btn btn-outline-secondary position-relative" on:click={() => document.getElementById('input-file')?.click()}>
+				<img src="/attachment.svg" alt="attachment" class="me-2" width="16" height="16" />
+				{#if attachments.length > 0}
+					<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+						{attachments.length}
+					</span>
+				{/if}
+			</button>
+			<textarea bind:value={text} style="width: auto;" class="form-control auto-resize" aria-label="Sizing example input"
+				aria-describedby="inputGroup-sizing-default" placeholder="Message" id="send-text"></textarea>
+			<input type="file" id="input-file" accept="*" on:change={handleFileSelect} style="display: none;">
+			<div id="send-btn-listener"> <!-- not sure im keeping the button -->
+				<input style="width: auto; height: 100%; { question ? 'background-color: #ba34eb !important;' : '' }" class="btn btn-warning" type="submit"
+					id="send-btn" value="Send" />
+			</div>
+		</form>
+	</div>
+
+	<!-- Right side: Notes -->
+	<!-- TODO add my own git db for this lol -->
+	<div class="d-flex flex-column w-50 p-3">
+		<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."></textarea>
+	</div>
 </section>
 
 <style>
 	.auto-resize {
 		resize: none;
 		max-height: 33vh;
+	}
+
+	.notes-area {
+		background: rgba(248, 248, 255, 0.4);
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(212, 212, 250, 0.3) !important;
+		border-radius: 8px;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		transition: all 0.2s ease;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+		resize: none;
+		overflow-y: auto;
+		min-height: 0;
+	}
+
+	.notes-area:focus {
+		outline: none;
+		background: rgba(255, 255, 255, 0.6);
+		border-color: rgba(186, 52, 235, 0.4) !important;
+		box-shadow: 0 6px 20px rgba(186, 52, 235, 0.15), 0 0 0 3px rgba(186, 52, 235, 0.05);
+	}
+
+	.notes-area::placeholder {
+		color: rgba(108, 117, 125, 0.5);
+		font-style: italic;
 	}
 
 	.btn-toggle {
