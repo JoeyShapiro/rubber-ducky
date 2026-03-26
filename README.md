@@ -36,3 +36,29 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+
+## Export Weaviate data
+
+This project includes a helper script to export all app collections from Weaviate into flat files that are easy to import into Postgres.
+
+Run the export:
+
+```bash
+npm run export:weaviate
+```
+
+Optional flags:
+
+```bash
+node export-weaviate.js --format=json,csv --outDir=exports --collections=Session,Badling,Duck,Message,Attachment,Answer,Note --pageSize=200
+```
+
+What it writes:
+
+- `exports/weaviate-export-<timestamp>/weaviate-export.json`
+- `exports/weaviate-export-<timestamp>/csv/<Collection>.csv`
+
+Notes:
+
+- Requires `WEAVIATE` in your `.env`.
+- For related collections (`Duck`, `Message`, `Attachment`, `Note`), it adds a flattened `belongsToId` column in the output.
