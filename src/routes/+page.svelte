@@ -32,6 +32,51 @@
 	let offset = 0;
 	let languages: string[] = [];
 	let question = false;
+	type TaskStatus = 'active' | 'inactive' | 'completed' | 'aborted' | 'locked';
+	type MockTask = {
+		title: string;
+		due: string;
+		status: TaskStatus;
+		done: boolean;
+	};
+
+	const taskStatuses: TaskStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
+	let mockTasks: MockTask[] = [
+		{ title: 'Refactor note save flow', due: 'Today', status: 'active', done: false },
+		{ title: 'Migrate Weaviate export to Postgres import', due: 'Tomorrow', status: 'inactive', done: false },
+		{ title: 'Polish attachment rendering', due: 'Fri', status: 'aborted', done: false },
+		{ title: 'Write smoke test for /messages', due: 'Sat', status: 'completed', done: true }
+	];
+
+	function toStatusLabel(status: TaskStatus): string {
+		switch (status) {
+			case 'active':
+				return 'Active';
+			case 'inactive':
+				return 'Inactive';
+			case 'completed':
+				return 'Completed';
+			case 'aborted':
+				return 'Aborted';
+			case 'locked':
+				return 'Locked';
+		}
+	}
+
+	function toStatusClass(status: TaskStatus): string {
+		return `task-status-${status}`;
+	}
+
+	function setTaskStatus(index: number, status: TaskStatus) {
+		mockTasks[index].status = status;
+		mockTasks[index].done = status === 'completed';
+		mockTasks = [...mockTasks];
+	}
+
+	function handleTaskStatusChange(index: number, event: Event) {
+		const select = event.currentTarget as HTMLSelectElement;
+		setTaskStatus(index, select.value as TaskStatus);
+	}
 
 	function getCookie(name: string): string | undefined {
 		const value = `; ${document.cookie}`;
@@ -574,13 +619,43 @@ background-color: rgb(230, 230, 220);
 
 	<!-- Right side: Notes -->
 	<!-- TODO add my own git db for this lol -->
-	<div class="d-flex flex-column w-50 p-3">
-		<div class="notes-container flex-fill d-flex flex-column">
+	<div class="d-flex flex-column w-50 p-3 right-panel">
+		<div class="notes-container d-flex flex-column">
 			<div class="notes-header d-flex justify-content-between align-items-center px-3 py-2">
 				<span class="notes-title fw-semibold">Notes</span>
 				<button class="btn btn-sm btn-warning" on:click={handleSaveNotes} disabled={notes === savedNotes}>Save</button>
 			</div>
 			<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."></textarea>
+		</div>
+
+		<div class="tasks-container mt-3 d-flex flex-column">
+			<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
+				<span class="tasks-title fw-semibold">Tasks</span>
+				<span class="tasks-chip">Mockup</span>
+			</div>
+			<ul class="tasks-list list-unstyled m-0 p-3">
+				{#each mockTasks as task, index}
+					<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
+						<div class="task-copy d-flex flex-column w-100 gap-2">
+							<div class="d-flex justify-content-between align-items-center gap-2">
+								<span class="task-title {task.done ? 'task-done' : ''}">{task.title}</span>
+								<small class="task-due">{task.due}</small>
+							</div>
+							<div class="d-flex justify-content-end align-items-center gap-2">
+								<select
+									class="form-select form-select-sm task-status-select {toStatusClass(task.status)}"
+									value={task.status}
+									on:change={(e) => handleTaskStatusChange(index, e)}
+								>
+									{#each taskStatuses as status}
+										<option value={status}>{toStatusLabel(status)}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
+					</li>
+				{/each}
+			</ul>
 		</div>
 	</div>
 </section>
@@ -600,6 +675,7 @@ background-color: rgb(230, 230, 220);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 		overflow: hidden;
 		min-height: 0;
+		flex: 1 1 0;
 	}
 
 	.notes-header {
@@ -635,6 +711,195 @@ background-color: rgb(230, 230, 220);
 	.notes-area::placeholder {
 		color: rgba(108, 117, 125, 0.5);
 		font-style: italic;
+	}
+
+	.tasks-container {
+		background: rgba(248, 248, 255, 0.4);
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(212, 212, 250, 0.3);
+		border-radius: 8px;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+		overflow: hidden;
+		min-height: 0;
+		flex: 2 1 0;
+	}
+
+	.right-panel {
+		min-height: 0;
+	}
+
+	.tasks-header {
+		background: rgba(212, 212, 250, 0.5);
+		border-bottom: 1px solid rgba(212, 212, 250, 0.4);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+
+	.tasks-title {
+		color: rgba(0, 0, 0, 0.75);
+		font-size: 0.9rem;
+		user-select: none;
+	}
+
+	.tasks-chip {
+		font-size: 0.75rem;
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+		background: rgba(255, 193, 7, 0.2);
+		border: 1px solid rgba(255, 193, 7, 0.45);
+		color: rgba(86, 61, 0, 0.9);
+	}
+
+	.tasks-list {
+		overflow-y: auto;
+	}
+
+	.task-item {
+		background: rgba(255, 255, 255, 0.45);
+		border: 1px solid rgba(212, 212, 250, 0.35);
+	}
+
+	.task-item:last-child {
+		margin-bottom: 0 !important;
+	}
+
+	.task-title {
+		font-size: 0.92rem;
+		font-weight: 500;
+	}
+
+	.task-done {
+		text-decoration: line-through;
+		opacity: 0.65;
+	}
+
+	.task-due {
+		color: rgba(108, 117, 125, 0.9);
+	}
+
+	.task-status-select {
+		max-width: 9.5rem;
+		font-size: 0.78rem;
+		line-height: 1.2;
+		padding-top: 0.25rem;
+		padding-bottom: 0.25rem;
+		padding-left: 0.7rem;
+		padding-right: 1.8rem;
+		border-radius: 999px;
+		font-weight: 600;
+		border-width: 1px;
+		border-style: solid;
+		appearance: none;
+		-webkit-appearance: none;
+		background-image:
+			linear-gradient(45deg, transparent 50%, currentColor 50%),
+			linear-gradient(135deg, currentColor 50%, transparent 50%);
+		background-position:
+			calc(100% - 14px) calc(50% - 2px),
+			calc(100% - 9px) calc(50% - 2px);
+		background-size: 5px 5px, 5px 5px;
+		background-repeat: no-repeat;
+		opacity: 0;
+		visibility: hidden;
+		transform: translateY(2px);
+		pointer-events: none;
+		transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.task-item:hover .task-status-select,
+	.task-item:focus-within .task-status-select {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+
+	.task-status-select:focus {
+		outline: none;
+		transform: translateY(-1px);
+		box-shadow: 0 0 0 0.16rem rgba(255, 193, 7, 0.22);
+	}
+
+	.task-status-select.task-status-active {
+		background: rgba(25, 135, 84, 0.12);
+		color: rgba(13, 110, 66, 0.95);
+		border-color: rgba(25, 135, 84, 0.25);
+	}
+
+	.task-status-select.task-status-inactive {
+		background: rgba(108, 117, 125, 0.12);
+		color: rgba(73, 80, 87, 0.95);
+		border-color: rgba(108, 117, 125, 0.3);
+	}
+
+	.task-status-select.task-status-completed {
+		background: rgba(13, 202, 240, 0.12);
+		color: rgba(5, 110, 140, 0.95);
+		border-color: rgba(13, 202, 240, 0.3);
+	}
+
+	.task-status-select.task-status-aborted {
+		background: rgba(220, 53, 69, 0.12);
+		color: rgba(132, 32, 41, 0.95);
+		border-color: rgba(220, 53, 69, 0.3);
+	}
+
+	.task-status-select.task-status-locked {
+		background: rgba(255, 193, 7, 0.16);
+		color: rgba(108, 77, 2, 0.95);
+		border-color: rgba(255, 193, 7, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-item {
+		background: rgba(35, 35, 33, 0.75);
+		border-color: rgba(80, 80, 80, 0.45);
+	}
+
+	:global(:root[data-theme="dark"]) .tasks-title {
+		color: rgba(232, 232, 232, 0.92);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select.task-status-active {
+		background: rgba(32, 201, 151, 0.2);
+		color: rgba(145, 255, 222, 0.95);
+		border-color: rgba(32, 201, 151, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select.task-status-inactive {
+		background: rgba(173, 181, 189, 0.16);
+		color: rgba(222, 226, 230, 0.92);
+		border-color: rgba(173, 181, 189, 0.3);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select.task-status-completed {
+		background: rgba(13, 202, 240, 0.2);
+		color: rgba(156, 236, 255, 0.95);
+		border-color: rgba(13, 202, 240, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select.task-status-aborted {
+		background: rgba(220, 53, 69, 0.22);
+		color: rgba(255, 185, 191, 0.95);
+		border-color: rgba(220, 53, 69, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select.task-status-locked {
+		background: rgba(255, 193, 7, 0.2);
+		color: rgba(255, 230, 156, 0.95);
+		border-color: rgba(255, 193, 7, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-status-select {
+		background-color: rgba(25, 25, 24, 0.75);
+		border-color: rgba(173, 181, 189, 0.28);
+		color: var(--text-primary);
+	}
+
+	:global(:root[data-theme="dark"]) .tasks-chip {
+		background: rgba(255, 193, 7, 0.15);
+		color: rgba(255, 224, 143, 0.95);
+		border-color: rgba(255, 193, 7, 0.3);
 	}
 
 	.btn-toggle {
