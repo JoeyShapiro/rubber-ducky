@@ -35,6 +35,7 @@
 	type TaskStatus = 'active' | 'inactive' | 'completed' | 'aborted' | 'locked';
 	type MockTask = {
 		title: string;
+		description: string;
 		due: string;
 		status: TaskStatus;
 		done: boolean;
@@ -42,11 +43,14 @@
 
 	const taskStatuses: TaskStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
 	let mockTasks: MockTask[] = [
-		{ title: 'Refactor note save flow', due: 'Today', status: 'active', done: false },
-		{ title: 'Migrate Weaviate export to Postgres import', due: 'Tomorrow', status: 'inactive', done: false },
-		{ title: 'Polish attachment rendering', due: 'Fri', status: 'aborted', done: false },
-		{ title: 'Write smoke test for /messages', due: 'Sat', status: 'completed', done: true }
+		{ title: 'Refactor note save flow', description: 'Split save logic and tighten error handling around note updates.', due: 'Today', status: 'active', done: false },
+		{ title: 'Migrate Weaviate export to Postgres import', description: 'Map exported IDs into FK-safe insert order for the new schema.', due: 'Tomorrow', status: 'inactive', done: false },
+		{ title: 'Polish attachment rendering', description: 'Fix first-upload image edge case and standardize preview sizes.', due: 'Fri', status: 'aborted', done: false },
+		{ title: 'Write smoke test for /messages', description: 'Cover load, pagination, and sort behavior end to end.', due: 'Sat', status: 'completed', done: true }
 	];
+	let showTaskModal = false;
+	let newTaskTitle = '';
+	let newTaskDescription = '';
 
 	function toStatusLabel(status: TaskStatus): string {
 		switch (status) {
@@ -67,6 +71,21 @@
 		return `task-status-${status}`;
 	}
 
+	function iconForStatus(status: TaskStatus): string {
+		switch (status) {
+			case 'active':
+				return 'M8 1.5l2.08 4.21 4.65.68-3.36 3.27.79 4.63L8 12.1l-4.16 2.19.79-4.63-3.36-3.27 4.65-.68L8 1.5z';
+			case 'inactive':
+				return 'M8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z';
+			case 'completed':
+				return 'M13.5 3.5a1 1 0 0 1 0 1.4l-6.3 6.3a1 1 0 0 1-1.4 0L2.5 7.9a1 1 0 1 1 1.4-1.4l2.6 2.6 5.6-5.6a1 1 0 0 1 1.4 0z';
+			case 'aborted':
+				return 'M3.3 2.3a1 1 0 0 1 1.4 0L8 5.6l3.3-3.3a1 1 0 1 1 1.4 1.4L9.4 7l3.3 3.3a1 1 0 0 1-1.4 1.4L8 8.4l-3.3 3.3a1 1 0 0 1-1.4-1.4L6.6 7 3.3 3.7a1 1 0 0 1 0-1.4z';
+			case 'locked':
+				return 'M5 6V4.8A3 3 0 0 1 8 1.8a3 3 0 0 1 3 3V6h.5A1.5 1.5 0 0 1 13 7.5v5A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-5A1.5 1.5 0 0 1 4.5 6H5zm2 0h2V4.8A1 1 0 0 0 8 3.8a1 1 0 0 0-1 1V6z';
+		}
+	}
+
 	function setTaskStatus(index: number, status: TaskStatus) {
 		mockTasks[index].status = status;
 		mockTasks[index].done = status === 'completed';
@@ -76,6 +95,36 @@
 	function handleTaskStatusChange(index: number, event: Event) {
 		const select = event.currentTarget as HTMLSelectElement;
 		setTaskStatus(index, select.value as TaskStatus);
+	}
+
+	function openTaskModal() {
+		showTaskModal = true;
+	}
+
+	function declineTaskModal() {
+		showTaskModal = false;
+		newTaskTitle = '';
+		newTaskDescription = '';
+	}
+
+	function acceptTaskModal() {
+		const title = newTaskTitle.trim();
+		if (title === '') {
+			return;
+		}
+
+		mockTasks = [
+			{
+				title,
+				description: newTaskDescription.trim(),
+				due: 'No due date',
+				status: 'active',
+				done: false
+			},
+			...mockTasks
+		];
+
+		declineTaskModal();
 	}
 
 	function getCookie(name: string): string | undefined {
@@ -631,16 +680,29 @@ background-color: rgb(230, 230, 220);
 		<div class="tasks-container mt-3 d-flex flex-column">
 			<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
 				<span class="tasks-title fw-semibold">Tasks</span>
-				<span class="tasks-chip">Mockup</span>
+				<div class="d-flex align-items-center gap-2">
+					<span class="tasks-chip">Mockup</span>
+					<button class="btn btn-sm btn-warning" on:click={openTaskModal} type="button">New Task</button>
+				</div>
 			</div>
 			<ul class="tasks-list list-unstyled m-0 p-3">
 				{#each mockTasks as task, index}
 					<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
+					<!-- TODO use skyrim symbols -->
+						<div class="task-icon-wrap {toStatusClass(task.status)}" title={toStatusLabel(task.status)} aria-hidden="true">
+							<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor">
+								<path d={iconForStatus(task.status)}></path>
+							</svg>
+						</div>
+						<!-- todo support sub tasks. symbol will also have number instead of status -->
 						<div class="task-copy d-flex flex-column w-100 gap-2">
 							<div class="d-flex justify-content-between align-items-center gap-2">
 								<span class="task-title {task.done ? 'task-done' : ''}">{task.title}</span>
 								<small class="task-due">{task.due}</small>
 							</div>
+							{#if task.description !== ''}
+								<p class="task-description m-0">{task.description}</p>
+							{/if}
 							<div class="d-flex justify-content-end align-items-center gap-2">
 								<select
 									class="form-select form-select-sm task-status-select {toStatusClass(task.status)}"
@@ -659,6 +721,27 @@ background-color: rgb(230, 230, 220);
 		</div>
 	</div>
 </section>
+
+{#if showTaskModal}
+	<div class="task-modal-backdrop" on:click={(e) => e.target === e.currentTarget && declineTaskModal()} role="presentation">
+		<div class="task-modal card" role="dialog" aria-modal="true" aria-label="Create task">
+			<div class="task-modal-header d-flex justify-content-between align-items-center px-3 py-2">
+				<h2 class="task-modal-title m-0">Create New Task</h2>
+			</div>
+			<div class="task-modal-body p-3">
+				<label class="form-label mb-1" for="task-title">Title</label>
+				<input id="task-title" class="form-control mb-3" bind:value={newTaskTitle} placeholder="Task title" maxlength="120" />
+
+				<label class="form-label mb-1" for="task-description">Description</label>
+				<textarea id="task-description" class="form-control" bind:value={newTaskDescription} placeholder="Describe the task..." rows="4"></textarea>
+			</div>
+			<div class="task-modal-footer d-flex justify-content-end gap-2 px-3 pb-3">
+				<button type="button" class="btn btn-outline-secondary" on:click={declineTaskModal}>Decline</button>
+				<button type="button" class="btn btn-warning" on:click={acceptTaskModal} disabled={newTaskTitle.trim() === ''}>Accept</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.auto-resize {
@@ -758,6 +841,7 @@ background-color: rgb(230, 230, 220);
 	.task-item {
 		background: rgba(255, 255, 255, 0.45);
 		border: 1px solid rgba(212, 212, 250, 0.35);
+		gap: 0.75rem;
 	}
 
 	.task-item:last-child {
@@ -769,6 +853,52 @@ background-color: rgb(230, 230, 220);
 		font-weight: 500;
 	}
 
+	.task-icon-wrap {
+		width: 1.8rem;
+		height: 1.8rem;
+		border-radius: 999px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid transparent;
+		flex-shrink: 0;
+	}
+
+	.task-icon {
+		width: 0.95rem;
+		height: 0.95rem;
+	}
+
+	.task-icon-wrap.task-status-active {
+		background: rgba(25, 135, 84, 0.12);
+		color: rgba(13, 110, 66, 0.95);
+		border-color: rgba(25, 135, 84, 0.25);
+	}
+
+	.task-icon-wrap.task-status-inactive {
+		background: rgba(108, 117, 125, 0.12);
+		color: rgba(73, 80, 87, 0.95);
+		border-color: rgba(108, 117, 125, 0.3);
+	}
+
+	.task-icon-wrap.task-status-completed {
+		background: rgba(13, 202, 240, 0.12);
+		color: rgba(5, 110, 140, 0.95);
+		border-color: rgba(13, 202, 240, 0.3);
+	}
+
+	.task-icon-wrap.task-status-aborted {
+		background: rgba(220, 53, 69, 0.12);
+		color: rgba(132, 32, 41, 0.95);
+		border-color: rgba(220, 53, 69, 0.3);
+	}
+
+	.task-icon-wrap.task-status-locked {
+		background: rgba(255, 193, 7, 0.16);
+		color: rgba(108, 77, 2, 0.95);
+		border-color: rgba(255, 193, 7, 0.35);
+	}
+
 	.task-done {
 		text-decoration: line-through;
 		opacity: 0.65;
@@ -776,6 +906,12 @@ background-color: rgb(230, 230, 220);
 
 	.task-due {
 		color: rgba(108, 117, 125, 0.9);
+	}
+
+	.task-description {
+		font-size: 0.84rem;
+		line-height: 1.45;
+		color: rgba(58, 58, 70, 0.86);
 	}
 
 	.task-status-select {
@@ -856,6 +992,36 @@ background-color: rgb(230, 230, 220);
 		border-color: rgba(80, 80, 80, 0.45);
 	}
 
+	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-active {
+		background: rgba(32, 201, 151, 0.2);
+		color: rgba(145, 255, 222, 0.95);
+		border-color: rgba(32, 201, 151, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-inactive {
+		background: rgba(173, 181, 189, 0.16);
+		color: rgba(222, 226, 230, 0.92);
+		border-color: rgba(173, 181, 189, 0.3);
+	}
+
+	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-completed {
+		background: rgba(13, 202, 240, 0.2);
+		color: rgba(156, 236, 255, 0.95);
+		border-color: rgba(13, 202, 240, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-aborted {
+		background: rgba(220, 53, 69, 0.22);
+		color: rgba(255, 185, 191, 0.95);
+		border-color: rgba(220, 53, 69, 0.35);
+	}
+
+	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-locked {
+		background: rgba(255, 193, 7, 0.2);
+		color: rgba(255, 230, 156, 0.95);
+		border-color: rgba(255, 193, 7, 0.35);
+	}
+
 	:global(:root[data-theme="dark"]) .tasks-title {
 		color: rgba(232, 232, 232, 0.92);
 	}
@@ -900,6 +1066,56 @@ background-color: rgb(230, 230, 220);
 		background: rgba(255, 193, 7, 0.15);
 		color: rgba(255, 224, 143, 0.95);
 		border-color: rgba(255, 193, 7, 0.3);
+	}
+
+	:global(:root[data-theme="dark"]) .task-description {
+		color: rgba(196, 196, 210, 0.85);
+	}
+
+	.task-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgba(18, 18, 28, 0.42);
+		backdrop-filter: blur(3px);
+		-webkit-backdrop-filter: blur(3px);
+		z-index: 1100;
+	}
+
+	.task-modal {
+		width: min(560px, 100%);
+		background: rgba(248, 248, 255, 0.96);
+		border: 1px solid rgba(212, 212, 250, 0.5);
+		border-radius: 12px;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+	}
+
+	.task-modal-header {
+		background: rgba(212, 212, 250, 0.45);
+		border-bottom: 1px solid rgba(212, 212, 250, 0.5);
+	}
+
+	.task-modal-title {
+		font-size: 1rem;
+		font-weight: 650;
+		color: rgba(33, 33, 44, 0.9);
+	}
+
+	:global(:root[data-theme="dark"]) .task-modal {
+		background: rgba(35, 35, 33, 0.97);
+		border-color: rgba(88, 88, 88, 0.45);
+	}
+
+	:global(:root[data-theme="dark"]) .task-modal-header {
+		background: rgba(55, 55, 52, 0.8);
+		border-bottom-color: rgba(88, 88, 88, 0.5);
+	}
+
+	:global(:root[data-theme="dark"]) .task-modal-title {
+		color: rgba(234, 234, 234, 0.95);
 	}
 
 	.btn-toggle {
