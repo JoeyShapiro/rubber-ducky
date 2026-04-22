@@ -37,6 +37,8 @@ await client.collections.create({
         { name: 'status', dataType: dataType.TEXT },
         { name: 'done', dataType: dataType.BOOLEAN },
         { name: 'createdOn', dataType: dataType.DATE },
+        // TODO updatedOn
+        // TODO any changes will be logged to the chat as 'system'
         { name: 'questParentId', dataType: dataType.TEXT },
     ],
     references: [{

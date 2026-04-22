@@ -43,6 +43,19 @@ services:
   #   volumes:
   #     - ollama_data:/root/.ollama
   
+  postgres:
+    image: pgvector/pgvector:pg17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error}
+      POSTGRES_DB: rubber_ducky
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: on-failure:0
+
   web:
     build:
       context: .
@@ -55,8 +68,10 @@ services:
       - WEAVIATE=${WEAVIATE:?error}
     depends_on:
       - weaviate
+      - postgres
     restart: on-failure:0
 
 volumes:
   weaviate_data:
+  postgres_data:
   # ollama_data:
