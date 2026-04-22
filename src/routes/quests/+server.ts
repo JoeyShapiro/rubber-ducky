@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client';
-import { Quest } from '$lib/types.js';
+import { Quest, Message } from '$lib/types.js';
 import { env } from '$lib/env';
 
 async function getClient() {
@@ -75,8 +75,21 @@ export async function PATCH({ request }) {
 		properties: {
 			status: data.status,
 			done: data.status === 'completed',
+			updatedOn: new Date(),
 		},
 	});
+
+	if (data.duck) {
+		const messagesCollection = client.collections.get('Message');
+		const timestamp = new Date();
+		const title = data.title || 'Quest';
+		const content = `Quest &ldquo;${title}&rdquo; &rarr; ${data.status}`;
+		const uuid = await messagesCollection.data.insert({
+			properties: { from: 'system', content, timestamp },
+			references: { belongsTo: data.duck },
+		});
+		return json({ ok: true, systemMessage: new Message(uuid, 'system', content, timestamp) });
+	}
 
 	return json({ ok: true });
 }

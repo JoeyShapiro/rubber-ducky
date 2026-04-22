@@ -118,3 +118,18 @@ body {
 :root[data-theme="dark"] img[src$=".svg"] {
   filter: invert(1) brightness(1.1);
 }
+
+.toast.system-message {
+	background: transparent !important;
+	box-shadow: none !important;
+	border: none !important;
+	font-size: 0.78em;
+	font-style: italic;
+	color: var(--text-secondary);
+	width: fit-content !important;
+}
+
+.toast.system-message .toast-body {
+	padding: 0.15rem 0.75rem;
+	color: var(--text-secondary);
+}

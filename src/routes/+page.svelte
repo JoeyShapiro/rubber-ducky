@@ -87,16 +87,21 @@
 	}
 
 	async function setQuestStatus(questUuid: string, status: QuestStatus) {
-		await fetch('/quests', {
+		const quest = quests.find(q => q.uuid === questUuid);
+		const res = await fetch('/quests', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ uuid: questUuid, status }),
+			body: JSON.stringify({ uuid: questUuid, status, duck: duck_v.uuid, title: quest?.title }),
 		});
 		const idx = quests.findIndex(q => q.uuid === questUuid);
 		if (idx !== -1) {
 			quests[idx].status = status;
 			quests[idx].done = status === 'completed';
 			quests = [...quests];
+		}
+		const result = await res.json();
+		if (result.systemMessage) {
+			messages = [...messages, Message.fromJSON(result.systemMessage)];
 		}
 	}
 
@@ -640,6 +645,11 @@ background-color: rgb(230, 230, 220);
 			{#if messages.length > 0}
 			<!-- need the uuid to stop list oddness -->
 			{#each messages as message (message.uuid)}
+				{#if message.from === 'system'}
+				<div use:onLoadMessage class="toast fade show mx-auto system-message {$hidden ? 'spoil' : ''}" role="log">
+					<div class="toast-body text-center">{@html message.content}</div>
+				</div>
+				{:else}
 				<div use:onLoadMessage class="toast fade show m-2 w-75 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
 					<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 						{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
@@ -661,6 +671,7 @@ background-color: rgb(230, 230, 220);
 					</div>
 					<small id="date" class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
 				</div>
+				{/if}
 			{/each}
 			{/if}
 		</div>

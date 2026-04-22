@@ -93,8 +93,9 @@ export class Quest {
     due: string;
     status: QuestStatus;
     done: boolean;
+    updated_on: Date | null;
 
-    constructor(uuid: string, parent_id: string, quest_parent_id: string, title: string, description: string, due: string, status: QuestStatus, done: boolean) {
+    constructor(uuid: string, parent_id: string, quest_parent_id: string, title: string, description: string, due: string, status: QuestStatus, done: boolean, updated_on: Date | null = null) {
         this.uuid = uuid;
         this.parent_id = parent_id;
         this.quest_parent_id = quest_parent_id;
@@ -103,6 +104,7 @@ export class Quest {
         this.due = due;
         this.status = status;
         this.done = done;
+        this.updated_on = updated_on;
     }
 
     static fromWeaviate(q: any): Quest {
@@ -114,7 +116,8 @@ export class Quest {
         const due = q.properties.due?.toString() || '';
         const status = (q.properties.status?.toString() || 'active') as QuestStatus;
         const done = q.properties.done || false;
-        return new Quest(uuid, parent_id, quest_parent_id, title, description, due, status, done);
+        const updated_on = q.properties.updatedOn ? new Date(q.properties.updatedOn.toString()) : null;
+        return new Quest(uuid, parent_id, quest_parent_id, title, description, due, status, done, updated_on);
     }
 }
 
