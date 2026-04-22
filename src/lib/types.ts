@@ -82,6 +82,39 @@ export class Note {
     }
 }
 
+export type QuestStatus = 'active' | 'inactive' | 'completed' | 'aborted' | 'locked';
+
+export class Quest {
+    uuid: string;
+    parent_id: string;
+    title: string;
+    description: string;
+    due: string;
+    status: QuestStatus;
+    done: boolean;
+
+    constructor(uuid: string, parent_id: string, title: string, description: string, due: string, status: QuestStatus, done: boolean) {
+        this.uuid = uuid;
+        this.parent_id = parent_id;
+        this.title = title;
+        this.description = description;
+        this.due = due;
+        this.status = status;
+        this.done = done;
+    }
+
+    static fromWeaviate(q: any): Quest {
+        const uuid = q.uuid;
+        const parent_id = q.references?.belongsTo?.objects?.[0]?.uuid || '';
+        const title = q.properties.title?.toString() || '';
+        const description = q.properties.description?.toString() || '';
+        const due = q.properties.due?.toString() || '';
+        const status = (q.properties.status?.toString() || 'active') as QuestStatus;
+        const done = q.properties.done || false;
+        return new Quest(uuid, parent_id, title, description, due, status, done);
+    }
+}
+
 export class Duck {
     uuid: string;
     name: string;

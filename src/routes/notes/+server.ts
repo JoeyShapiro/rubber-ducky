@@ -19,6 +19,7 @@ export async function GET({ url }) {
 		sort: notesCollection.sort.byCreationTime(false),
 	});
 
+	if (results.objects.length === 0) return json({ notes: null });
 	return json({ notes: Note.fromWeaviate(results.objects[0]) });
 }
 

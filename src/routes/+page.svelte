@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { duck, hidden } from './stores.js';
-	import { Attachment, Message, Duck } from "$lib/types";
+	import { Attachment, Message, Duck, Quest, type QuestStatus } from "$lib/types";
 	import hljs from 'highlight.js/lib/core';
 	import 'highlight.js/styles/default.css'; // need to get the styles
 
@@ -32,46 +32,28 @@
 	let offset = 0;
 	let languages: string[] = [];
 	let question = false;
-	type TaskStatus = 'active' | 'inactive' | 'completed' | 'aborted' | 'locked';
-	type MockTask = {
-		title: string;
-		description: string;
-		due: string;
-		status: TaskStatus;
-		done: boolean;
-	};
 
-	const taskStatuses: TaskStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
-	let mockTasks: MockTask[] = [
-		{ title: 'Refactor note save flow', description: 'Split save logic and tighten error handling around note updates.', due: 'Today', status: 'active', done: false },
-		{ title: 'Migrate Weaviate export to Postgres import', description: 'Map exported IDs into FK-safe insert order for the new schema.', due: 'Tomorrow', status: 'inactive', done: false },
-		{ title: 'Polish attachment rendering', description: 'Fix first-upload image edge case and standardize preview sizes.', due: 'Fri', status: 'aborted', done: false },
-		{ title: 'Write smoke test for /messages', description: 'Cover load, pagination, and sort behavior end to end.', due: 'Sat', status: 'completed', done: true }
-	];
+	const taskStatuses: QuestStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
+	let quests: Quest[] = [];
 	let showTaskModal = false;
 	let newTaskTitle = '';
 	let newTaskDescription = '';
 
-	function toStatusLabel(status: TaskStatus): string {
+	function toStatusLabel(status: QuestStatus): string {
 		switch (status) {
-			case 'active':
-				return 'Active';
-			case 'inactive':
-				return 'Inactive';
-			case 'completed':
-				return 'Completed';
-			case 'aborted':
-				return 'Aborted';
-			case 'locked':
-				return 'Locked';
+			case 'active': return 'Active';
+			case 'inactive': return 'Inactive';
+			case 'completed': return 'Completed';
+			case 'aborted': return 'Aborted';
+			case 'locked': return 'Locked';
 		}
 	}
 
-	function toStatusClass(status: TaskStatus): string {
+	function toStatusClass(status: QuestStatus): string {
 		return `task-status-${status}`;
 	}
 
-	function iconForStatus(status: TaskStatus): string {
+	function iconForStatus(status: QuestStatus): string {
 		switch (status) {
 			case 'active':
 				return 'M8 1.5l2.08 4.21 4.65.68-3.36 3.27.79 4.63L8 12.1l-4.16 2.19.79-4.63-3.36-3.27 4.65-.68L8 1.5z';
@@ -86,15 +68,21 @@
 		}
 	}
 
-	function setTaskStatus(index: number, status: TaskStatus) {
-		mockTasks[index].status = status;
-		mockTasks[index].done = status === 'completed';
-		mockTasks = [...mockTasks];
+	async function setQuestStatus(index: number, status: QuestStatus) {
+		const quest = quests[index];
+		await fetch('/quests', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ uuid: quest.uuid, status }),
+		});
+		quests[index].status = status;
+		quests[index].done = status === 'completed';
+		quests = [...quests];
 	}
 
 	function handleTaskStatusChange(index: number, event: Event) {
 		const select = event.currentTarget as HTMLSelectElement;
-		setTaskStatus(index, select.value as TaskStatus);
+		setQuestStatus(index, select.value as QuestStatus);
 	}
 
 	function openTaskModal() {
@@ -107,22 +95,22 @@
 		newTaskDescription = '';
 	}
 
-	function acceptTaskModal() {
+	async function acceptTaskModal() {
 		const title = newTaskTitle.trim();
-		if (title === '') {
-			return;
-		}
+		if (title === '' || !duck_v.uuid) return;
 
-		mockTasks = [
-			{
+		const res = await fetch('/quests', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				duck: duck_v.uuid,
 				title,
 				description: newTaskDescription.trim(),
-				due: 'No due date',
-				status: 'active',
-				done: false
-			},
-			...mockTasks
-		];
+				due: '',
+			}),
+		});
+		const data = await res.json();
+		quests = [data.quest, ...quests];
 
 		declineTaskModal();
 	}
@@ -591,6 +579,15 @@
 				.catch(err => {
 					console.error('messages', err);
 				});
+
+			fetch(`/quests?duck=${duck_v.uuid}`)
+				.then(res => res.json())
+				.then(data => {
+					quests = data.quests;
+				})
+				.catch(err => {
+					console.error('quests', err);
+				});
 		});
 
 		window.addEventListener('scroll', handleScroll);
@@ -679,34 +676,31 @@ background-color: rgb(230, 230, 220);
 
 		<div class="tasks-container mt-3 d-flex flex-column">
 			<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
-				<span class="tasks-title fw-semibold">Tasks</span>
-				<div class="d-flex align-items-center gap-2">
-					<span class="tasks-chip">Mockup</span>
-					<button class="btn btn-sm btn-warning" on:click={openTaskModal} type="button">New Task</button>
-				</div>
+				<span class="tasks-title fw-semibold">Quests</span>
+				<button class="btn btn-sm btn-warning" on:click={openTaskModal} type="button">New Quest</button>
 			</div>
 			<ul class="tasks-list list-unstyled m-0 p-3">
-				{#each mockTasks as task, index}
+				{#each quests as quest, index}
 					<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
-					<!-- TODO use skyrim symbols -->
-						<div class="task-icon-wrap {toStatusClass(task.status)}" title={toStatusLabel(task.status)} aria-hidden="true">
+						<!-- TODO use skyrim symbols -->
+						<div class="task-icon-wrap {toStatusClass(quest.status)}" title={toStatusLabel(quest.status)} aria-hidden="true">
 							<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor">
-								<path d={iconForStatus(task.status)}></path>
+								<path d={iconForStatus(quest.status)}></path>
 							</svg>
 						</div>
 						<!-- todo support sub tasks. symbol will also have number instead of status -->
 						<div class="task-copy d-flex flex-column w-100 gap-2">
 							<div class="d-flex justify-content-between align-items-center gap-2">
-								<span class="task-title {task.done ? 'task-done' : ''}">{task.title}</span>
-								<small class="task-due">{task.due}</small>
+								<span class="task-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
+								{#if quest.due}<small class="task-due">{quest.due}</small>{/if}
 							</div>
-							{#if task.description !== ''}
-								<p class="task-description m-0">{task.description}</p>
+							{#if quest.description !== ''}
+								<p class="task-description m-0">{quest.description}</p>
 							{/if}
 							<div class="d-flex justify-content-end align-items-center gap-2">
 								<select
-									class="form-select form-select-sm task-status-select {toStatusClass(task.status)}"
-									value={task.status}
+									class="form-select form-select-sm task-status-select {toStatusClass(quest.status)}"
+									value={quest.status}
 									on:change={(e) => handleTaskStatusChange(index, e)}
 								>
 									{#each taskStatuses as status}
@@ -726,14 +720,14 @@ background-color: rgb(230, 230, 220);
 	<div class="task-modal-backdrop" on:click={(e) => e.target === e.currentTarget && declineTaskModal()} role="presentation">
 		<div class="task-modal card" role="dialog" aria-modal="true" aria-label="Create task">
 			<div class="task-modal-header d-flex justify-content-between align-items-center px-3 py-2">
-				<h2 class="task-modal-title m-0">Create New Task</h2>
+				<h2 class="task-modal-title m-0">Create New Quest</h2>
 			</div>
 			<div class="task-modal-body p-3">
 				<label class="form-label mb-1" for="task-title">Title</label>
-				<input id="task-title" class="form-control mb-3" bind:value={newTaskTitle} placeholder="Task title" maxlength="120" />
+				<input id="task-title" class="form-control mb-3" bind:value={newTaskTitle} placeholder="Quest title" maxlength="120" />
 
 				<label class="form-label mb-1" for="task-description">Description</label>
-				<textarea id="task-description" class="form-control" bind:value={newTaskDescription} placeholder="Describe the task..." rows="4"></textarea>
+				<textarea id="task-description" class="form-control" bind:value={newTaskDescription} placeholder="Describe the quest..." rows="4"></textarea>
 			</div>
 			<div class="task-modal-footer d-flex justify-content-end gap-2 px-3 pb-3">
 				<button type="button" class="btn btn-outline-secondary" on:click={declineTaskModal}>Decline</button>
