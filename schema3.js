@@ -37,6 +37,7 @@ await client.collections.create({
         { name: 'status', dataType: dataType.TEXT },
         { name: 'done', dataType: dataType.BOOLEAN },
         { name: 'createdOn', dataType: dataType.DATE },
+        { name: 'questParentId', dataType: dataType.TEXT },
     ],
     references: [{
         name: 'belongsTo',
@@ -57,17 +58,47 @@ if (duckResults.objects.length > 0) {
 
     const samples = [
         { title: 'Add Quest persistence', description: 'Wire quests to Weaviate so they survive a page reload.', status: 'completed', done: true },
-        { title: 'Support subtasks', description: 'Allow quests to have child quests via parent_id references.', status: 'inactive', done: false },
+        { title: 'Support subtasks', description: 'Allow quests to have child quests via questParentId references.', status: 'completed', done: true },
         { title: 'Add due date picker', description: 'Replace the plain text due field with a real date input in the modal.', status: 'active', done: false },
         { title: 'Quest filtering', description: 'Add a filter bar to show only active, completed, or aborted quests.', status: 'inactive', done: false },
     ];
 
+    const sampleUuids = [];
     for (const s of samples) {
         const uuid = await quests.data.insert({
-            properties: { ...s, due: '', createdOn: new Date() },
+            properties: { ...s, due: '', createdOn: new Date(), questParentId: '' },
             references: { belongsTo: rubberDuckyUuid },
         });
+        sampleUuids.push(uuid);
         console.log('sample quest:', s.title, uuid);
+    }
+
+    // Subquests of "Support subtasks" (index 1)
+    const subtaskSubquests = [
+        { title: 'Design questParentId schema', description: 'Add questParentId text property to the Quest collection.', status: 'completed', done: true },
+        { title: 'Update API endpoints', description: 'Pass quest_parent in POST body; return it in the response.', status: 'completed', done: true },
+        { title: 'Build breadcrumb UI', description: 'Show a clickable breadcrumb trail when drilling into subquests.', status: 'completed', done: true },
+        { title: 'Replace icon with count', description: 'Show child count on the icon when a quest has subquests.', status: 'completed', done: true },
+    ];
+    for (const s of subtaskSubquests) {
+        const uuid = await quests.data.insert({
+            properties: { ...s, due: '', createdOn: new Date(), questParentId: sampleUuids[1] },
+            references: { belongsTo: rubberDuckyUuid },
+        });
+        console.log('  subquest:', s.title, uuid);
+    }
+
+    // Subquests of "Add due date picker" (index 2)
+    const datePickerSubquests = [
+        { title: 'Add date input to modal', description: 'Swap the plain text due field for an <input type="date">.', status: 'active', done: false },
+        { title: 'Format date for display', description: 'Show a human-readable date string on the quest card.', status: 'inactive', done: false },
+    ];
+    for (const s of datePickerSubquests) {
+        const uuid = await quests.data.insert({
+            properties: { ...s, due: '', createdOn: new Date(), questParentId: sampleUuids[2] },
+            references: { belongsTo: rubberDuckyUuid },
+        });
+        console.log('  subquest:', s.title, uuid);
     }
 } else {
     console.log('rubber-ducky duck not found, skipping sample quests');

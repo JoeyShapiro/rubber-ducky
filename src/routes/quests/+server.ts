@@ -49,13 +49,14 @@ export async function POST({ request }) {
 			status: 'active',
 			done: false,
 			createdOn: new Date(),
+			questParentId: data.quest_parent || '',
 		},
 		references: {
 			belongsTo: data.duck,
 		},
 	});
 
-	const quest = new Quest(uuid, data.duck, data.title, data.description || '', data.due || '', 'active', false);
+	const quest = new Quest(uuid, data.duck, data.quest_parent || '', data.title, data.description || '', data.due || '', 'active', false);
 	return json({ quest });
 }
 

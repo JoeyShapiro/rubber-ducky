@@ -35,9 +35,27 @@
 
 	const taskStatuses: QuestStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
 	let quests: Quest[] = [];
+	let questPath: Quest[] = [];
 	let showTaskModal = false;
 	let newTaskTitle = '';
 	let newTaskDescription = '';
+
+	$: currentParentId = questPath.length > 0 ? questPath[questPath.length - 1].uuid : '';
+	$: subquestCounts = quests.reduce((acc, q) => {
+		if (q.quest_parent_id) {
+			acc.set(q.quest_parent_id, (acc.get(q.quest_parent_id) || 0) + 1);
+		}
+		return acc;
+	}, new Map<string, number>());
+	$: visibleQuests = quests.filter(q => (q.quest_parent_id || '') === currentParentId);
+
+	function drillInto(quest: Quest) {
+		questPath = [...questPath, quest];
+	}
+
+	function breadcrumbTo(index: number) {
+		questPath = questPath.slice(0, index);
+	}
 
 	function toStatusLabel(status: QuestStatus): string {
 		switch (status) {
@@ -68,21 +86,23 @@
 		}
 	}
 
-	async function setQuestStatus(index: number, status: QuestStatus) {
-		const quest = quests[index];
+	async function setQuestStatus(questUuid: string, status: QuestStatus) {
 		await fetch('/quests', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ uuid: quest.uuid, status }),
+			body: JSON.stringify({ uuid: questUuid, status }),
 		});
-		quests[index].status = status;
-		quests[index].done = status === 'completed';
-		quests = [...quests];
+		const idx = quests.findIndex(q => q.uuid === questUuid);
+		if (idx !== -1) {
+			quests[idx].status = status;
+			quests[idx].done = status === 'completed';
+			quests = [...quests];
+		}
 	}
 
-	function handleTaskStatusChange(index: number, event: Event) {
+	function handleTaskStatusChange(questUuid: string, event: Event) {
 		const select = event.currentTarget as HTMLSelectElement;
-		setQuestStatus(index, select.value as QuestStatus);
+		setQuestStatus(questUuid, select.value as QuestStatus);
 	}
 
 	function openTaskModal() {
@@ -107,6 +127,7 @@
 				title,
 				description: newTaskDescription.trim(),
 				due: '',
+				quest_parent: currentParentId,
 			}),
 		});
 		const data = await res.json();
@@ -523,6 +544,7 @@
 		// has to be here, because "eagerly loaded" components are not loaded yet
 		duck.subscribe((value: Duck) => {
 			duck_v = value;
+			questPath = [];
 
 			fetch(`/notes?duck=${duck_v.uuid}`)
 				.then(res => res.json())
@@ -676,39 +698,51 @@ background-color: rgb(230, 230, 220);
 
 		<div class="tasks-container mt-3 d-flex flex-column">
 			<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
-				<span class="tasks-title fw-semibold">Quests</span>
-				<button class="btn btn-sm btn-warning" on:click={openTaskModal} type="button">New Quest</button>
+				<div class="breadcrumb-nav d-flex align-items-center gap-1">
+					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+					<span class="breadcrumb-btn {questPath.length === 0 ? 'breadcrumb-current' : ''}" on:click={() => breadcrumbTo(0)}>Quests</span>
+					{#each questPath as ancestor, i}
+						<span class="breadcrumb-sep">/</span>
+						<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+						<span class="breadcrumb-btn {i === questPath.length - 1 ? 'breadcrumb-current' : ''}" on:click={() => breadcrumbTo(i + 1)}>{ancestor.title}</span>
+					{/each}
+				</div>
+				<button class="btn btn-sm btn-warning" on:click={openTaskModal} type="button">{questPath.length > 0 ? 'New Subquest' : 'New Quest'}</button>
 			</div>
 			<ul class="tasks-list list-unstyled m-0 p-3">
-				{#each quests as quest, index}
+				{#each visibleQuests as quest}
 					<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
 						<!-- TODO use skyrim symbols -->
-						<div class="task-icon-wrap {toStatusClass(quest.status)}" title={toStatusLabel(quest.status)} aria-hidden="true">
-							<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor">
-								<path d={iconForStatus(quest.status)}></path>
-							</svg>
-						</div>
-						<!-- todo support sub tasks. symbol will also have number instead of status -->
-						<div class="task-copy d-flex flex-column w-100 gap-2">
-							<div class="d-flex justify-content-between align-items-center gap-2">
+						{#if subquestCounts.get(quest.uuid)}
+							<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+							<div class="task-icon-wrap {toStatusClass(quest.status)} task-icon-drill" title="{subquestCounts.get(quest.uuid)} subquests" on:click={() => drillInto(quest)}>
+								<span class="task-subcount">{subquestCounts.get(quest.uuid)}</span>
+							</div>
+						{:else}
+							<div class="task-icon-wrap {toStatusClass(quest.status)}" title={toStatusLabel(quest.status)} aria-hidden="true">
+								<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor">
+									<path d={iconForStatus(quest.status)}></path>
+								</svg>
+							</div>
+						{/if}
+						<div class="task-copy d-flex flex-column w-100 gap-1">
+							<div class="d-flex align-items-center gap-2">
 								<span class="task-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
-								{#if quest.due}<small class="task-due">{quest.due}</small>{/if}
+								{#if quest.due}<small class="task-due ms-auto">{quest.due}</small>{/if}
 							</div>
 							{#if quest.description !== ''}
 								<p class="task-description m-0">{quest.description}</p>
 							{/if}
-							<div class="d-flex justify-content-end align-items-center gap-2">
-								<select
-									class="form-select form-select-sm task-status-select {toStatusClass(quest.status)}"
-									value={quest.status}
-									on:change={(e) => handleTaskStatusChange(index, e)}
-								>
-									{#each taskStatuses as status}
-										<option value={status}>{toStatusLabel(status)}</option>
-									{/each}
-								</select>
-							</div>
 						</div>
+						<select
+							class="form-select form-select-sm task-status-select {toStatusClass(quest.status)} align-self-center ms-2"
+							value={quest.status}
+							on:change={(e) => handleTaskStatusChange(quest.uuid, e)}
+						>
+							{#each taskStatuses as status}
+								<option value={status}>{toStatusLabel(status)}</option>
+							{/each}
+						</select>
 					</li>
 				{/each}
 			</ul>
@@ -720,7 +754,7 @@ background-color: rgb(230, 230, 220);
 	<div class="task-modal-backdrop" on:click={(e) => e.target === e.currentTarget && declineTaskModal()} role="presentation">
 		<div class="task-modal card" role="dialog" aria-modal="true" aria-label="Create task">
 			<div class="task-modal-header d-flex justify-content-between align-items-center px-3 py-2">
-				<h2 class="task-modal-title m-0">Create New Quest</h2>
+				<h2 class="task-modal-title m-0">{questPath.length > 0 ? `New Subquest of "${questPath[questPath.length - 1].title}"` : 'Create New Quest'}</h2>
 			</div>
 			<div class="task-modal-body p-3">
 				<label class="form-label mb-1" for="task-title">Title</label>
@@ -909,7 +943,8 @@ background-color: rgb(230, 230, 220);
 	}
 
 	.task-status-select {
-		max-width: 9.5rem;
+		width: 8rem;
+		flex-shrink: 0;
 		font-size: 0.78rem;
 		line-height: 1.2;
 		padding-top: 0.25rem;
@@ -932,7 +967,7 @@ background-color: rgb(230, 230, 220);
 		background-repeat: no-repeat;
 		opacity: 0;
 		visibility: hidden;
-		transform: translateY(2px);
+		transform: translateX(4px);
 		pointer-events: none;
 		transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 	}
@@ -941,7 +976,7 @@ background-color: rgb(230, 230, 220);
 	.task-item:focus-within .task-status-select {
 		opacity: 1;
 		visibility: visible;
-		transform: translateY(0);
+		transform: translateX(0);
 		pointer-events: auto;
 	}
 
@@ -1064,6 +1099,67 @@ background-color: rgb(230, 230, 220);
 
 	:global(:root[data-theme="dark"]) .task-description {
 		color: rgba(196, 196, 210, 0.85);
+	}
+
+	.breadcrumb-nav {
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.breadcrumb-btn {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: rgba(0, 0, 0, 0.55);
+		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 10rem;
+		user-select: none;
+		transition: color 0.12s ease;
+	}
+
+	.breadcrumb-btn:hover {
+		color: rgba(0, 0, 0, 0.85);
+	}
+
+	.breadcrumb-btn.breadcrumb-current {
+		color: rgba(0, 0, 0, 0.8);
+	}
+
+	.breadcrumb-sep {
+		font-size: 0.8rem;
+		color: rgba(0, 0, 0, 0.3);
+		flex-shrink: 0;
+	}
+
+	:global(:root[data-theme="dark"]) .breadcrumb-btn {
+		color: rgba(220, 220, 220, 0.5);
+	}
+
+	:global(:root[data-theme="dark"]) .breadcrumb-btn:hover,
+	:global(:root[data-theme="dark"]) .breadcrumb-btn.breadcrumb-current {
+		color: rgba(220, 220, 220, 0.9);
+	}
+
+	:global(:root[data-theme="dark"]) .breadcrumb-sep {
+		color: rgba(220, 220, 220, 0.25);
+	}
+
+	.task-icon-drill {
+		cursor: pointer;
+		transition: filter 0.12s ease, transform 0.12s ease;
+	}
+
+	.task-icon-drill:hover {
+		filter: brightness(1.15);
+		transform: scale(1.08);
+	}
+
+	.task-subcount {
+		font-size: 0.75rem;
+		font-weight: 700;
+		line-height: 1;
 	}
 
 	.task-modal-backdrop {
