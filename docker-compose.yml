@@ -66,6 +66,8 @@ services:
       - PASSWORD=${PASSWORD:?error}
       - PORT=${PORT:?error}
       - WEAVIATE=${WEAVIATE:?error}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?error}
     depends_on:
       - weaviate
       - postgres
