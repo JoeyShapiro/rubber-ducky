@@ -71,6 +71,11 @@
 		return `task-status-${status}`;
 	}
 
+	function systemMessageStatus(content: string): string {
+		const match = content.match(/(\w+)$/);
+		return match ? match[1] : '';
+	}
+
 	function iconForStatus(status: QuestStatus): string {
 		switch (status) {
 			case 'active':
@@ -646,8 +651,10 @@ background-color: rgb(230, 230, 220);
 			<!-- need the uuid to stop list oddness -->
 			{#each messages as message (message.uuid)}
 				{#if message.from === 'system'}
-				<div use:onLoadMessage class="toast fade show mx-auto system-message {$hidden ? 'spoil' : ''}" role="log">
-					<div class="toast-body text-center">{@html message.content}</div>
+				<div use:onLoadMessage class="system-log-entry system-log-{systemMessageStatus(message.content)} {$hidden ? 'spoil' : ''}" role="log">
+					<span class="system-log-glyph">◈</span>
+					<span class="system-log-content">{@html message.content}</span>
+					<span class="system-log-time">{formatDate(message.timestamp)}</span>
 				</div>
 				{:else}
 				<div use:onLoadMessage class="toast fade show m-2 w-75 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
@@ -1237,5 +1244,101 @@ background-color: rgb(230, 230, 220);
 	background: rgba(212, 212, 250, 0.3);
 	-webkit-backdrop-filter: blur(10px);
 	backdrop-filter: blur(10px);
+}
+
+.system-log-entry {
+	display: flex;
+	align-items: baseline;
+	gap: 0.45rem;
+	width: 62%;
+	margin: 0.4rem auto;
+	padding: 0.45rem 0.75rem;
+	border-radius: 6px;
+	border: 1px solid rgba(130, 130, 140, 0.22);
+	border-left-width: 3px;
+	background: rgba(120, 120, 130, 0.08);
+	font-size: 0.78rem;
+	font-family: 'Courier New', monospace;
+	letter-spacing: 0.01em;
+	color: rgba(60, 60, 70, 0.72);
+}
+
+.system-log-glyph {
+	flex-shrink: 0;
+	opacity: 0.55;
+	font-size: 0.7rem;
+}
+
+.system-log-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.system-log-time {
+	flex-shrink: 0;
+	font-size: 0.68rem;
+	opacity: 0.5;
+	white-space: nowrap;
+}
+
+.system-log-active {
+	background: rgba(25, 135, 84, 0.07);
+	border-color: rgba(120, 120, 130, 0.18);
+	border-left-color: rgba(25, 135, 84, 0.5);
+}
+
+.system-log-inactive {
+	background: rgba(108, 117, 125, 0.07);
+	border-color: rgba(120, 120, 130, 0.18);
+	border-left-color: rgba(108, 117, 125, 0.45);
+}
+
+.system-log-completed {
+	background: rgba(13, 202, 240, 0.07);
+	border-color: rgba(120, 120, 130, 0.18);
+	border-left-color: rgba(13, 202, 240, 0.5);
+}
+
+.system-log-aborted {
+	background: rgba(220, 53, 69, 0.07);
+	border-color: rgba(120, 120, 130, 0.18);
+	border-left-color: rgba(220, 53, 69, 0.45);
+}
+
+.system-log-locked {
+	background: rgba(255, 193, 7, 0.07);
+	border-color: rgba(120, 120, 130, 0.18);
+	border-left-color: rgba(255, 193, 7, 0.5);
+}
+
+:global(:root[data-theme="dark"]) .system-log-entry {
+	background: rgba(80, 80, 90, 0.15);
+	border-color: rgba(160, 160, 170, 0.18);
+	color: rgba(180, 180, 190, 0.7);
+}
+
+:global(:root[data-theme="dark"]) .system-log-active {
+	background: rgba(32, 201, 151, 0.08);
+	border-left-color: rgba(32, 201, 151, 0.5);
+}
+
+:global(:root[data-theme="dark"]) .system-log-inactive {
+	background: rgba(173, 181, 189, 0.08);
+	border-left-color: rgba(173, 181, 189, 0.4);
+}
+
+:global(:root[data-theme="dark"]) .system-log-completed {
+	background: rgba(13, 202, 240, 0.08);
+	border-left-color: rgba(13, 202, 240, 0.5);
+}
+
+:global(:root[data-theme="dark"]) .system-log-aborted {
+	background: rgba(220, 53, 69, 0.1);
+	border-left-color: rgba(220, 53, 69, 0.5);
+}
+
+:global(:root[data-theme="dark"]) .system-log-locked {
+	background: rgba(255, 193, 7, 0.08);
+	border-left-color: rgba(255, 193, 7, 0.5);
 }
 </style>
