@@ -1,7 +1,10 @@
 import { json } from '@sveltejs/kit';
 import weaviate from 'weaviate-client';
-import { Quest, Message } from '$lib/types.js';
+import { Quest, Message, type QuestStatus } from '$lib/types.js';
 import { env } from '$lib/env';
+import { db } from '$lib/db';
+import { quests } from '$lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 async function getClient() {
 	return weaviate.connectToLocal({
@@ -16,16 +19,19 @@ export async function GET({ url }) {
 	if (!duck) return json({ quests: [] });
 
 	try {
-		const client = await getClient();
-		const questsCollection = client.collections.get('Quest');
-
-		const results = await questsCollection.query.fetchObjects({
-			filters: questsCollection.filter.byRef('belongsTo').byId().equal(duck),
-			returnReferences: [{ linkOn: 'belongsTo' }],
-			sort: questsCollection.sort.byCreationTime(false),
-		});
-
-		return json({ quests: results.objects.map(Quest.fromWeaviate) });
+		const rows = await db.select().from(quests).where(eq(quests.duckId, duck)).orderBy(desc(quests.createdOn));
+		const result = rows.map(r => new Quest(
+			r.id,
+			r.duckId,
+			r.questParentId ?? '',
+			r.title ?? '',
+			r.description ?? '',
+			r.due ?? '',
+			(r.status ?? 'active') as QuestStatus,
+			r.done ?? false,
+			r.updatedOn,
+		));
+		return json({ quests: result });
 	} catch {
 		return json({ quests: [] });
 	}
@@ -38,25 +44,27 @@ export async function POST({ request }) {
 		return json({ error: 'Missing duck or title' }, { status: 400 });
 	}
 
-	const client = await getClient();
-	const questsCollection = client.collections.get('Quest');
+	const [row] = await db.insert(quests).values({
+		title: data.title,
+		description: data.description || '',
+		due: data.due || '',
+		status: 'active',
+		done: false,
+		createdOn: new Date(),
+		questParentId: data.quest_parent || null,
+		duckId: data.duck,
+	}).returning();
 
-	const uuid = await questsCollection.data.insert({
-		properties: {
-			title: data.title,
-			description: data.description || '',
-			due: data.due || '',
-			status: 'active',
-			done: false,
-			createdOn: new Date(),
-			questParentId: data.quest_parent || '',
-		},
-		references: {
-			belongsTo: data.duck,
-		},
-	});
-
-	const quest = new Quest(uuid, data.duck, data.quest_parent || '', data.title, data.description || '', data.due || '', 'active', false);
+	const quest = new Quest(
+		row.id,
+		row.duckId,
+		row.questParentId ?? '',
+		row.title ?? '',
+		row.description ?? '',
+		row.due ?? '',
+		'active',
+		false,
+	);
 	return json({ quest });
 }
 
@@ -67,19 +75,14 @@ export async function PATCH({ request }) {
 		return json({ error: 'Missing uuid or status' }, { status: 400 });
 	}
 
-	const client = await getClient();
-	const questsCollection = client.collections.get('Quest');
-
-	await questsCollection.data.update({
-		id: data.uuid,
-		properties: {
-			status: data.status,
-			done: data.status === 'completed',
-			updatedOn: new Date(),
-		},
-	});
+	await db.update(quests).set({
+		status: data.status,
+		done: data.status === 'completed',
+		updatedOn: new Date(),
+	}).where(eq(quests.id, data.uuid));
 
 	if (data.duck) {
+		const client = await getClient();
 		const messagesCollection = client.collections.get('Message');
 		const timestamp = new Date();
 		const title = data.title || 'Quest';
