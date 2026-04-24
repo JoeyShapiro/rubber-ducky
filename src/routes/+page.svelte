@@ -39,6 +39,7 @@
 	let showTaskModal = false;
 	let newTaskTitle = '';
 	let newTaskDescription = '';
+	let newTaskDue = '';
 
 	$: currentParentId = questPath.length > 0 ? questPath[questPath.length - 1].uuid : '';
 	$: subquestCounts = quests.reduce((acc, q) => {
@@ -123,6 +124,7 @@
 		showTaskModal = false;
 		newTaskTitle = '';
 		newTaskDescription = '';
+		newTaskDue = '';
 	}
 
 	async function acceptTaskModal() {
@@ -136,7 +138,7 @@
 				duck: duck_v.uuid,
 				title,
 				description: newTaskDescription.trim(),
-				due: '',
+				due: newTaskDue,
 				quest_parent: currentParentId,
 			}),
 		});
@@ -779,7 +781,10 @@ background-color: rgb(230, 230, 220);
 				<input id="task-title" class="form-control mb-3" bind:value={newTaskTitle} placeholder="Quest title" maxlength="120" />
 
 				<label class="form-label mb-1" for="task-description">Description</label>
-				<textarea id="task-description" class="form-control" bind:value={newTaskDescription} placeholder="Describe the quest..." rows="4"></textarea>
+				<textarea id="task-description" class="form-control mb-3" bind:value={newTaskDescription} placeholder="Describe the quest..." rows="4"></textarea>
+
+				<label class="form-label mb-1" for="task-due">Due Date <span class="text-muted fw-normal">(optional)</span></label>
+				<input id="task-due" class="form-control" type="date" bind:value={newTaskDue} />
 			</div>
 			<div class="task-modal-footer d-flex justify-content-end gap-2 px-3 pb-3">
 				<button type="button" class="btn btn-outline-secondary" on:click={declineTaskModal}>Decline</button>
@@ -952,6 +957,12 @@ background-color: rgb(230, 230, 220);
 
 	.task-due {
 		color: rgba(108, 117, 125, 0.9);
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.task-item:hover .task-due {
+		opacity: 1;
 	}
 
 	.task-description {
