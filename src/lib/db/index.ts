@@ -3,7 +3,7 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 const client = postgres({
-    host: process.env.POSTGRES_HOST || 'localhost',
+    host: 'localhost',
     port: 5432,
     database: 'rubber_ducky',
     username: 'postgres',
