@@ -3,6 +3,7 @@ import { Message } from '$lib/types.js';
 import { db } from '$lib/db';
 import { messages as messagesTable, answers } from '$lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { embed } from '$lib/embedding';
 
 export async function GET({ url }) {
 	const duck = url.searchParams.get('duck');
@@ -39,11 +40,14 @@ export async function POST({ request }) {
 	const data = await request.json();
 	const timestamp = new Date();
 
+	const embedding = await embed(data.message);
+
 	const [row] = await db.insert(messagesTable).values({
 		from: 'user',
 		content: data.message,
 		timestamp,
 		duckId: data.duck,
+		...(embedding ? { embedding } : {}),
 	}).returning();
 
 	return json({ message: new Message(row.id, 'user', data.message, timestamp) });

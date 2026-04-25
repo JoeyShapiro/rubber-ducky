@@ -1,57 +1,46 @@
 import { json } from '@sveltejs/kit';
-import weaviate from 'weaviate-client';
 import { Message } from '$lib/types.js';
-import { env } from '$lib/env';
 import { db } from '$lib/db';
 import { answers } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-async function getClient() {
-	return weaviate.connectToLocal({
-		host: env.WEAVIATE,
-		port: 50080,
-		grpcPort: 50051,
-	});
-}
+const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
+const GEN_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2';
 
 export async function POST({ request }) {
 	const data = await request.json();
 
-	let uuid = '';
-	let timestamp = new Date(0);
 	let generated = '';
+	const timestamp = new Date();
 
 	try {
-		const client = await getClient();
-		const messages = client.collections.get('Message');
-		const result = await messages.generate.nearText(data.prompt, {
-			groupedTask: data.prompt,
-		}, {
-			limit: 3,
+		const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ model: GEN_MODEL, prompt: data.prompt, stream: false }),
 		});
 
-		const conns = JSON.stringify(
-			result.objects.map(item => ({ uuid: item.uuid, dist: item.metadata?.distance }))
-		);
+		if (res.status === 404) {
+			return json({ error: `Model '${GEN_MODEL}' is not installed. Run: ollama pull ${GEN_MODEL}` }, { status: 503 });
+		}
+		if (!res.ok) {
+			return json({ error: `Ollama error: ${res.status}` }, { status: 502 });
+		}
 
-		generated = result.generated || '';
-		timestamp = new Date();
-
-		const [row] = await db.insert(answers).values({
-			promt: data.prompt,
-			content: generated,
-			timestamp,
-			messages: conns,
-		}).returning();
-
-		uuid = row.id;
-	} catch (error) {
-		console.error(error);
-		generated = `Error: ${error}`;
-		timestamp = new Date();
+		const result = await res.json();
+		generated = result.response ?? '';
+	} catch (e) {
+		return json({ error: `Ollama unreachable: ${e}` }, { status: 503 });
 	}
 
-	return json({ message: new Message(uuid, 'ai', generated, timestamp) });
+	const [row] = await db.insert(answers).values({
+		promt: data.prompt,
+		content: generated,
+		timestamp,
+		messages: null,
+	}).returning();
+
+	return json({ message: new Message(row.id, 'ai', generated, timestamp) });
 }
 
 export async function GET({ url }) {
