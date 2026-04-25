@@ -1,41 +1,4 @@
 services:
-  weaviate:
-    command:
-    - --host
-    - 0.0.0.0
-    - --port
-    - '50080'
-    - --scheme
-    - http
-    image: cr.weaviate.io/semitechnologies/weaviate:1.26.1
-    ports:
-    - 50080:50080
-    - 50051:50051
-    volumes:
-    - weaviate_data:/var/lib/weaviate
-    restart: on-failure:0
-    environment:
-      TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
-      QNA_INFERENCE_API: 'http://qna-transformers:8080'
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'text2vec-transformers'
-      ENABLE_MODULES: 'text2vec-transformers,qna-transformers,generative-ollama'
-      CLUSTER_HOSTNAME: 'node1'
-
-  t2v-transformers:
-    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
-    environment:
-      ENABLE_CUDA: '0' # enable if running with CUDA
-      # NVIDIA_VISIBLE_DEVICES: all # enable if running with CUDA
-
-  qna-transformers:
-    image: cr.weaviate.io/semitechnologies/qna-transformers:distilbert-base-uncased-distilled-squad
-    environment:
-      ENABLE_CUDA: '0' # enable if running with CUDA
-      # NVIDIA_VISIBLE_DEVICES: all # enable if running with CUDA
-
   postgres:
     image: pgvector/pgvector:pg17
     ports:
@@ -49,5 +12,4 @@ services:
     restart: on-failure:0
 
 volumes:
-  weaviate_data:
   postgres_data:

@@ -1,18 +1,8 @@
 import { json } from '@sveltejs/kit';
-import weaviate from 'weaviate-client';
 import { Quest, Message, type QuestStatus } from '$lib/types.js';
-import { env } from '$lib/env';
 import { db } from '$lib/db';
-import { quests } from '$lib/db/schema';
+import { quests, messages as messagesTable } from '$lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
-
-async function getClient() {
-	return weaviate.connectToLocal({
-		host: env.WEAVIATE,
-		port: 50080,
-		grpcPort: 50051,
-	});
-}
 
 export async function GET({ url }) {
 	const duck = url.searchParams.get('duck');
@@ -82,16 +72,16 @@ export async function PATCH({ request }) {
 	}).where(eq(quests.id, data.uuid));
 
 	if (data.duck) {
-		const client = await getClient();
-		const messagesCollection = client.collections.get('Message');
 		const timestamp = new Date();
 		const title = data.title || 'Quest';
 		const content = `Quest &ldquo;${title}&rdquo; &rarr; ${data.status}`;
-		const uuid = await messagesCollection.data.insert({
-			properties: { from: 'system', content, timestamp },
-			references: { belongsTo: data.duck },
-		});
-		return json({ ok: true, systemMessage: new Message(uuid, 'system', content, timestamp) });
+		const [row] = await db.insert(messagesTable).values({
+			from: 'system',
+			content,
+			timestamp,
+			duckId: data.duck,
+		}).returning();
+		return json({ ok: true, systemMessage: new Message(row.id, 'system', content, timestamp) });
 	}
 
 	return json({ ok: true });

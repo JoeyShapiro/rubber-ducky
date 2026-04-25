@@ -1,72 +1,42 @@
 import { json } from '@sveltejs/kit';
-import weaviate from 'weaviate-client'
 import { Attachment } from '$lib/types';
-import { env } from '$lib/env';
+import { db } from '$lib/db';
+import { attachments as attachmentsTable } from '$lib/db/schema';
+import { eq } from 'drizzle-orm';
 
-export async function POST({ request, cookies }) {
+export async function POST({ request }) {
 	const data = await request.json();
 
-	const client = await weaviate.connectToLocal(
-    {
-        host: env.WEAVIATE,   // URL only, no http prefix
-        port: 50080,
-        grpcPort: 50051,     // Default is 50051, WCD uses 443
-    });
+	const [row] = await db.insert(attachmentsTable).values({
+		name: data.attachment.name,
+		type: data.attachment.type,
+		content: data.attachment.content,
+		messageId: data.message,
+	}).returning();
 
-	const collection = client.collections.get("Attachment");
-	let uuid = await collection.data.insert({
-        properties: {
-            'name': data.attachment.name,
-            'type': data.attachment.type,
-            'content': data.attachment.content,
-        },
-        references: {
-            'belongsTo': data.message,
-        }
-    });
-
-    // not sending the whole attachment back
-	return json({ message: data.message, attachment: new Attachment(uuid, data.type, data.name, '') });
+	return json({ message: data.message, attachment: new Attachment(row.id, row.type ?? '', row.name ?? '', '') });
 }
 
 export async function GET({ url }) {
-    let attachment: Attachment | null = null;
+	const uuid = url.searchParams.get('uuid');
+	if (!uuid) return json({ attachment: null });
 
-    let uuid = url.searchParams.get('uuid');
-    if (uuid ===  null || uuid === '') return json({ attachment });
+	const [row] = await db.select().from(attachmentsTable).where(eq(attachmentsTable.id, uuid));
+	if (!row) return json({ attachment: null });
 
-    const client = await weaviate.connectToLocal(
-    {
-        host: env.WEAVIATE,   // URL only, no http prefix
-        port: 50080,
-        grpcPort: 50051,     // Default is 50051, WCD uses 443
-    });
-    
-    const collection = client.collections.get("Attachment");
-    const results = await collection.query.fetchObjects({
-        filters: collection.filter.byId().equal(uuid)
-    })
+	const type = (row.type ?? '').replace('data:', '');
+	const content = row.content ?? '';
 
-    if (results.objects.length === 0) return json({ attachment });
-    attachment = Attachment.fromWeaviate(results.objects[0]);
+	const headers = new Headers();
+	headers.set('Content-Disposition', 'attachment; filename=' + (row.name ?? ''));
+	headers.set('Content-Type', type);
 
-    // remove data prefix from type cause idk
-    attachment.type = attachment.type.replace('data:', '');
+	const base64 = content.split(',')[1];
+	const binaryString = atob(base64);
+	const bytes = new Uint8Array(binaryString.length);
+	for (let i = 0; i < binaryString.length; i++) {
+		bytes[i] = binaryString.charCodeAt(i);
+	}
 
-    const headers = new Headers();
-    headers.set("Content-Disposition", "attachment; filename="+attachment.name);
-    headers.set("Content-Type", attachment.type);
-
-    // Convert base64 to Uint8Array
-    const base64 = attachment.content.split(',')[1];
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    return new Response(bytes, {
-        status: 200,
-        headers: headers
-    });
+	return new Response(bytes, { status: 200, headers });
 }

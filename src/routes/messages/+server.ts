@@ -1,109 +1,50 @@
 import { json } from '@sveltejs/kit';
-import weaviate from 'weaviate-client'
-import { Attachment, Message } from '$lib/types.js';
-import { env } from '$lib/env';
+import { Message } from '$lib/types.js';
+import { db } from '$lib/db';
+import { messages as messagesTable, answers } from '$lib/db/schema';
+import { eq, asc } from 'drizzle-orm';
 
 export async function GET({ url }) {
-	// get the params from url
-	let messages: Message[] = [];
-	let duck = url.searchParams.get('duck');
-	let offset = parseInt(url.searchParams.get('offset') || '0', 10);
-	if (duck ===  null || duck === '') return json({ messages });
+	const duck = url.searchParams.get('duck');
+	const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+	if (!duck) return json({ messages: [] });
 
-    // let messages = [ '', '', '', '', '', '', '', '', '', '', '', '' ];
+	const rows = await db.select().from(messagesTable)
+		.where(eq(messagesTable.duckId, duck))
+		.orderBy(asc(messagesTable.timestamp))
+		.limit(10)
+		.offset(offset);
 
-	const client = await weaviate.connectToLocal(
-	{
-		host: env.WEAVIATE,   // URL only, no http prefix
-		port: 50080,
-		grpcPort: 50051,     // Default is 50051, WCD uses 443
-	});
-	
-	const messagesCollection = client.collections.get("Message");
-	const results = await messagesCollection.query.fetchObjects({
-		filters: messagesCollection.filter.byRef('belongsTo').byId().equal(duck),
-		sort: messagesCollection.sort.byCreationTime(false),
-		limit: 10,
-		offset
-	});
+	const msgs: Message[] = rows.map(r =>
+		new Message(r.id, r.from ?? '', r.content ?? '', r.timestamp ?? new Date())
+	);
 
-	const attachmentsCollection = client.collections.get("Attachment");
-	for (const m of results.objects) {
-		let message = Message.fromWeaviate(m);
-		// get the possible attachments of the message
-		const attachments = await attachmentsCollection.query.fetchObjects({
-			filters: attachmentsCollection.filter.byRef('belongsTo').byId().equal(message.uuid),
-			returnProperties: [ 'name', 'type' ]
-		})
-		for (const a of attachments.objects) {
-			message.attachments.push(Attachment.fromWeaviate(a));
-		}
-
-		messages.push(message);
-	}
-
-	// get ai messages
-	const answers = client.collections.get('Answer');
-	const aiResults = await answers.query.fetchObjects({
-		sort: answers.sort.byCreationTime(false),
-		limit: 10,
-		offset
-	});
-
-	// find oldest message date
-	let oldest = new Date();
-	for (const m of messages) {
-		if (m.timestamp.getTime() < oldest.getTime()) {
-			oldest = m.timestamp;
+	// Merge AI answers that fall within the same time window
+	if (msgs.length > 0) {
+		const oldest = msgs.reduce((a, b) => (a.timestamp < b.timestamp ? a : b)).timestamp;
+		const answerRows = await db.select().from(answers).orderBy(asc(answers.timestamp));
+		for (const a of answerRows) {
+			const ts = a.timestamp ?? new Date();
+			if (ts >= oldest) {
+				msgs.push(new Message(a.id, 'ai', a.content ?? '', ts));
+			}
 		}
 	}
-	
-	for (const m of aiResults.objects) {
-		let timestamp = new Date(m.properties.timestamp?.toString() || "");
-		if (timestamp.getTime() < oldest.getTime()) {
-			continue; // cant confirm order
-		}
 
-		let message = new Message(m.uuid, m.properties.from?.toString() || '', m.properties.content?.toString() || '', timestamp);
-
-		messages.push(message);
-	}
-
-	// sort the messages by timestamp
-	// i feel like sql handles this better
-	messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-	return json({ messages });
+	msgs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+	return json({ messages: msgs });
 }
 
-export async function POST({ request, cookies }) {
+export async function POST({ request }) {
 	const data = await request.json();
-
-	const client = await weaviate.connectToLocal(
-	{
-		host: env.WEAVIATE,   // URL only, no http prefix
-		port: 50080,
-		grpcPort: 50051,     // Default is 50051, WCD uses 443
-	});
-
-	const ducks = client.collections.get('Duck');
-	const results = await ducks.query.fetchObjects({
-		filters: ducks.filter.byId().equal(data.duck),
-		returnProperties: ['name']
-	});
-
-	const messagesCollection = client.collections.get("Message");
 	const timestamp = new Date();
-	let uuid = await messagesCollection.data.insert({
-        properties: {
-			'from': 'user',
-            'content': data.message,
-            'timestamp': timestamp,
-        },
-        references: {
-            'belongsTo': results.objects[0].uuid,
-        }
-    });
 
-	return json({ message: new Message(uuid, 'user', data.message, timestamp) });
+	const [row] = await db.insert(messagesTable).values({
+		from: 'user',
+		content: data.message,
+		timestamp,
+		duckId: data.duck,
+	}).returning();
+
+	return json({ message: new Message(row.id, 'user', data.message, timestamp) });
 }
