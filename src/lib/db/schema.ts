@@ -35,7 +35,7 @@ export const ducks = pgTable('ducks', {
 
 export const messages = pgTable('messages', {
     id: uuid('id').primaryKey().defaultRandom(),
-    from: text('"from"'),
+    from: text('from'),
     content: text('content'),
     embedding: vector('embedding'),
     timestamp: timestamp('timestamp', { withTimezone: true }),

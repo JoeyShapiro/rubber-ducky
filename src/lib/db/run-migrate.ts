@@ -26,5 +26,5 @@ const client = postgres({
 
 const db = drizzle(client);
 await client`CREATE EXTENSION IF NOT EXISTS vector`;
-await migrate(db, { migrationsFolder: '/app/drizzle' });
+await migrate(db, { migrationsFolder: 'drizzle' });
 await client.end();
