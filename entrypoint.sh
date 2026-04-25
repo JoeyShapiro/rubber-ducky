@@ -19,4 +19,6 @@ until su -c "pg_isready -q" postgres; do sleep 1; done
 
 su -c "psql -c \"ALTER USER postgres WITH PASSWORD '${POSTGRES_PASSWORD}'\"" postgres
 
+bun /app/run-migrate.ts
+
 exec bun build/index.js

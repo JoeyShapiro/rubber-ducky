@@ -21,7 +21,7 @@ WORKDIR /app
 COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile
 COPY . .
-RUN bun run build && bun install --production
+RUN bun run db:generate && bun run build && bun install --production
 
 FROM debian:bookworm-slim
 
@@ -46,12 +46,13 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/src/lib/db/run-migrate.ts ./run-migrate.ts
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV PORT=80 \
-    WEAVIATE=localhost
+ENV PORT=80
 
 EXPOSE 80 5432
 ENTRYPOINT ["/entrypoint.sh"]

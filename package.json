@@ -2,6 +2,9 @@
 	"name": "rubber-ducky",
 	"version": "0.0.1",
 	"scripts": {
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "bun src/lib/db/run-migrate.ts",
+		"db:seed": "bun src/lib/db/run-seed.ts",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -18,6 +21,7 @@
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
 		"@types/eslint": "^9.6.0",
+		"@types/node": "^25.6.0",
 		"drizzle-kit": "^0.31.10",
 		"eslint": "^9.0.0",
 		"eslint-config-prettier": "^9.1.0",
