@@ -16,6 +16,8 @@ PASSWORD=??? # should be pre hashed
 PORT=80
 POSTGRES_PASSWORD=???
 OLLAMA_URL=http://localhost:11434
+# for proper importing of data
+BODY_SIZE_LIMIT=Infinity
 ```
 
 ## Creating a project
