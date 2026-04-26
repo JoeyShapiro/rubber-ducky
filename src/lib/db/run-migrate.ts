@@ -27,4 +27,23 @@ const client = postgres({
 const db = drizzle(client);
 await client`CREATE EXTENSION IF NOT EXISTS vector`;
 await migrate(db, { migrationsFolder: 'drizzle' });
+
+// Ensure the system badling and duck exist (idempotent)
+await client`
+	INSERT INTO badlings (id, name, created_on)
+	VALUES ('00000000-0000-0000-0000-000000000001', 'System', '2000-01-01')
+	ON CONFLICT DO NOTHING
+`;
+await client`
+	INSERT INTO ducks (id, name, description, created_on, badling_id)
+	VALUES (
+		'00000000-0000-0000-0000-000000000002',
+		'Daemon',
+		'System events, warnings, and logs',
+		'2000-01-01',
+		'00000000-0000-0000-0000-000000000001'
+	)
+	ON CONFLICT DO NOTHING
+`;
+
 await client.end();

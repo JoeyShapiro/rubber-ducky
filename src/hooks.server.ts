@@ -1,14 +1,22 @@
 import { initEmbedding } from '$lib/embedding';
-import { ensureSystemDuck, postSystemMessage } from '$lib/system';
+import { postSystemMessage } from '$lib/system';
 
-export async function init() {
-	await ensureSystemDuck();
+let startupDone = false;
 
-	const embeddingAvailable = await initEmbedding();
-
-	await postSystemMessage('Server started');
-
-	if (!embeddingAvailable) {
-		await postSystemMessage(`Warning: embedding service unavailable (${process.env.OLLAMA_URL ?? 'http://localhost:11434'}) — semantic search disabled`);
+export async function handle({ event, resolve }) {
+	if (!startupDone) {
+		startupDone = true;
+		try {
+			const embeddingAvailable = await initEmbedding();
+			await postSystemMessage('Server started');
+			if (!embeddingAvailable) {
+				await postSystemMessage(
+					`Warning: embedding service unavailable (${process.env.OLLAMA_URL ?? 'http://localhost:11434'}) — semantic search disabled`,
+				);
+			}
+		} catch (err) {
+			console.error('[startup]', err);
+		}
 	}
+	return resolve(event);
 }
