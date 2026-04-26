@@ -2,6 +2,22 @@
 
 Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
 
+## Use the public container
+```bash
+bun run build
+docker build -t rubber-ducky .
+
+docker run -v rddata:/var/lib/postgresql/data -env-file .env rubber-ducky
+```
+
+```bash
+# .env
+PASSWORD=??? # should be pre hashed
+PORT=80
+POSTGRES_PASSWORD=???
+OLLAMA_URL=http://localhost:11434
+```
+
 ## Creating a project
 
 If you're seeing this, you've probably already done this step. Congrats!
@@ -42,6 +58,12 @@ You can preview the production build with `npm run preview`.
 This project includes a helper script to export all app collections from Weaviate into flat files that are easy to import into Postgres.
 
 Run the export:
+
+```bash
+# export in docker
+docker cp export-weaviate.js rubber-ducky-web-1:/app/export-weaviate.js
+docker exec -it rubber-ducky-web-1 node export-weaviate.js
+```
 
 ```bash
 npm run export:weaviate
