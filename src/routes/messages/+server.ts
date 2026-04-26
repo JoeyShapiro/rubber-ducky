@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { Message } from '$lib/types.js';
 import { db } from '$lib/db';
 import { messages as messagesTable, answers } from '$lib/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { embed } from '$lib/embedding';
 
 export async function GET({ url }) {
@@ -12,7 +12,7 @@ export async function GET({ url }) {
 
 	const rows = await db.select().from(messagesTable)
 		.where(eq(messagesTable.duckId, duck))
-		.orderBy(asc(messagesTable.timestamp))
+		.orderBy(desc(messagesTable.timestamp))
 		.limit(10)
 		.offset(offset);
 
@@ -23,7 +23,7 @@ export async function GET({ url }) {
 	// Merge AI answers that fall within the same time window
 	if (msgs.length > 0) {
 		const oldest = msgs.reduce((a, b) => (a.timestamp < b.timestamp ? a : b)).timestamp;
-		const answerRows = await db.select().from(answers).orderBy(asc(answers.timestamp));
+		const answerRows = await db.select().from(answers).orderBy(desc(answers.timestamp));
 		for (const a of answerRows) {
 			const ts = a.timestamp ?? new Date();
 			if (ts >= oldest) {
