@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-USERNAME="JoeyShapiro"
+USERNAME="joeyshapiro"
 IMAGE="rubber-ducky"
 VERSION="2.0.1"
 # ──────────────────────────────────────────────────────────────────────────────
 
-FULL_IMAGE="${USERNAME}/${IMAGE}"
+FULL_IMAGE="docker.io/${USERNAME}/${IMAGE}"
 
 echo "Building ${FULL_IMAGE}:${VERSION} ..."
 

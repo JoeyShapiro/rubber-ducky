@@ -7,6 +7,7 @@ Everything you need to build a Svelte project, powered by [`create-svelte`](http
 bun run build
 docker build -t rubber-ducky .
 
+ollama pull nomic-embed-text
 docker run -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env rubber-ducky
 ```
 
@@ -15,7 +16,7 @@ docker run -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env rubber-du
 PASSWORD=??? # should be pre hashed
 PORT=80
 POSTGRES_PASSWORD=???
-OLLAMA_URL=http://localhost:11434
+OLLAMA_URL=http://host.docker.internal:11434
 # for proper importing of data
 BODY_SIZE_LIMIT=Infinity
 ```
