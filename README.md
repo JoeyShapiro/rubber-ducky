@@ -8,7 +8,7 @@ bun run build
 docker build -t rubber-ducky .
 
 ollama pull nomic-embed-text
-docker run -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env rubber-ducky
+docker run -d -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env joeyshapiro/rubber-ducky
 ```
 
 ```bash
