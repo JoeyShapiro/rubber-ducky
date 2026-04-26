@@ -1163,16 +1163,16 @@ background-color: rgb(230, 230, 220);
 	}
 
 	:global(:root[data-theme="dark"]) .breadcrumb-btn {
-		color: rgba(220, 220, 220, 0.5);
+		color: rgba(0, 0, 0, 0.45);
 	}
 
 	:global(:root[data-theme="dark"]) .breadcrumb-btn:hover,
 	:global(:root[data-theme="dark"]) .breadcrumb-btn.breadcrumb-current {
-		color: rgba(220, 220, 220, 0.9);
+		color: rgba(0, 0, 0, 0.75);
 	}
 
 	:global(:root[data-theme="dark"]) .breadcrumb-sep {
-		color: rgba(220, 220, 220, 0.25);
+		color: rgba(0, 0, 0, 0.3);
 	}
 
 	.task-icon-drill {

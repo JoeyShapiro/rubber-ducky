@@ -22,6 +22,8 @@
 	--bs-body-bg-rgb: 25, 25, 24;
 	--bs-body-color: #e8e8e8;
 	--bs-body-color-rgb: 232, 232, 232;
+	--bs-secondary-color: rgba(222, 226, 230, 0.75);
+	--bs-secondary-color-rgb: 222, 226, 230;
 	--bs-emphasis-color: #e8e8e8;
 	--bs-emphasis-color-rgb: 232, 232, 232;
 	--bs-secondary-bg: rgb(35, 35, 33);
