@@ -6,7 +6,8 @@ import { Duck, Badling } from '$lib/types';
 
 export async function GET({ request }) {
 	const sessionId = request.headers.get('session');
-	if (!sessionId) return error(401, { message: 'Unauthorized' });
+	const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	if (!sessionId || !uuidPattern.test(sessionId)) return error(401, { message: 'Unauthorized' });
 
 	const [sess] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
 	if (!sess || (sess.expiresOn && sess.expiresOn < new Date())) {

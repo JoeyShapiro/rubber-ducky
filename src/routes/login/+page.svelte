@@ -17,7 +17,10 @@
                   'password' : hashHex,
                 })
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Invalid password');
+                return res.json();
+            })
             .then(data => {
                 document.cookie = `session=${data.uuid}; expires=${data.expiresOn}; path=/`;
                 window.location.href = `${window.location.origin}/`;
