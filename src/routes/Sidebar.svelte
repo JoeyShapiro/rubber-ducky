@@ -46,6 +46,7 @@
     function loadDuck(duck: Duck) {
         store.duck.set(duck);
         duck_v = duck;
+        document.cookie = `lastDuck=${duck.uuid}; path=/; max-age=31536000`;
     }
 
     function addDuck(badling: string) {
@@ -156,6 +157,13 @@
       })
 			.then(data => {
 				badlings = data.badlings;
+				const lastDuckUuid = getCookie('lastDuck');
+				if (lastDuckUuid) {
+					for (const b of badlings) {
+						const found = b.ducks.find((d: Duck) => d.uuid === lastDuckUuid);
+						if (found) { loadDuck(found); break; }
+					}
+				}
 			})
 			.catch(err => {
         if (err.status === 401) {
