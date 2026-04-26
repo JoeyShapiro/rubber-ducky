@@ -7,7 +7,7 @@ Everything you need to build a Svelte project, powered by [`create-svelte`](http
 bun run build
 docker build -t rubber-ducky .
 
-docker run -v rddata:/var/lib/postgresql/data --env-file .env rubber-ducky
+docker run -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env rubber-ducky
 ```
 
 ```bash

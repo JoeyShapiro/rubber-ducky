@@ -12,23 +12,34 @@
 
   type ImportState = null | 'loading' | { imported: Record<string, number> } | { error: string };
   let importState: ImportState = null;
+  let importFileInput: HTMLInputElement;
 
   async function handleImport(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    input.value = '';
     if (!file) return;
 
     importState = 'loading';
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('/import', { method: 'POST', body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Import failed');
+      const text = await file.text();
+      JSON.parse(text); // validate before sending
+      const res = await fetch('/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text,
+      });
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server error (${res.status}): ${await res.text().catch(() => 'no response body')}`);
+      }
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       importState = { imported: data.imported };
     } catch (err: any) {
       importState = { error: err.message ?? 'Import failed' };
+    } finally {
+      input.value = '';
     }
   }
 
@@ -242,28 +253,26 @@
     <button class="btn-hidden rounded border-0 mb-3 ms-3" on:click={() => darkMode.set(!$darkMode)}>
       <img src={$darkMode ? "/sun.svg" : "/moon.svg"} alt="dark mode" class="me-2" width="16" height="16" />
     </button>
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <span class="btn-hidden rounded border-0 mb-3 ms-3 import-btn" title="Import data" on:click={() => document.getElementById('import-file')?.click()}>
+    <button class="btn-hidden rounded border-0 mb-3 ms-3 import-btn" title="Import data" type="button" on:click={() => importFileInput?.click()}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="me-2">
         <path d="M8 1a.5.5 0 0 1 .5.5v6.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 .708-.708L7.5 8.293V1.5A.5.5 0 0 1 8 1z"/>
         <path d="M2.5 13a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"/>
       </svg>
-    </span>
-    <input type="file" id="import-file" accept=".json" style="display:none" on:change={handleImport} />
+    </button>
   </div>
+
+  <input bind:this={importFileInput} type="file" accept=".json" style="display:none" on:change={handleImport} />
 
   {#if importState !== null}
     <div class="import-status position-absolute" role="status">
       {#if importState === 'loading'}
-        <span class="import-loading">Importing...</span>
+        <span class="import-text">Importing...</span>
       {:else if 'error' in importState}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <span class="import-error" on:click={() => importState = null}>{importState.error} ✕</span>
+        <span class="import-text import-error">{importState.error}</span>
+        <button class="import-close" type="button" on:click={() => importState = null}>✕</button>
       {:else}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <span class="import-done" on:click={() => importState = null}>
-          Imported: {Object.entries(importState.imported).map(([k, v]) => `${v} ${k}`).join(', ')} ✕
-        </span>
+        <span class="import-text import-done">Imported: {Object.entries(importState.imported).map(([k, v]) => `${v} ${k}`).join(', ')}</span>
+        <button class="import-close" type="button" on:click={() => importState = null}>✕</button>
       {/if}
     </div>
   {/if}
@@ -363,23 +372,46 @@ div:hover > .bar-hidden {
   bottom: 3rem;
   left: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.75rem;
   font-size: 0.78rem;
   font-family: 'Courier New', monospace;
   border-top: 1px solid rgba(130, 130, 140, 0.2);
+  background: var(--bs-body-bg);
+  z-index: 10;
 }
 
-.import-loading {
+.import-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: rgba(108, 117, 125, 0.85);
 }
 
 .import-done {
   color: rgba(25, 135, 84, 0.9);
-  cursor: pointer;
 }
 
 .import-error {
   color: rgba(220, 53, 69, 0.9);
+}
+
+.import-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0 0.2rem;
+  font-size: 0.78rem;
+  color: rgba(108, 117, 125, 0.7);
   cursor: pointer;
+  line-height: 1;
+}
+
+.import-close:hover {
+  color: var(--bs-emphasis-color);
 }
 </style>

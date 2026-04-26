@@ -17,13 +17,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export async function POST({ request }) {
-	const form = await request.formData();
-	const file = form.get('file') as File | null;
-	if (!file) return json({ error: 'No file provided' }, { status: 400 });
+	try {
+		return await doImport(request);
+	} catch (err) {
+		console.error('[import]', err);
+		return json({ error: String(err) }, { status: 500 });
+	}
+}
 
+async function doImport(request: Request) {
 	let data: { collections: Record<string, any[]> };
 	try {
-		data = JSON.parse(await file.text());
+		data = await request.json();
 	} catch {
 		return json({ error: 'Invalid JSON' }, { status: 400 });
 	}
