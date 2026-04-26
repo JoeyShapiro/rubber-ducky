@@ -9,6 +9,7 @@ import {
 	answers,
 	notes,
 } from '$lib/db/schema';
+import { postSystemMessage } from '$lib/system';
 
 function chunk<T>(arr: T[], size: number): T[][] {
 	const out: T[][] = [];
@@ -21,6 +22,7 @@ export async function POST({ request }) {
 		return await doImport(request);
 	} catch (err) {
 		console.error('[import]', err);
+		await postSystemMessage(`Import failed — ${String(err)}`);
 		return json({ error: String(err) }, { status: 500 });
 	}
 }
@@ -163,6 +165,12 @@ async function doImport(request: Request) {
 		}
 		counts.notes = n;
 	}
+
+	const summary = Object.entries(counts)
+		.filter(([, v]) => v > 0)
+		.map(([k, v]) => `${v} ${k}`)
+		.join(', ');
+	await postSystemMessage(`Import complete — ${summary || 'nothing new'}`);
 
 	return json({ imported: counts });
 }

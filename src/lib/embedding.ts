@@ -3,7 +3,7 @@ const EMBED_MODEL = 'nomic-embed-text';
 
 let available = false;
 
-export async function initEmbedding(): Promise<void> {
+export async function initEmbedding(): Promise<boolean> {
 	try {
 		const res = await fetch(`${OLLAMA_URL}/api/embeddings`, {
 			method: 'POST',
@@ -12,9 +12,11 @@ export async function initEmbedding(): Promise<void> {
 		});
 		if (!res.ok) throw new Error(`status ${res.status}`);
 		available = true;
+		return true;
 	} catch (e) {
 		console.warn(`[embedding] nomic-embed-text unavailable — embeddings will be skipped. (${e})`);
 		available = false;
+		return false;
 	}
 }
 
