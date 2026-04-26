@@ -713,7 +713,9 @@ background-color: rgb(230, 230, 220);
 				<span class="notes-title fw-semibold">Notes</span>
 				<button class="btn btn-sm btn-warning" on:click={handleSaveNotes} disabled={notes === savedNotes}>Save</button>
 			</div>
-			<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."></textarea>
+			<textarea bind:value={notes} class="notes-area flex-fill p-3" placeholder="Notes..."
+				on:keydown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSaveNotes(); } }}
+			></textarea>
 		</div>
 
 		<div class="tasks-container mt-3 d-flex flex-column">
