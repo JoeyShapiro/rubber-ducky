@@ -1263,17 +1263,18 @@ background-color: rgb(230, 230, 220);
 	display: flex;
 	align-items: baseline;
 	gap: 0.45rem;
-	width: 62%;
-	margin: 0.4rem auto;
-	padding: 0.45rem 0.75rem;
+	width: 75%;
+	margin: 0.5rem;
+	padding: 0.5rem 0.75rem 1.6rem;
 	border-radius: 6px;
 	border: 1px solid rgba(130, 130, 140, 0.22);
 	border-left-width: 3px;
 	background: rgba(120, 120, 130, 0.08);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	font-family: 'Courier New', monospace;
 	letter-spacing: 0.01em;
 	color: rgba(60, 60, 70, 0.72);
+	position: relative;
 }
 
 .system-log-glyph {
@@ -1288,7 +1289,9 @@ background-color: rgb(230, 230, 220);
 }
 
 .system-log-time {
-	flex-shrink: 0;
+	position: absolute;
+	bottom: 0.25rem;
+	right: 0.5rem;
 	font-size: 0.68rem;
 	opacity: 0.5;
 	white-space: nowrap;
