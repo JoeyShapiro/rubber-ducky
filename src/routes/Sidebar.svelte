@@ -10,6 +10,28 @@
   let hidden = store.hidden;
   let darkMode = store.darkMode;
 
+  type ImportState = null | 'loading' | { imported: Record<string, number> } | { error: string };
+  let importState: ImportState = null;
+
+  async function handleImport(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    importState = 'loading';
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/import', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Import failed');
+      importState = { imported: data.imported };
+    } catch (err: any) {
+      importState = { error: err.message ?? 'Import failed' };
+    }
+  }
+
   function getCookie(name: string): string | undefined {
 		const value = `; ${document.cookie}`;
 		const parts = value.split(`; ${name}=`);
@@ -212,7 +234,31 @@
     <button class="btn-hidden rounded border-0 mb-3 ms-3" on:click={() => darkMode.set(!$darkMode)}>
       <img src={$darkMode ? "/sun.svg" : "/moon.svg"} alt="dark mode" class="me-2" width="16" height="16" />
     </button>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <span class="btn-hidden rounded border-0 mb-3 ms-3 import-btn" title="Import data" on:click={() => document.getElementById('import-file')?.click()}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="me-2">
+        <path d="M8 1a.5.5 0 0 1 .5.5v6.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 .708-.708L7.5 8.293V1.5A.5.5 0 0 1 8 1z"/>
+        <path d="M2.5 13a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"/>
+      </svg>
+    </span>
+    <input type="file" id="import-file" accept=".json" style="display:none" on:change={handleImport} />
   </div>
+
+  {#if importState !== null}
+    <div class="import-status position-absolute" role="status">
+      {#if importState === 'loading'}
+        <span class="import-loading">Importing...</span>
+      {:else if 'error' in importState}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <span class="import-error" on:click={() => importState = null}>{importState.error} ✕</span>
+      {:else}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <span class="import-done" on:click={() => importState = null}>
+          Imported: {Object.entries(importState.imported).map(([k, v]) => `${v} ${k}`).join(', ')} ✕
+        </span>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -291,5 +337,41 @@ div .bar-hidden {
 div:hover > .bar-hidden {
   opacity: 1;
   visibility: visible;
+}
+
+.import-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--bs-emphasis-color);
+}
+
+.import-btn:hover {
+  color: rgba(var(--bs-emphasis-color-rgb), .85);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.import-status {
+  bottom: 3rem;
+  left: 0;
+  right: 0;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  font-family: 'Courier New', monospace;
+  border-top: 1px solid rgba(130, 130, 140, 0.2);
+}
+
+.import-loading {
+  color: rgba(108, 117, 125, 0.85);
+}
+
+.import-done {
+  color: rgba(25, 135, 84, 0.9);
+  cursor: pointer;
+}
+
+.import-error {
+  color: rgba(220, 53, 69, 0.9);
+  cursor: pointer;
 }
 </style>
