@@ -1,3 +1,14 @@
+// clipboard files often arrive nameless, so give them something to show and download as
+function fileName(file: File, type: string): string {
+    if (file.name) return file.name;
+    const ext = type.split('/')[1]?.split('+')[0] || 'bin';
+    return `pasted-${Date.now()}.${ext}`;
+}
+
+// an attachment has one shape everywhere - client, api, and db:
+//   type     bare mime type, eg "image/png"
+//   content  full data url, eg "data:image/png;base64,iVBOR..."
+//   name     filename, never empty
 export class Attachment {
     uuid: string;
     type: string;
@@ -11,12 +22,21 @@ export class Attachment {
         this.content = content;
     }
 
-    static toJSON(attachment: Attachment): any {
-        return {
-            uuid: attachment.uuid,
-            name: attachment.name,
-            content: attachment.content
-        }
+    // the only way to build one from a picked, pasted, or dropped file
+    static fromFile(file: File): Promise<Attachment> {
+        const type = file.type || 'application/octet-stream';
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error ?? new Error(`could not read ${file.name}`));
+            reader.onload = () => {
+                // rebuild the data url so type and content always agree, even when the
+                // browser hands us a file with no mime type
+                const base64 = (reader.result as string).split(',')[1] ?? '';
+                resolve(new Attachment('', type, fileName(file, type), `data:${type};base64,${base64}`));
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
     static fromJSON(json: any): Attachment {

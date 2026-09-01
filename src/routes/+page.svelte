@@ -452,21 +452,25 @@
 		}
 	}
 
-	function handleFileSelect(event: Event) {
-		const files = (event.target as HTMLInputElement)?.files;
-		if (!files) {
+	// every attachment, however it got here, goes through this
+	async function addFiles(files: File[]) {
+		for (const file of files) {
+			try {
+				attachments = [...attachments, await Attachment.fromFile(file)];
+			} catch (err) {
+				console.error('attachment', err);
+			}
+		}
+	}
+
+	async function handleFileSelect(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input?.files) {
 			return;
 		}
 
-		for (let i = 0; i < files.length; i++) {
-			const file = files[i];
-			const reader = new FileReader();
-			reader.onload = function (e) {
-				attachments.push(new Attachment('', e.target?.result as string, file.name, file.type));
-				attachments = [...attachments];
-			};
-			reader.readAsDataURL(file);
-		}
+		await addFiles(Array.from(input.files));
+		input.value = ''; // so the same file can be picked twice in a row
 	}
 
 	async function loadMoreData() {
@@ -500,39 +504,18 @@
 
 	onMount(() => {
 		document.onpaste = function (event) {
-		var items = event.clipboardData?.items as DataTransferItemList; // readd if errors `event.originalEvent.clipboardData`
-		console.log(JSON.stringify(items)); // might give you mime types
-		for (var index in items) {
-			var item = items[index];
-			if (item.kind === 'file') {
-				console.log(item);
+			const files = Array.from(event.clipboardData?.items ?? [])
+				.filter((item) => item.kind === 'file')
+				.map((item) => item.getAsFile())
+				.filter((file): file is File => file !== null);
 
-				var blob = item.getAsFile();
-				if (!blob) {
-					console.error('No blob');
-					return;
-				}
-				
-				var reader = new FileReader();
-				reader.onload = function (event) {
-					// console.log(event.target.result); // data url!
-
-					// split data url
-					var parts = (event.target?.result as string).split(';');
-
-					attachments.push(new Attachment('', parts[0], blob!.name, parts[1]));
-					// image - data:image/png;base64,
-					// src file - data:application/octet-stream;base64,
-					// docx - data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,
-					attachments = [...attachments];
-				}; 
-				reader.readAsDataURL(blob);
-
-				// prevent pasting image in contenteditable
-				event.preventDefault();
+			if (files.length === 0) {
+				return;
 			}
-		}
-	};
+
+			event.preventDefault(); // don't drop the image into the textarea as well
+			addFiles(files);
+		};
 
 		const textarea = document.getElementById('send-text');
 		if (!textarea) {

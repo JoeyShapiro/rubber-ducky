@@ -54,9 +54,18 @@ problem and a large part of why notes and tasks feel bolted on.
 The reported symptom is "uploading pictures doesn't always work." It is four independent
 defects that compound. Do these in order; T-01 defines the data format that T-02 and T-03 depend on.
 
-### [ ] T-01 — Unify attachment encoding across both upload paths
+### [x] T-01 — Unify attachment encoding across both upload paths
 
 **Priority:** critical · **Blocked by:** none
+
+> **Done 2026-08-31.** Added `Attachment.fromFile(file)` in [`types.ts`](../src/lib/types.ts),
+> the single factory for picked, pasted, and (later) dropped files. It rebuilds the data URL
+> from the reader's base64 rather than trusting it, so `type` and `content` always agree even
+> for files with no MIME type. Both call sites in `+page.svelte` now go through one `addFiles`
+> helper. Removed the unused `Attachment.toJSON` static — it dropped `type`, and being static
+> it never actually participated in `JSON.stringify`, so it was misleading dead code.
+> Side effect: staged images now preview correctly before send, and the file-picker path no
+> longer 500s on download. **Rows written before this change are untouched** — see T-02.
 
 **Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte) (`handleFileSelect` ~L455,
 paste handler ~L502), [`src/lib/types.ts`](../src/lib/types.ts#L7)
@@ -111,6 +120,18 @@ throws — a **500**. The paste-produced row survives only by coincidence.
 - Rows imported by the legacy path still download (see [`import/+server.ts`](../src/routes/import/+server.ts#L115) —
   check what encoding the Weaviate export actually produced before assuming; a migration may
   be needed, in which case split it into its own task rather than doing it inline here).
+
+**Three encodings now exist in the table.** T-01 established the canonical one for new rows;
+the two legacy shapes are still there and a migration is likely the real fix:
+
+| Origin | `type` | `content` | GET works? |
+|---|---|---|---|
+| New (post-T-01) | `image/png` | `data:image/png;base64,...` | yes |
+| Old paste path | `data:image/png` | `base64,...` | yes, by luck |
+| Old file picker | *the entire data URL* | `image/png` | **no — `atob(undefined)` throws 500** |
+
+The old file-picker rows have lost their bytes entirely (`content` is just the MIME string), so
+they are unrecoverable and should be detected and either deleted or flagged, not migrated.
 
 ---
 
@@ -575,4 +596,5 @@ Record choices made while working, so later tasks do not re-litigate them.
 
 | Date | Task | Decision |
 |------|------|----------|
-| | | |
+| 2026-08-31 | T-01 | Canonical attachment shape: `type` = bare MIME (`image/png`), `content` = full data URL, `name` never empty. Files with no MIME become `application/octet-stream`; nameless clipboard files get `pasted-<ts>.<ext>`. |
+| 2026-08-31 | T-01 | `Attachment.fromFile` is the only sanctioned way to build an attachment from a file. New entry points (drag-drop in T-06) must use it rather than reading a `File` themselves. |
