@@ -99,9 +99,19 @@ call sites drifted.
 
 ---
 
-### [ ] T-02 — Fix the attachment download endpoint's data-URL assumption
+### [x] T-02 — Fix the attachment download endpoint's data-URL assumption
 
 **Priority:** critical · **Blocked by:** T-01
+
+> **Done 2026-08-31.** `GET` now runs a `decode()` that recognises all three encodings in the
+> table (including the swapped-column legacy rows) and returns a described 4xx instead of
+> throwing: 400 missing uuid, 404 unknown row, 422 undecodable, with the reason logged.
+> Replaced the char-by-char `atob` loop with `Buffer.from`. Added `Content-Length`, and
+> filename sanitising so a name with quotes or control characters cannot make `headers.set`
+> throw. `POST` now rejects anything that is not the T-01 canonical shape, so no new drift can
+> enter the table. Covered by a 10-case decoder test (3 encodings + docx + bare payload +
+> 5 malformed); the `BARE_MIME` guard specifically stops MIME strings whose length happens to
+> be a multiple of 4 (`text/css`) from decoding as valid base64 garbage.
 
 **Files:** [`src/routes/attachments/+server.ts`](../src/routes/attachments/+server.ts)
 
@@ -122,16 +132,17 @@ throws — a **500**. The paste-produced row survives only by coincidence.
   be needed, in which case split it into its own task rather than doing it inline here).
 
 **Three encodings now exist in the table.** T-01 established the canonical one for new rows;
-the two legacy shapes are still there and a migration is likely the real fix:
+both legacy shapes are still present:
 
-| Origin | `type` | `content` | GET works? |
+| Origin | `type` | `content` | Bytes recoverable? |
 |---|---|---|---|
 | New (post-T-01) | `image/png` | `data:image/png;base64,...` | yes |
-| Old paste path | `data:image/png` | `base64,...` | yes, by luck |
-| Old file picker | *the entire data URL* | `image/png` | **no — `atob(undefined)` throws 500** |
+| Old paste path | `data:image/png` | `base64,...` | yes |
+| Old file picker | `data:image/png;base64,...` | `image/png` | **yes — the columns are swapped** |
 
-The old file-picker rows have lost their bytes entirely (`content` is just the MIME string), so
-they are unrecoverable and should be detected and either deleted or flagged, not migrated.
+The old file-picker rows are *not* lost. The swapped constructor arguments put the full data URL
+into `type` and the bare MIME type into `content`, so the payload was written — to the wrong
+column. `decode()` in the endpoint detects and reads all three.
 
 ---
 
@@ -178,6 +189,25 @@ Svelte's own render, with a `revokeObjectURL` in an `onload` that may never fire
 - Markup becomes `<img src="/attachments?uuid={uuid}">`; the entire blob-fetch /
   `createObjectURL` / `getElementById` block in `onMount` is deleted.
 - No `document.getElementById` calls remain in the attachment render path.
+
+---
+
+### [ ] T-22 — Normalise legacy attachment rows to the canonical encoding
+
+**Priority:** low · **Blocked by:** T-02 · **Optional**
+
+**Files:** a one-off migration or script
+
+**Problem:** T-02 made the endpoint read all three encodings, which fixes the symptom but keeps
+three shapes alive in the table forever. Every future reader has to know about all of them.
+
+**Acceptance criteria:**
+- One-off pass rewriting legacy rows into the canonical shape (`type` = bare MIME,
+  `content` = full data URL), reusing `decode()` from the attachments endpoint.
+- Rows that `decode()` rejects are reported, not silently dropped.
+- Once no legacy rows remain, `decode()`'s legacy branches could be deleted — but only after
+  confirming no un-imported Weaviate export will be loaded later.
+- Fold into T-05 if that lands first, since it rewrites every row anyway.
 
 ---
 
@@ -598,3 +628,5 @@ Record choices made while working, so later tasks do not re-litigate them.
 |------|------|----------|
 | 2026-08-31 | T-01 | Canonical attachment shape: `type` = bare MIME (`image/png`), `content` = full data URL, `name` never empty. Files with no MIME become `application/octet-stream`; nameless clipboard files get `pasted-<ts>.<ext>`. |
 | 2026-08-31 | T-01 | `Attachment.fromFile` is the only sanctioned way to build an attachment from a file. New entry points (drag-drop in T-06) must use it rather than reading a `File` themselves. |
+| 2026-08-31 | T-02 | Read all three legacy encodings rather than migrating the data now. Reading is reversible and unblocks the rest of W1; a migration (T-22) can follow once the endpoint is known good. |
+| 2026-08-31 | T-02 | `POST /attachments` validates the canonical shape and 400s otherwise. The invariant is enforced at the write boundary, so `decode()`'s legacy branches only ever handle pre-existing rows. |
