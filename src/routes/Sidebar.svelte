@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-  import * as store from './stores.js';
+  import * as store from '$lib/stores';
   import { Duck, Badling } from '$lib/types';
 
 	let badlings: Badling[] = [];

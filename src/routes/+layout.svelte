@@ -3,7 +3,7 @@
 	import '../app.css';
 	import Sidebar from './Sidebar.svelte';
 	import { page } from '$app/stores';
-	import { darkMode } from './stores.js';
+	import { darkMode } from '$lib/stores';
 
 	// Apply dark mode to the root element
 	$: if (typeof document !== 'undefined') {

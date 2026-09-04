@@ -25,11 +25,40 @@ single task and complete it without reading the rest of the document.
 SvelteKit 2 / Svelte 4, Postgres via Drizzle, Bootstrap 5 from CDN, optional Ollama for
 embeddings and Q&A. Deployed as a single Node container on port 80.
 
-The entire application is **one route**. [`src/routes/+page.svelte`](../src/routes/+page.svelte)
-is ~1360 lines containing chat, notes, and quests side by side.
-[`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte) selects a duck and writes it into a
-`writable` store ([`src/routes/stores.js`](../src/routes/stores.js)); every panel refetches from
-that subscription.
+The entire application is still **one route**, but the frontend is no longer one file
+(see *Frontend layout* below). [`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte)
+selects a duck and writes it into a `writable` store ([`src/lib/stores.ts`](../src/lib/stores.ts));
+each panel component loads its own data when that duck changes.
+
+### Frontend layout
+
+```
+src/lib/
+  stores.ts              duck, hidden, darkMode, messages
+  api.ts                 every fetch to our own endpoints, plus one shared 401 handler
+  markdown.ts            the regex markdown action (T-17 replaces it)
+  format.ts              formatDate
+  quests.ts              status list, labels, css classes, svg icons
+  types.ts               Attachment / Message / Note / Quest / Duck / Badling
+  components/
+    Chat.svelte          left column: message list + composer, owns loading and scroll
+    Message.svelte       one message, system or normal, with its attachments
+    Composer.svelte      textarea, attachments, paste, submit, the qna toggle
+    Notes.svelte         the notes pane
+    Quests.svelte        breadcrumbs + quest list
+    QuestModal.svelte    create-quest dialog
+src/routes/
+  +page.svelte           layout only - two columns, passes $duck down
+```
+
+Rules of thumb for anyone adding to this:
+
+- Components own their own data loading, keyed on the `duck` prop. That is deliberate - it is
+  what makes T-11 (route split) cheap, since each component already stands alone.
+- No component calls `fetch` directly. Add a function to `api.ts` instead, so 401 handling and
+  error shape stay in one place.
+- Cross-panel state goes in `stores.ts`. Today that is only `messages`, which both the composer
+  and the quest list append to.
 
 Data model:
 
@@ -173,14 +202,17 @@ that uploaded them.** After a reload they are gone from the UI, though still in 
 
 **Priority:** high · **Blocked by:** T-02, T-03
 
-**Files:** [`src/routes/attachments/+server.ts`](../src/routes/attachments/+server.ts#L31),
-[`src/routes/+page.svelte`](../src/routes/+page.svelte#L577-L608)
+**Files:** [`src/routes/attachments/+server.ts`](../src/routes/attachments/+server.ts),
+[`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte) (`hydrateImages`),
+[`src/lib/components/Message.svelte`](../src/lib/components/Message.svelte)
 
 **Problem:** The GET always sets `Content-Disposition: attachment`, so the URL cannot be used
 as an `<img src>`. To work around that, the client fetches each image as a blob, calls
 `URL.createObjectURL`, then finds the element with `document.getElementById(uuid)` and assigns
-`.src` directly ([L589](../src/routes/+page.svelte#L589)) — a manual DOM write racing against
-Svelte's own render, with a `revokeObjectURL` in an `onload` that may never fire.
+`.src` directly — a manual DOM write racing against Svelte's own render, with a
+`revokeObjectURL` in an `onload` that may never fire. That workaround is now isolated in
+`hydrateImages()` in `Chat.svelte`, so this task is mostly deleting one function and changing
+one `<img>` tag.
 
 **Acceptance criteria:**
 - `Content-Disposition: inline` for `image/*`, `attachment` otherwise (with a properly quoted
@@ -236,10 +268,10 @@ anywhere in the stack (`BODY_SIZE_LIMIT=Infinity` is set in the documented `.env
 
 **Priority:** high · **Blocked by:** T-01
 
-**Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte#L689-L705)
+**Files:** [`src/lib/components/Composer.svelte`](../src/lib/components/Composer.svelte)
 
 **Problem:** Staged attachments are represented only by a red count badge on the paperclip
-button ([L692](../src/routes/+page.svelte#L692)). You cannot see what you attached, or remove one.
+button. You cannot see what you attached, or remove one.
 
 **Acceptance criteria:**
 - A tray above the composer showing one card per staged attachment: thumbnail for images,
@@ -261,7 +293,8 @@ button ([L692](../src/routes/+page.svelte#L692)). You cannot see what you attach
 
 **Files:** [`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
 [`src/lib/db/schema.ts`](../src/lib/db/schema.ts#L62-L67),
-[`src/lib/types.ts`](../src/lib/types.ts#L64), [`src/routes/+page.svelte`](../src/routes/+page.svelte#L710-L719)
+[`src/lib/types.ts`](../src/lib/types.ts#L64),
+[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte)
 
 **Problem:** "Notes feels totally tacked on" is structurally accurate. There is exactly one
 `notes` row per duck; `POST` overwrites the entire blob
@@ -338,8 +371,9 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 
 **Priority:** high · **Blocked by:** T-08, T-09
 
-**Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte#L721-L771) (moving to its own
-route under T-11), [`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts)
+**Files:** [`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte),
+[`src/lib/components/QuestModal.svelte`](../src/lib/components/QuestModal.svelte),
+[`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts)
 
 **Problem:** The list is cumbersome to operate:
 - No edit and no delete — `PATCH` only accepts a status change
@@ -416,11 +450,11 @@ client-side store, and there is no URL you can link to or refresh into.
 [`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte), [`src/app.css`](../src/app.css)
 
 **Problem:** There is essentially no responsive handling.
-- Hard `w-50` / `w-50` split ([`+page.svelte:647`](../src/routes/+page.svelte#L647),
-  [L710](../src/routes/+page.svelte#L710)).
+- Hard `w-50` / `w-50` split ([`+page.svelte`](../src/routes/+page.svelte) and
+  [`Chat.svelte`](../src/lib/components/Chat.svelte)).
 - Fixed `280px` sidebar with no drawer ([`Sidebar.svelte:187`](../src/routes/Sidebar.svelte#L187)).
-- `max-height: 100vh` ([`+page.svelte:645`](../src/routes/+page.svelte#L645)) — wrong on mobile
-  Safari, needs `dvh`.
+- `max-height: 100vh` in [`+page.svelte`](../src/routes/+page.svelte) — wrong on mobile Safari,
+  needs `dvh`.
 - Hover-only affordances everywhere, including the sidebar's entire button bar
   (`div:hover > .bar-hidden`, [`Sidebar.svelte:348-357`](../src/routes/Sidebar.svelte#L348-L357)),
   which makes add-duck, add-badling, hide, dark mode, and import **completely unreachable by touch**.
@@ -498,25 +532,28 @@ window instead of by relationship.
 
 ---
 
-### [ ] T-16 — Infinite scroll is dead code with inverted logic
+### [ ] T-16 — Implement infinite scroll (the old attempt was deleted)
 
 **Priority:** medium · **Blocked by:** none
 
-**Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte#L472-L499)
+**Files:** [`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte)
 
-**Problem:** Two compounding bugs. The listener is attached to `window`
-([L627](../src/routes/+page.svelte#L627)), but the scrolling element is `#chatbox`
-(`overflow-auto` inside a `100vh` container) — so `window` never scrolls and the handler never
-fires. And the condition
-`window.innerHeight + window.scrollY <= document.body.offsetHeight - 10`
-([L494](../src/routes/+page.svelte#L494)) is inverted: it is true when you are *not* at the
-bottom. If the listener were ever attached to the right element it would loop.
+**Problem:** The original had two compounding bugs that made it dead code: the listener was on
+`window`, but the scrolling element is `#chatbox` (`overflow-auto` inside a `100vh` container),
+so it never fired; and the condition
+`window.innerHeight + window.scrollY <= document.body.offsetHeight - 10` was inverted — true
+when you are *not* at the bottom. It would have looped had it ever run.
+
+`loadMoreData` and `handleScroll` were **removed** during the component extraction rather than
+transplanted, so this is now a fresh implementation, not a fix. `GET /messages` already accepts
+`?offset=`, and `fetchMessages(duck, offset)` in `api.ts` already passes it — the server side is
+ready. Note T-15 first: paginating currently duplicates every AI answer on each page.
 
 **Acceptance criteria:**
-- Listener on `#chatbox`, firing when scrolled near the **top** (older messages).
-- Scroll position is preserved when older messages are prepended — currently prepending
-  jumps the view.
-- The `loading` guard actually prevents overlapping fetches.
+- Listener on the `chatbox` element, firing when scrolled near the **top** (older messages).
+- Scroll position is preserved when older messages are prepended — naive prepending jumps the view.
+- A `loading` guard that actually prevents overlapping fetches (`Chat.svelte` already has the
+  flag and renders the indicator; it is currently only used for the initial load).
 
 ---
 
@@ -524,8 +561,8 @@ bottom. If the listener were ever attached to the right element it would loop.
 
 **Priority:** medium · **Blocked by:** none
 
-**Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte#L352-L416),
-[`+page.svelte:664`](../src/routes/+page.svelte#L664)
+**Files:** [`src/lib/markdown.ts`](../src/lib/markdown.ts),
+[`src/lib/components/Message.svelte`](../src/lib/components/Message.svelte)
 
 **Problem:** Message content is emitted with `{@html message.content}` — **unescaped** — and
 then an action reads `node.innerHTML`, runs eight sequential regex replacements over it, and
@@ -574,19 +611,15 @@ spaces, punctuation, and a leading digit.
 
 ---
 
-### [ ] T-20 — Store subscription leak
+### [x] T-20 — Store subscription leak
 
-**Priority:** low · **Blocked by:** none (subsumed by T-11 if that lands first)
+**Priority:** low · **Blocked by:** none
 
-**Files:** [`src/routes/+page.svelte`](../src/routes/+page.svelte#L557-L625)
-
-**Problem:** `duck.subscribe(...)` inside `onMount` is never unsubscribed; the returned cleanup
-only removes the scroll listener. Also, `document.onpaste = ...`
-([L502](../src/routes/+page.svelte#L502)) assigns to a global handler rather than using
-`addEventListener`, clobbering any other paste handler.
-
-**Acceptance criteria:** Subscription disposed in the `onMount` cleanup (or replaced by `$duck`
-auto-subscription); paste uses `addEventListener` with a matching `removeEventListener`.
+> **Done 2026-08-31**, as a side effect of the component extraction. The manual
+> `duck.subscribe()` in `onMount` is gone — components take `duck` as a prop and the page uses
+> `$duck` auto-subscription. `document.onpaste = ...` became an `addEventListener` in
+> `Composer.svelte` with a matching `removeEventListener` in the `onMount` cleanup, so it no
+> longer clobbers other paste handlers or leak on unmount.
 
 ---
 
@@ -602,6 +635,27 @@ container.
 
 **Acceptance criteria:** Full connection config from the environment with the current values as
 defaults; `README.md`'s `.env` block updated.
+
+---
+
+## Unsorted ideas
+
+Rescued from the comment block at the top of the old `+page.svelte` before it was split up.
+Not tasks yet — no acceptance criteria, no priority. Promote one to a `T-##` when it matters.
+
+- **videos** — attachments only ever render images inline; video gets the generic file card.
+- **reply** — quoting or threading a previous message.
+- **link** — linking messages to quests, or messages to each other? Original intent unclear.
+- **escape markdown** — no way to write literal `**` or backticks today. Folds into T-17.
+- **qna get** — `GET /qna` exists but nothing calls it; AI answers are only ever read via the
+  timestamp-window merge in `GET /messages`. Related to T-15.
+- **model** — pick the Ollama model from the UI rather than the `OLLAMA_MODEL` env var.
+- **window size** / **small font** — display density. Overlaps T-12.
+- **add colors to login** — the login page never got the theme treatment.
+- ~~functionize~~ — done, the frontend split.
+- ~~attachments dont work~~ — done, T-01 and T-02.
+- ~~import export~~ — import exists in the sidebar; export is `export-weaviate.js`.
+- **still feels odd** — the whole point of this document.
 
 ---
 
@@ -630,3 +684,7 @@ Record choices made while working, so later tasks do not re-litigate them.
 | 2026-08-31 | T-01 | `Attachment.fromFile` is the only sanctioned way to build an attachment from a file. New entry points (drag-drop in T-06) must use it rather than reading a `File` themselves. |
 | 2026-08-31 | T-02 | Read all three legacy encodings rather than migrating the data now. Reading is reversible and unblocks the rest of W1; a migration (T-22) can follow once the endpoint is known good. |
 | 2026-08-31 | T-02 | `POST /attachments` validates the canonical shape and 400s otherwise. The invariant is enforced at the write boundary, so `decode()`'s legacy branches only ever handle pre-existing rows. |
+| 2026-08-31 | frontend split | Components own their data loading (keyed on the `duck` prop) rather than a parent orchestrating fetches. Makes each one liftable into its own route in T-11 with no rewiring. |
+| 2026-08-31 | frontend split | `messages` is a store; notes and quests are component-local. Only messages is written by more than one panel (composer + quest status changes), so only it needs to be shared. |
+| 2026-08-31 | frontend split | All endpoint calls go through `api.ts`. Ad-hoc `fetch` in a component is the thing that let six copies of broken 401 handling drift apart. |
+| 2026-08-31 | frontend split | Did **not** split routes. That is T-11 and it is blocked by T-08, since the task-scope schema decides what routes need to exist. |
