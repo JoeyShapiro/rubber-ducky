@@ -37,6 +37,7 @@ src/lib/
   stores.ts              duck, hidden, darkMode, messages
   api.ts                 every fetch to our own endpoints, plus one shared 401 handler
   markdown.ts            the regex markdown action (T-17 replaces it)
+  attachments.ts         reading the three attachment encodings; shared by both endpoints
   format.ts              formatDate
   quests.ts              status list, labels, css classes, svg icons
   types.ts               Attachment / Message / Note / Quest / Duck / Badling
@@ -175,9 +176,18 @@ column. `decode()` in the endpoint detects and reads all three.
 
 ---
 
-### [ ] T-03 — Load attachments when fetching messages
+### [x] T-03 — Load attachments when fetching messages
 
 **Priority:** critical · **Blocked by:** T-01
+
+> **Done 2026-09-05.** `GET /messages` now calls `attachTo()`, one `inArray` query for the whole
+> page. It selects only `left(type, 64)` and `left(content, 64)` rather than either column
+> whole — the base64 payload lives in `content` normally and in `type` for legacy swapped rows,
+> so selecting either would pull megabytes out of postgres just to learn a mime type. The
+> decoding helpers moved to [`$lib/attachments.ts`](../src/lib/attachments.ts) so the messages
+> and attachments endpoints share one definition of the three encodings. Verified live: a duck
+> with two image attachments returns 824 bytes of JSON, and the bytes endpoint serves a valid
+> PNG. Images still reach the page through the `hydrateImages()` blob hack — T-04 removes it.
 
 **Files:** [`src/routes/messages/+server.ts`](../src/routes/messages/+server.ts#L19-L21)
 
@@ -688,3 +698,5 @@ Record choices made while working, so later tasks do not re-litigate them.
 | 2026-08-31 | frontend split | `messages` is a store; notes and quests are component-local. Only messages is written by more than one panel (composer + quest status changes), so only it needs to be shared. |
 | 2026-08-31 | frontend split | All endpoint calls go through `api.ts`. Ad-hoc `fetch` in a component is the thing that let six copies of broken 401 handling drift apart. |
 | 2026-08-31 | frontend split | Did **not** split routes. That is T-11 and it is blocked by T-08, since the task-scope schema decides what routes need to exist. |
+| 2026-09-05 | T-03 | `GET /messages` returns attachment metadata only, never bytes. Keeps a page of messages small and makes the bytes cacheable per uuid by the browser. |
+| 2026-09-05 | T-03 | Encoding knowledge lives in `$lib/attachments.ts`, not in a route. Two endpoints needed it; a third (T-22's migration) will too. |

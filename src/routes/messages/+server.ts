@@ -1,9 +1,44 @@
 import { json } from '@sveltejs/kit';
-import { Message } from '$lib/types.js';
+import { Attachment, Message } from '$lib/types.js';
 import { db } from '$lib/db';
-import { messages as messagesTable, answers } from '$lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { messages as messagesTable, answers, attachments as attachmentsTable } from '$lib/db/schema';
+import { eq, desc, inArray, sql } from 'drizzle-orm';
 import { embed } from '$lib/embedding';
+import { mimeOf } from '$lib/attachments';
+
+/**
+ * Hang each message's attachments off it, in one query rather than one per message.
+ *
+ * Only the first bytes of `type` and `content` are read. The base64 payload lives in `content`
+ * normally, and in `type` for legacy swapped rows, so selecting either whole column would drag
+ * megabytes out of postgres just to learn a mime type. The client gets metadata only and
+ * fetches the bytes from GET /attachments by uuid.
+ */
+async function attachTo(msgs: Message[], ids: string[]) {
+	if (ids.length === 0) return;
+
+	const rows = await db
+		.select({
+			id: attachmentsTable.id,
+			name: attachmentsTable.name,
+			typeHead: sql<string>`left(${attachmentsTable.type}, 64)`,
+			contentHead: sql<string>`left(${attachmentsTable.content}, 64)`,
+			messageId: attachmentsTable.messageId,
+		})
+		.from(attachmentsTable)
+		.where(inArray(attachmentsTable.messageId, ids));
+
+	const byMessage = new Map<string, Attachment[]>();
+	for (const row of rows) {
+		const list = byMessage.get(row.messageId) ?? [];
+		list.push(new Attachment(row.id, mimeOf(row.typeHead ?? '', row.contentHead ?? ''), row.name ?? '', ''));
+		byMessage.set(row.messageId, list);
+	}
+
+	for (const msg of msgs) {
+		msg.attachments = byMessage.get(msg.uuid) ?? [];
+	}
+}
 
 export async function GET({ url }) {
 	const duck = url.searchParams.get('duck');
@@ -19,6 +54,8 @@ export async function GET({ url }) {
 	const msgs: Message[] = rows.map(r =>
 		new Message(r.id, r.from ?? '', r.content ?? '', r.timestamp ?? new Date())
 	);
+
+	await attachTo(msgs, rows.map(r => r.id));
 
 	// Merge AI answers that fall within the same time window
 	if (msgs.length > 0) {
