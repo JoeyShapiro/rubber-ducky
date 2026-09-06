@@ -77,7 +77,8 @@ export async function POST({ request }) {
 	const data = await request.json();
 	const timestamp = new Date();
 
-	const embedding = await embed(data.message);
+	// an attachment-only message has no text worth embedding
+	const embedding = data.message ? await embed(data.message) : null;
 
 	const [row] = await db.insert(messagesTable).values({
 		from: 'user',

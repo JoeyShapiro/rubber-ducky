@@ -3,7 +3,7 @@ import { Attachment } from '$lib/types';
 import { db } from '$lib/db';
 import { attachments as attachmentsTable } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { decode, isCanonical, safeFilename } from '$lib/attachments';
+import { contentDisposition, decode, isCanonical } from '$lib/attachments';
 
 export async function POST({ request }) {
 	const data = await request.json();
@@ -36,10 +36,15 @@ export async function GET({ url }) {
 		return error(422, `Attachment "${row.name ?? uuid}" cannot be read: ${decoded.reason}`);
 	}
 
+	// images render inline so <img src> works directly; everything else downloads
+	const inline = decoded.mime.startsWith('image/');
+
 	const headers = new Headers();
 	headers.set('Content-Type', decoded.mime);
 	headers.set('Content-Length', String(decoded.bytes.length));
-	headers.set('Content-Disposition', `attachment; filename="${safeFilename(row.name, uuid)}"`);
+	headers.set('Content-Disposition', contentDisposition(row.name, uuid, inline));
+	// the bytes behind a uuid never change
+	headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
 	return new Response(decoded.bytes, { status: 200, headers });
 }

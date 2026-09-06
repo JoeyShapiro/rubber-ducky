@@ -208,9 +208,16 @@ that uploaded them.** After a reload they are gone from the UI, though still in 
 
 ---
 
-### [ ] T-04 — Serve images inline and delete the manual `img.src` patching
+### [x] T-04 — Serve images inline and delete the manual `img.src` patching
 
 **Priority:** high · **Blocked by:** T-02, T-03
+
+> **Done 2026-09-05.** Images now serve `Content-Disposition: inline` (everything else still
+> downloads) plus `Cache-Control: immutable`, since the bytes behind a uuid never change.
+> `contentDisposition()` in `$lib/attachments.ts` emits both the ascii `filename=` and the
+> rfc 5987 `filename*=` when a name needs it. Markup points straight at
+> `/attachments?uuid=`, and `hydrateImages()` plus the `id={uuid}` hook it depended on are
+> gone. Images are clickable to open full size, capped at 350px tall in the log.
 
 **Files:** [`src/routes/attachments/+server.ts`](../src/routes/attachments/+server.ts),
 [`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte) (`hydrateImages`),
@@ -274,9 +281,15 @@ anywhere in the stack (`BODY_SIZE_LIMIT=Infinity` is set in the documented `.env
 
 ## W2 — Composer / attachment UX
 
-### [ ] T-06 — Discord-style attachment preview tray
+### [x] T-06 — Discord-style attachment preview tray
 
 **Priority:** high · **Blocked by:** T-01
+
+> **Done 2026-09-05.** Tray above the composer: image thumbnails, a generic card for other
+> files, name and size on each, and a remove button that is *not* hover-only so it survives
+> T-12. Drag-and-drop onto the composer with a dashed outline and a "Drop files to attach"
+> overlay. The file picker gained `multiple`. Send is disabled until there is something to
+> send, and re-disabled while sending. Upload progress is still not shown - see T-23.
 
 **Files:** [`src/lib/components/Composer.svelte`](../src/lib/components/Composer.svelte)
 
@@ -292,6 +305,26 @@ button. You cannot see what you attached, or remove one.
 - Upload progress or at least a pending state — currently the send fires N parallel POSTs with
   no feedback ([L277-L312](../src/routes/+page.svelte#L277-L312)).
 - Failed uploads surface an error instead of only `console.error`.
+
+---
+
+### [ ] T-23 — Upload feedback and failure handling
+
+**Priority:** medium · **Blocked by:** T-06
+
+**Files:** [`src/lib/components/Composer.svelte`](../src/lib/components/Composer.svelte)
+
+**Problem:** T-06 gave attachments a visible tray, but the upload itself is still silent. The
+send button disables while sending and that is all: there is no per-file progress, and a failed
+upload only reaches `console.error` — the message posts, the attachment quietly does not, and
+nothing on screen says so. Large files make this obvious, since the whole base64 payload goes
+up in one JSON POST.
+
+**Acceptance criteria:**
+- Per-attachment pending / done / failed state shown on its card.
+- A failed upload is visible and offers a retry, or at minimum names the file that failed.
+- Sensible behaviour when some attachments in a batch succeed and others fail.
+- Fold in a client-side size limit when T-05 sets one.
 
 ---
 
@@ -700,3 +733,6 @@ Record choices made while working, so later tasks do not re-litigate them.
 | 2026-08-31 | frontend split | Did **not** split routes. That is T-11 and it is blocked by T-08, since the task-scope schema decides what routes need to exist. |
 | 2026-09-05 | T-03 | `GET /messages` returns attachment metadata only, never bytes. Keeps a page of messages small and makes the bytes cacheable per uuid by the browser. |
 | 2026-09-05 | T-03 | Encoding knowledge lives in `$lib/attachments.ts`, not in a route. Two endpoints needed it; a third (T-22's migration) will too. |
+| 2026-09-05 | T-04 | Images are served by URL, never inlined as base64 into a message payload. The browser caches them per uuid and a page of messages stays small. |
+| 2026-09-05 | T-06 | The remove button on a staged attachment is always visible, not revealed on hover. Hover-only controls are exactly what makes the current UI unusable on touch (T-12). |
+| 2026-09-05 | T-06 | A message may have empty text if it carries attachments. `POST /messages` skips embedding when there is no text, rather than embedding an empty string. |

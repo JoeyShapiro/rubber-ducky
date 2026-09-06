@@ -77,9 +77,20 @@ export function decode(type: string, content: string): Decoded {
     };
 }
 
-// header values cannot carry quotes, control characters, or non-ascii bytes.
-// T-04 adds the inline/attachment split and rfc 5987 encoding for non-ascii names.
-export function safeFilename(name: string | null, fallback: string): string {
-    const cleaned = (name ?? '').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '').trim();
-    return cleaned || fallback;
+/**
+ * A Content-Disposition value that will not throw and will not mangle the name.
+ *
+ * Header values cannot carry quotes, control characters, or non-ascii bytes, so the plain
+ * `filename=` gets an ascii-only version and anything richer is repeated in the rfc 5987
+ * `filename*=` form, which every current browser prefers.
+ */
+export function contentDisposition(name: string | null, fallback: string, inline: boolean): string {
+    const raw = (name ?? '').replace(/[\r\n]/g, '').trim() || fallback;
+    const ascii = raw.replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '').trim() || fallback;
+
+    let value = `${inline ? 'inline' : 'attachment'}; filename="${ascii}"`;
+    if (raw !== ascii) {
+        value += `; filename*=UTF-8''${encodeURIComponent(raw)}`;
+    }
+    return value;
 }

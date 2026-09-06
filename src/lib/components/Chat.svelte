@@ -27,47 +27,12 @@
 		try {
 			const data = await fetchMessages(uuid);
 			messages.set(data.messages);
-			hydrateImages(data.messages);
 			await tick();
 			scrollToBottom();
 		} catch (err) {
 			console.error('messages', err);
 		} finally {
 			loading = false;
-		}
-	}
-
-	/**
-	 * Refetch each image as a blob and poke its src in by hand.
-	 *
-	 * This is dead code today - GET /messages never returns attachments, so the list is always
-	 * empty (that is T-03). Once T-03 lands this will start running, and T-04 deletes it outright
-	 * by serving images inline so the markup can just point at the url. Carried over unchanged so
-	 * this refactor changes no behaviour.
-	 */
-	function hydrateImages(list: typeof $messages) {
-		for (const message of list) {
-			for (const attachment of message.attachments) {
-				if (!attachment.type.includes('image')) continue;
-
-				fetch(`/attachments?uuid=${attachment.uuid}`)
-					.then((res) => res.blob())
-					.then((blob) => {
-						attachment.content = URL.createObjectURL(blob);
-
-						// best i can think of
-						// find the image and set the src
-						const img = document.getElementById(attachment.uuid) as HTMLImageElement;
-						if (img) {
-							img.src = attachment.content;
-							// Remember to revoke the URL when you're done with the image
-							img.onload = () => URL.revokeObjectURL(attachment.content);
-						} else {
-							console.error(`Image ${attachment.uuid} not found`);
-						}
-					})
-					.catch((err) => console.error('attachment', err));
-			}
 		}
 	}
 

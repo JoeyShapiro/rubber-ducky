@@ -19,19 +19,24 @@
 		<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 			{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
 			{#if message.attachments.length > 0}
-				{#each message.attachments as attachment}
-					{#if attachment.type.includes('image')}
-						<!-- the id is how hydrateImages() in Chat.svelte finds this; T-04 removes both -->
-						<img id={attachment.uuid} src={attachment.content} alt={attachment.name} style="max-width: 100%" />
-					{:else}
-						<div class="card acrylic m-1 flip-card-inner">
-							<div class="card-body">
-								<img src="/cute-doc.svg" alt="duck" class="me-2" width="32" height="32" />
-								<a href="/attachments?uuid={attachment.uuid}">{attachment.name}</a>
-							</div>
-						</div>
-					{/if}
-				{/each}
+				<div class="attachments d-flex flex-column gap-2 mt-2">
+					{#each message.attachments as attachment}
+						{#if attachment.type.startsWith('image/')}
+							<a href="/attachments?uuid={attachment.uuid}" target="_blank" rel="noreferrer" class="attachment-image-link">
+								<img src="/attachments?uuid={attachment.uuid}" alt={attachment.name} class="attachment-image" loading="lazy" />
+							</a>
+						{:else}
+							<a href="/attachments?uuid={attachment.uuid}" class="attachment-file acrylic d-flex align-items-center gap-2 p-2" download={attachment.name}>
+								<img src="/cute-doc.svg" alt="" width="28" height="28" />
+								<span class="attachment-file-name flex-fill">{attachment.name}</span>
+								<svg class="attachment-file-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+									<path d="M8 1a.5.5 0 0 1 .5.5v6.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 .708-.708L7.5 8.293V1.5A.5.5 0 0 1 8 1z" />
+									<path d="M2.5 13a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z" />
+								</svg>
+							</a>
+						{/if}
+					{/each}
+				</div>
 			{/if}
 		</div>
 		<small class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
@@ -43,6 +48,54 @@
 		background: rgba(212, 212, 250, 0.3);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
+	}
+
+	.attachments {
+		max-width: 420px;
+	}
+
+	.attachment-image-link {
+		display: block;
+		width: fit-content;
+		line-height: 0;
+	}
+
+	.attachment-image {
+		max-width: 100%;
+		max-height: 350px;
+		border-radius: 8px;
+		border: 1px solid rgba(212, 212, 250, 0.35);
+	}
+
+	.attachment-file {
+		border-radius: 8px;
+		border: 1px solid rgba(212, 212, 250, 0.45);
+		text-decoration: none;
+		color: inherit;
+		transition: border-color 0.12s ease, background 0.12s ease;
+	}
+
+	.attachment-file:hover {
+		border-color: rgba(255, 193, 7, 0.6);
+	}
+
+	.attachment-file-name {
+		font-size: 0.85rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	.attachment-file-icon {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+		opacity: 0.55;
+	}
+
+	:global(:root[data-theme="dark"]) .attachment-file {
+		border-color: rgba(88, 88, 88, 0.55);
 	}
 
 	.system-log-entry {
