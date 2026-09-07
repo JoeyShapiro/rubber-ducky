@@ -110,6 +110,16 @@ Choices already made, so later work does not re-open them.
 | 2026-09-05 | attachments | Encoding knowledge lives in `$lib/attachments.ts`, not in a route. Two endpoints need it; T-22's migration will too. |
 | 2026-09-05 | ui | The remove button on a staged attachment is always visible, not revealed on hover. Hover-only controls are exactly what makes the current UI unusable on touch (T-12). |
 | 2026-09-05 | messages | A message may have empty text if it carries attachments. `POST /messages` skips embedding when there is no text, rather than embedding an empty string. |
+| 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
+| 2026-09-06 | notes | Notes are shaped like quests — name plus content, listed as items — with a visually distinct style. **If a note is a text box, something has gone wrong.** |
+| 2026-09-06 | notes | The title is a lookup key, not a headline. Optimise for "find the one called *start command*", not for reading top to bottom. |
+| 2026-09-06 | notes | Notes are the residue of work, distilled at the end. Continuous capture is what the message log is for; "tried X, didn't work" is a message, not a note. |
+| 2026-09-06 | notes | Note create / delete / save each post a system message to the duck log. This is why notes keep a deliberate save rather than quiet autosave — short autosave would spam the log. |
+| 2026-09-06 | links | **No message pinning**, ever. A pin list becomes a second, worse message history and is redundant once search exists. |
+| 2026-09-06 | links | Backtracing, note↔quest, and message citation are one primitive: a `references` row with kind+id on each end and an optional label. Not four features. |
+| 2026-09-06 | links | A reference always has a source — no free-floating saved links, which would be pinning with extra steps. |
+| 2026-09-06 | links | Code and schema say `reference` / `backlinks`; `backtrace` already means a stack trace elsewhere. UI wording is free. |
+| 2026-09-06 | model | Notes and quests stay separate tables despite the similar shape. Different lifecycles, fields, and UI; merging produces something where neither is fast. They share the scope model and the reference table. |
 
 ---
 
