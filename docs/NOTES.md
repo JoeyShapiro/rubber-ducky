@@ -22,7 +22,7 @@ panel component loads its own data when that duck changes. T-11 turns this into 
 badlings (groups)
   └── ducks (channels)
         ├── messages ──── attachments
-        ├── notes      (exactly one row per duck)
+        ├── notes      (many per duck; title + content, no completion state)
         └── quests     (self-referencing parent, duckId NOT NULL)
 answers (AI responses — no FK to anything, merged into message lists by timestamp)
 ```
@@ -47,9 +47,10 @@ src/lib/
     Chat.svelte          left column: message list + composer, owns loading and scroll
     Message.svelte       one message, system or normal, with its attachments
     Composer.svelte      textarea, attachments, paste, submit, the qna toggle
-    Notes.svelte         the notes pane
+    Notes.svelte         the notes pane: titled items, opened in place
     Quests.svelte        breadcrumbs + quest list
     QuestModal.svelte    create-quest dialog
+    ConfirmDialog.svelte reusable destructive-action confirm
 src/routes/
   +page.svelte           layout only - two columns, passes $duck down
 ```
@@ -111,6 +112,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-05 | ui | The remove button on a staged attachment is always visible, not revealed on hover. Hover-only controls are exactly what makes the current UI unusable on touch (T-12). |
 | 2026-09-05 | messages | A message may have empty text if it carries attachments. `POST /messages` skips embedding when there is no text, rather than embedding an empty string. |
 | 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
+| 2026-09-09 | notes | Deleting a note is confirmed, despite being the normal end of life. Notes are near-permanent by design with no undo and no history, so "one action, not buried" means reachable — not unguarded. |
+| 2026-09-09 | ui | Destructive confirms use `ConfirmDialog.svelte`: Cancel holds focus, Escape and backdrop cancel, and Cancel sits where the triggering button was so a double click lands on the safe option. Reuse it for quest delete in T-10. |
 | 2026-09-06 | notes | Notes are shaped like quests — name plus content, listed as items — with a visually distinct style. **If a note is a text box, something has gone wrong.** |
 | 2026-09-06 | notes | The title is a lookup key, not a headline. Optimise for "find the one called *start command*", not for reading top to bottom. |
 | 2026-09-06 | notes | Notes are the residue of work, distilled at the end. Continuous capture is what the message log is for; "tried X, didn't work" is a message, not a note. |
@@ -127,6 +130,31 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-09 — T-07: notes are real
+
+Notes went from one blob per duck to many titled items, in the database. `notes` gained `title`,
+`created_on` and `updated_on` (migration `0001_lonely_the_hand.sql`); the endpoint gained
+GET list / POST create / PATCH / DELETE, and [`Notes.svelte`](../src/lib/components/Notes.svelte)
+is a list of titled rows that opens one in place, with breadcrumbs matching the quest panel.
+
+**Closing a note is the save.** No save button and no per-keystroke autosave: Cmd/Ctrl-S commits
+without closing, Escape closes, a 15s idle timer catches an abandoned edit, and the component
+commits on unmount and on duck change. `commit()` captures the note, duck and drafts
+synchronously so an in-flight save stays correct if you switch ducks. `updated_on` therefore
+only moves on a real edit, which is what makes one honest log entry per edit possible (T-27).
+
+Deleting asks first, via the reusable `ConfirmDialog` — notes are near-permanent and nothing
+behind them keeps history.
+
+Deliberately not built: no content preview on rows (the title is a lookup key, and a preview is
+the first step back toward a document), no per-row delete (delete lives in the open note, so
+there is no hover-only control on a list item), and no filter box — a command palette is wanted
+instead. Rows are sorted most-recently-touched first, which may want to be alphabetical once
+there are enough notes to make lookup the dominant use.
+
+Scope is duck-only for now; T-28 widens it once T-08 lands. **No data was migrated** — the notes
+table was empty.
 
 ### 2026-09-05 — T-04, T-06: attachments render like a chat app
 

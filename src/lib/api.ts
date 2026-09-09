@@ -1,4 +1,5 @@
-import type { Attachment, Message, Note, Quest, QuestStatus } from '$lib/types';
+import { Note } from '$lib/types';
+import type { Attachment, Message, Quest, QuestStatus } from '$lib/types';
 
 export function getCookie(name: string): string | undefined {
     const value = `; ${document.cookie}`;
@@ -70,12 +71,29 @@ export function askQuestion(duck: string, prompt: string): Promise<{ message: Me
     return post('/qna', { duck, prompt, session: getCookie('session') || '' });
 }
 
-export function fetchNotes(duck: string): Promise<{ notes: Note | null }> {
-    return request(`/notes?duck=${duck}`);
+// notes are the one type revived into real instances here: the component compares and sorts by
+// their dates, and JSON hands them back as strings
+export async function fetchNotes(duck: string): Promise<Note[]> {
+    const data = await request<{ notes: unknown[] }>(`/notes?duck=${duck}`);
+    return data.notes.map(Note.fromJSON);
 }
 
-export function saveNotes(duck: string, notes: string): Promise<{ uuid: string }> {
-    return post('/notes', { duck, notes });
+export async function createNote(duck: string): Promise<Note> {
+    const data = await post<{ note: unknown }>('/notes', { duck });
+    return Note.fromJSON(data.note);
+}
+
+export async function updateNote(uuid: string, title: string, content: string): Promise<Note> {
+    const data = await request<{ note: unknown }>('/notes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid, title, content }),
+    });
+    return Note.fromJSON(data.note);
+}
+
+export function deleteNote(uuid: string): Promise<{ ok: boolean }> {
+    return request(`/notes?uuid=${uuid}`, { method: 'DELETE' });
 }
 
 export function fetchQuests(duck: string): Promise<{ quests: Quest[] }> {

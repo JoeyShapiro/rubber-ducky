@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
-	import type { Duck, Note } from '$lib/types';
-	import { createNote, deleteNote, listNotes, updateNote } from '$lib/notes';
+	import { Note, type Duck } from '$lib/types';
+	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
 	import { formatDate } from '$lib/format';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	export let duck: Duck;
 
 	let notes: Note[] = [];
 	let openUuid: string | null = null;
-	let filter = '';
+	let loading = false;
 	let loadedDuck = '';
+	let confirmingDelete = false;
 
 	// editing buffers - the open note is not touched until the edit is committed
 	let draftTitle = '';
@@ -20,42 +22,64 @@
 	const IDLE_COMMIT_MS = 15000;
 
 	$: if (duck.uuid !== loadedDuck) {
-		commit();
+		commit(); // captures the outgoing duck synchronously, before loadedDuck moves
 		loadedDuck = duck.uuid;
 		openUuid = null;
-		filter = '';
-		notes = duck.uuid ? listNotes(duck.uuid) : [];
+		load(duck.uuid);
 	}
 
 	$: open = notes.find((n) => n.uuid === openUuid) ?? null;
 	$: dirty = open !== null && (draftTitle !== open.title || draftContent !== open.content);
-	$: visible = notes
-		.filter((n) => match(n, filter))
-		.sort((a, b) => stamp(b) - stamp(a));
+	$: ordered = [...notes].sort((a, b) => stamp(b) - stamp(a));
 
 	function stamp(note: Note): number {
 		return (note.modified ?? note.created).getTime();
-	}
-
-	function match(note: Note, needle: string): boolean {
-		if (needle.trim() === '') return true;
-		const q = needle.toLowerCase();
-		return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
 	}
 
 	function displayTitle(note: Note): string {
 		return note.title.trim() || 'Untitled';
 	}
 
+	async function load(uuid: string) {
+		if (!uuid) {
+			notes = [];
+			return;
+		}
+
+		loading = true;
+		try {
+			const list = await fetchNotes(uuid);
+			if (loadedDuck === uuid) notes = list;
+		} catch (err) {
+			console.error('notes', err);
+		} finally {
+			loading = false;
+		}
+	}
+
 	/**
 	 * Closing a note is the save. That gives a real `modified` date and one discrete event for
 	 * the log (T-27) without a save button and without autosave firing per keystroke. Cmd/Ctrl-S
 	 * commits without closing; a long idle timer catches you if you wander off mid-edit.
+	 *
+	 * Everything it needs is captured synchronously, so it stays correct if the duck changes
+	 * while the request is in flight.
 	 */
-	function commit() {
-		if (!open || !dirty) return;
-		updateNote(loadedDuck, open.uuid, { title: draftTitle, content: draftContent });
-		notes = listNotes(loadedDuck);
+	async function commit() {
+		const note = open;
+		if (!note || !dirty) return;
+
+		const duckId = loadedDuck;
+		const title = draftTitle;
+		const content = draftContent;
+
+		try {
+			const saved = await updateNote(note.uuid, title, content);
+			if (loadedDuck !== duckId) return; // moved on while saving
+			notes = notes.map((n) => (n.uuid === saved.uuid ? saved : n));
+		} catch (err) {
+			console.error('notes', err);
+		}
 	}
 
 	function touch() {
@@ -63,7 +87,7 @@
 		idleTimer = setTimeout(commit, IDLE_COMMIT_MS);
 	}
 
-	async function openNote(note: Note) {
+	function openNote(note: Note) {
 		commit();
 		draftTitle = note.title;
 		draftContent = note.content;
@@ -78,27 +102,42 @@
 
 	async function addNote() {
 		if (!duck.uuid) return;
-		commit();
+		await commit();
 
-		const note = createNote(duck.uuid);
-		notes = listNotes(duck.uuid);
-		draftTitle = '';
-		draftContent = '';
-		openUuid = note.uuid;
+		try {
+			const note = await createNote(duck.uuid);
+			notes = [note, ...notes];
+			draftTitle = '';
+			draftContent = '';
+			openUuid = note.uuid;
 
-		await tick();
-		titleInput?.focus();
+			await tick();
+			titleInput?.focus();
+		} catch (err) {
+			console.error('notes', err);
+		}
 	}
 
-	function removeNote() {
-		if (!open) return;
-		deleteNote(loadedDuck, open.uuid);
+	// notes are meant to be near-permanent, and there is no undo and no history behind them,
+	// so deletion asks first
+	async function removeNote() {
+		const note = open;
+		confirmingDelete = false;
+		if (!note) return;
+
 		clearTimeout(idleTimer);
-		openUuid = null;
-		notes = listNotes(loadedDuck);
+		try {
+			await deleteNote(note.uuid);
+			notes = notes.filter((n) => n.uuid !== note.uuid);
+			openUuid = null;
+		} catch (err) {
+			console.error('notes', err);
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (confirmingDelete) return; // the dialog owns the keyboard while it is up
+
 		if ((event.ctrlKey || event.metaKey) && event.key === 's') {
 			event.preventDefault();
 			commit();
@@ -123,7 +162,7 @@
 				<span class="notes-crumb notes-crumb-current">{displayTitle(open)}</span>
 				{#if dirty}<span class="notes-dirty" title="Unsaved">•</span>{/if}
 			</div>
-			<button class="notes-btn notes-btn-danger" type="button" on:click={removeNote}>Delete</button>
+			<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
 		{:else}
 			<span class="notes-title fw-semibold">Notes</span>
 			<button class="notes-btn" type="button" on:click={addNote} disabled={!duck.uuid}>New Note</button>
@@ -152,35 +191,34 @@
 			></textarea>
 		</div>
 	{:else}
-		{#if notes.length > 1}
-			<div class="px-3 pt-2">
-				<input bind:value={filter} class="notes-filter" placeholder="Find a note" />
-			</div>
-		{/if}
-
 		<ul class="notes-list list-unstyled m-0 p-3">
-			{#each visible as note (note.uuid)}
+			{#each ordered as note (note.uuid)}
 				<li>
 					<button class="note-item d-flex align-items-center gap-2 w-100" type="button" on:click={() => openNote(note)}>
-						<span class="note-glyph" aria-hidden="true">▤</span>
 						<span class="note-item-title flex-fill">{displayTitle(note)}</span>
 						<span class="note-item-date">{formatDate(note.modified ?? note.created)}</span>
 					</button>
 				</li>
 			{/each}
 
-			{#if visible.length === 0}
+			{#if ordered.length === 0 && !loading}
 				<li class="notes-empty">
-					{#if notes.length === 0}
-						Nothing kept yet. Notes are the things you will want to look up again.
-					{:else}
-						No note matches “{filter}”.
-					{/if}
+					Nothing kept yet. Notes are the things you will want to look up again.
 				</li>
 			{/if}
 		</ul>
 	{/if}
 </div>
+
+{#if confirmingDelete && open}
+	<ConfirmDialog
+		title="Delete “{displayTitle(open)}”?"
+		body="Notes are kept because you will want them again. This one goes for good — there is no undo."
+		confirmLabel="Delete note"
+		on:confirm={removeNote}
+		on:cancel={() => (confirmingDelete = false)}
+	/>
+{/if}
 
 <style>
 	/* notes are shaped like quests but must not read like them: cool slate instead of the
@@ -280,20 +318,6 @@
 		flex-shrink: 0;
 	}
 
-	.notes-filter {
-		width: 100%;
-		font-size: 0.8rem;
-		padding: 0.25rem 0.6rem;
-		border-radius: 999px;
-		border: 1px solid rgba(212, 212, 250, 0.6);
-		background: rgba(255, 255, 255, 0.5);
-	}
-
-	.notes-filter:focus {
-		outline: none;
-		border-color: rgba(94, 106, 158, 0.6);
-	}
-
 	.notes-list {
 		overflow-y: auto;
 	}
@@ -313,12 +337,6 @@
 	.note-item:hover {
 		background: rgba(255, 255, 255, 0.8);
 		border-left-color: rgba(94, 106, 158, 0.95);
-	}
-
-	.note-glyph {
-		color: rgba(94, 106, 158, 0.7);
-		font-size: 0.8rem;
-		flex-shrink: 0;
 	}
 
 	.note-item-title {
@@ -414,8 +432,7 @@
 		background: rgba(45, 45, 43, 0.9);
 	}
 
-	:global(:root[data-theme="dark"]) .note-content-input,
-	:global(:root[data-theme="dark"]) .notes-filter {
+	:global(:root[data-theme="dark"]) .note-content-input {
 		background: rgba(25, 25, 24, 0.6);
 		border-color: rgba(80, 80, 80, 0.5);
 		color: var(--text-primary);

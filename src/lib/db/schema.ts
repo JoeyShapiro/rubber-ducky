@@ -59,9 +59,14 @@ export const answers = pgTable('answers', {
     messages: text('messages'),
 });
 
+// many notes per duck. the title is a lookup key, and there is no completion state - a note is
+// true or stale, and stale notes get deleted. see docs/PLAN.md, W3.
 export const notes = pgTable('notes', {
     id: uuid('id').primaryKey().defaultRandom(),
-    content: text('content'),
+    title: text('title').notNull().default(''),
+    content: text('content').notNull().default(''),
+    createdOn: timestamp('created_on', { withTimezone: true }).notNull().defaultNow(),
+    updatedOn: timestamp('updated_on', { withTimezone: true }),
     embedding: vector('embedding'),
     duckId: uuid('duck_id').notNull().references(() => ducks.id),
 });

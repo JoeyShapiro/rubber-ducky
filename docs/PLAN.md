@@ -273,65 +273,25 @@ badling-scoped items are unreachable — created and then lost.
 
 ---
 
-### [ ] T-07 — Make notes a real entity instead of one blob per duck
+### [ ] T-28 — Give notes the same scope as quests
 
-> **UI prototyped 2026-09-07, in memory only.** [`Notes.svelte`](../src/lib/components/Notes.svelte)
-> is the design spike: a list of titled items, click one to edit it in place, backed by
-> [`$lib/notes.ts`](../src/lib/notes.ts) — a `Map` that is wiped on reload and seeds every duck
-> with two examples. `Note` in [`types.ts`](../src/lib/types.ts) gained `title`, `created` and
-> `modified`. **No database work, no migration, no endpoint.** What remains for T-07 is the
-> persistence underneath, and the existing `/notes` endpoint is now stale and unused.
->
-> Settled by the spike:
-> - **In place, not a modal.** The quest panel beside it already drills down with breadcrumbs;
->   a modal would make two sibling panels answer the same gesture differently.
-> - **Closing the note is the save.** No save button, no per-keystroke autosave. Cmd/Ctrl-S
->   commits without closing, Escape closes, and a 15s idle timer catches an abandoned edit.
->   `modified` is only touched when the content actually changed, so open-and-close is free.
->   This is what makes one discrete log event per edit possible (T-27).
-> - List shows title and date only. No content preview — the title is the lookup key, and a
->   preview is the first step back toward a document.
-> - Delete lives in the open note, not on the row: one action once you are in, and no
->   hover-only control on every list item (T-12).
-> - Monospace content area, because the content is usually a snippet.
-> - A filter box appears once there is more than one note.
->
-> Still to decide: sort order is most-recently-touched first, which suits "the one I just made"
-> but not "find the one called *start command*" once there are twenty — alphabetical may be the
-> better default. And `modified` is implemented, but whether it earns its place in the UI is
-> still open.
+**Priority:** medium · **Blocked by:** T-08
 
-**Priority:** high · **Blocked by:** the design brief above (and coordinate with T-11, which
-moves notes into their own route)
+**Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts),
+[`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
+[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte), a migration
 
-**Files:** [`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
-[`src/lib/db/schema.ts`](../src/lib/db/schema.ts#L62-L67),
-[`src/lib/types.ts`](../src/lib/types.ts),
-[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte),
-[`src/lib/api.ts`](../src/lib/api.ts), a Drizzle migration
-
-**Problem:** There is exactly one `notes` row per duck and `POST` overwrites the entire blob
-([`notes/+server.ts:26-29`](../src/routes/notes/+server.ts#L26-L29)). No title, no multiple
-notes, no timestamps, no history, no search, no autosave — and it permanently occupies half the
-window width. It is a scratchpad nailed to the side of a chat, with no relationship to the
-messages or quests around it.
+**Problem:** T-07 shipped notes as duck-only, because T-08's scope model does not exist yet.
+"Office snack preferences: Sarah is gluten-free" is reference material for an area of life, not
+for one project, and today it has nowhere to live — the same gap loose tasks have. See *Where a
+loose task lives*.
 
 **Acceptance criteria:**
-- Schema: `title`, `content`, `createdOn`, `updatedOn`, and the scope decided in the design
-  brief (recommended: same nullable duck / badling / global model as T-08).
-- **A list of small titled items, not a text box.** Structurally the quest list — name plus
-  content, browsable by title, because the title is a lookup key: optimise for "find the one
-  called *start command*", not for reading top to bottom.
-- **Visually distinct from quests.** Same shape, different style; the two must not be confused
-  at a glance. No status pill, no due date, no completion affordance anywhere on a note.
-- **No completion state.** Notes are true or stale; deleting is the normal end of life and must
-  be one action, not buried.
-- Content renders code legibly — the motivating example is a shell snippet.
-- **Deliberate save**, not quiet autosave: either an explicit save action or a very long
-  debounce, because every commit writes a system message (T-27) and a short autosave would spam
-  the log. Keep the ⌘S/Ctrl-S handler and show a clear unsaved state.
-- Creating a note is one action from wherever you are — no dialog, no required parent.
-- Migration folds each existing single blob into one titled note per duck without data loss.
+- `notes.duckId` becomes nullable alongside a nullable `badlingId`, matching whatever shape T-08
+  settles on. Do not invent a second scope model.
+- `GET /notes` accepts `?duck=`, `?badling=`, or neither (global), like `GET /quests`.
+- Existing notes keep their duck; the migration is non-destructive.
+- The badling and global views can list and create notes, not just ducks.
 
 ---
 
@@ -540,7 +500,9 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 **Acceptance criteria:**
 - Inline quick-add (type a title, press Enter) alongside the full modal.
 - Edit and delete, with `PATCH` accepting arbitrary field updates and a `DELETE` handler that
-  handles sub-quests (cascade or re-parent — decide and record).
+  handles sub-quests (cascade or re-parent — decide and record). Deleting confirms via
+  [`ConfirmDialog.svelte`](../src/lib/components/ConfirmDialog.svelte); deleting a quest with
+  subquests especially needs to say what else goes with it.
 - No control is hover-only; everything is reachable by tap.
 - Status and sub-quest count are visible simultaneously.
 - Drag-to-reorder writing `sortOrder`.
@@ -785,10 +747,10 @@ defaults; `README.md`'s `.env` block updated.
 Dependency-driven; W6 items are independent and can be interleaved.
 
 1. **T-13, T-14** — auth and session lifetime. Small, and the app is currently wide open.
-2. **Settle the W3 design brief** — costs nothing to decide, and T-07 cannot start without it.
-3. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
+2. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
+   It also decides whether notes gain badling/global scope (T-28).
 4. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
-5. **T-07, T-10, T-12** — the UX work, now that the foundations hold.
+5. **T-10, T-12** — the UX work, now that the foundations hold.
 6. **T-24, T-25** — the reference table, then distilling notes from the log. These are what
    make notes stop feeling bolted on, but they need T-07 and T-08 underneath first.
 7. **T-27** — note activity in the log, once notes exist and can be referenced.
