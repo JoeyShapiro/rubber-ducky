@@ -1,5 +1,7 @@
 import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/default.css'; // need to get the styles
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const languages: string[] = [];
 
@@ -47,6 +49,22 @@ async function metaRegisterLanguage(name: string) {
                 break;
             case 'kotlin':
                 module = await import('highlight.js/lib/languages/kotlin');
+                break;
+            // notes are mostly shell and config, so these earn their place
+            case 'bash':
+            case 'sh':
+            case 'shell':
+                module = await import('highlight.js/lib/languages/bash');
+                break;
+            case 'sql':
+                module = await import('highlight.js/lib/languages/sql');
+                break;
+            case 'json':
+                module = await import('highlight.js/lib/languages/json');
+                break;
+            case 'yaml':
+            case 'yml':
+                module = await import('highlight.js/lib/languages/yaml');
                 break;
 
             // Add more cases for other languages you need
@@ -133,5 +151,101 @@ export function markdown(node: HTMLElement) {
         destroy() {
             // Cleanup code if needed
         }
+    };
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// The real renderer. Notes use this; messages are still on the legacy action above until T-17
+// moves them over and deletes it. Do not add a third path.
+// ---------------------------------------------------------------------------------------------
+
+marked.setOptions({ gfm: true, breaks: true });
+
+let hooked = false;
+
+/**
+ * Markdown source -> sanitised html.
+ *
+ * Unlike the legacy action this never touches rendered html: marked parses the *source string*
+ * and DOMPurify strips anything dangerous out of the result, so content like `<stdio.h>` or a
+ * pasted `<script>` is inert rather than mangled or executed.
+ */
+export function renderMarkdown(source: string): string {
+    const html = marked.parse(source ?? '', { async: false }) as string;
+
+    // DOMPurify needs a dom. Notes only ever render client side, so this is belt and braces.
+    if (typeof window === 'undefined') return '';
+
+    if (!hooked) {
+        hooked = true;
+        DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+            if (node.tagName === 'A') {
+                node.setAttribute('target', '_blank');
+                node.setAttribute('rel', 'noreferrer');
+            }
+        });
+    }
+
+    return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+}
+
+async function highlightBlocks(root: HTMLElement) {
+    for (const block of Array.from(root.querySelectorAll('pre code'))) {
+        const named = Array.from(block.classList).find((c) => c.startsWith('language-'));
+        if (!named) continue;
+
+        const language = named.slice('language-'.length);
+        if (!languages.includes(language)) {
+            try {
+                await metaRegisterLanguage(language);
+                languages.push(language);
+            } catch {
+                continue; // unsupported language stays plain, which is fine
+            }
+        }
+        hljs.highlightElement(block as HTMLElement);
+    }
+}
+
+function addCopyButtons(root: HTMLElement) {
+    for (const pre of Array.from(root.querySelectorAll('pre'))) {
+        if (pre.querySelector('.md-copy')) continue;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'md-copy';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
+                button.textContent = 'Copied';
+                setTimeout(() => (button.textContent = 'Copy'), 1200);
+            } catch {
+                button.textContent = 'Failed';
+                setTimeout(() => (button.textContent = 'Copy'), 1200);
+            }
+        });
+
+        pre.appendChild(button);
+    }
+}
+
+/**
+ * Svelte action for a node whose innerHTML came from renderMarkdown: highlights code blocks and
+ * gives each one a copy button. Pass the html as the parameter so it re-runs when the content
+ * changes.
+ */
+export function enhanceMarkdown(node: HTMLElement, _html: string) {
+    function run() {
+        highlightBlocks(node);
+        addCopyButtons(node);
+    }
+
+    run();
+    return {
+        update() {
+            run();
+        },
     };
 }

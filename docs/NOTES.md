@@ -38,7 +38,8 @@ problem and a large part of why notes and tasks feel bolted on. T-08 is the fix.
 src/lib/
   stores.ts              duck, hidden, darkMode, messages
   api.ts                 every fetch to our own endpoints, plus one shared 401 handler
-  markdown.ts            the regex markdown action (T-17 replaces it)
+  markdown.ts            renderMarkdown (marked+dompurify, used by notes) and the legacy
+                         regex action still used by messages - T-17 closes the gap
   attachments.ts         reading the three attachment encodings; shared by both endpoints
   format.ts              formatDate
   quests.ts              status list, labels, css classes, svg icons
@@ -113,6 +114,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-05 | messages | A message may have empty text if it carries attachments. `POST /messages` skips embedding when there is no text, rather than embedding an empty string. |
 | 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
 | 2026-09-09 | notes | Deleting a note is confirmed, despite being the normal end of life. Notes are near-permanent by design with no undo and no history, so "one action, not buried" means reachable — not unguarded. |
+| 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
+| 2026-09-09 | markdown | `renderMarkdown()` = marked + DOMPurify, parsing the **source string**. Never regex over rendered html. DOMPurify is not optional: marked passes `<script>` through untouched by design. |
 | 2026-09-09 | ui | Destructive confirms use `ConfirmDialog.svelte`: Cancel holds focus, Escape and backdrop cancel, and Cancel sits where the triggering button was so a double click lands on the safe option. Reuse it for quest delete in T-10. |
 | 2026-09-06 | notes | Notes are shaped like quests — name plus content, listed as items — with a visually distinct style. **If a note is a text box, something has gone wrong.** |
 | 2026-09-06 | notes | The title is a lookup key, not a headline. Optimise for "find the one called *start command*", not for reading top to bottom. |
@@ -130,6 +133,21 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-09 — notes render markdown
+
+Notes open in a **read** mode showing rendered markdown; an Edit button swaps to the raw title +
+textarea, and Done (or Escape, or leaving) commits and returns to reading. A brand new note opens
+straight into edit mode, since there is nothing to read yet.
+
+`renderMarkdown()` in [`markdown.ts`](../src/lib/markdown.ts) is marked + DOMPurify over the
+source string — added rather than reusing the legacy action, which mangles `<stdio.h>` and is an
+XSS hole. `enhanceMarkdown` is a companion action that highlights fenced code and gives every
+block an always-visible copy button. The language switch gained bash/sh/shell, sql, json and
+yaml, since note content is mostly shell.
+
+**Messages still use the legacy renderer** — that is the remainder of T-17, and two renderers is
+drift that should not sit for long.
 
 ### 2026-09-09 — T-07: notes are real
 

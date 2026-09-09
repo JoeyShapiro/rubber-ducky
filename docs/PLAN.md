@@ -672,28 +672,31 @@ paginating will duplicate every AI answer.
 
 ---
 
-### [ ] T-17 — Replace the regex markdown renderer
+### [ ] T-17 — Move messages onto the real markdown renderer
 
 **Priority:** medium · **Blocked by:** none
 
 **Files:** [`src/lib/markdown.ts`](../src/lib/markdown.ts),
 [`src/lib/components/Message.svelte`](../src/lib/components/Message.svelte)
 
-**Problem:** Message content is emitted with `{@html message.content}` — **unescaped** — and
-then an action reads `node.innerHTML`, runs eight sequential regex replacements over it, and
-writes it back ([`markdown.ts:84-137`](../src/lib/markdown.ts#L84-L137)). This is an XSS hole on
-your own stored data, it re-parses the whole subtree once per replacement, and it corrupts any
-content containing HTML-significant characters. The `replaceAsync` helper is annotated
-`// idk what this does, but it works`.
+**Problem:** Half done. `renderMarkdown()` (marked + DOMPurify) exists and notes use it, but
+messages still go through the legacy `markdown` action in the same file — the one that emits
+`{@html message.content}` unescaped and then runs eight regex passes over the rendered
+`innerHTML`. That is an XSS hole on stored data, quadratic, and it corrupts anything with
+HTML-significant characters. **Two renderers is drift; close it.**
 
 **Acceptance criteria:**
-- A real markdown library (e.g. `marked`) plus a sanitiser, producing HTML from the **source
-  string** — never by rewriting rendered `innerHTML`.
-- Code highlighting integrates via the markdown renderer, letting the hardcoded 13-case
-  language `switch` ([`markdown.ts:11`](../src/lib/markdown.ts#L11)) be deleted.
-- Existing custom syntax is preserved: `||spoilers||` and bare-URL autolinking.
-- Escaping works — there is currently no way to write a literal `**` or backtick.
-- No `{@html}` on unsanitised input.
+- `Message.svelte` renders `{@html renderMarkdown(message.content)}` and the legacy `markdown`
+  action, `replaceAsync`, and their comments are deleted.
+- Custom syntax preserved: `||spoilers||` (a marked extension or a post-sanitise pass) and bare
+  URL autolinking (marked's gfm autolink covers it — verify).
+- Existing messages still render acceptably. Their content was written against the old renderer,
+  so check a fenced code block, an inline backtick, and a bare URL from the real log.
+- Escaping works: a literal `**` or backtick can be written.
+- Code blocks in messages get the same highlighting and copy button notes have — reuse
+  `enhanceMarkdown`.
+- The hardcoded language `switch` ([`markdown.ts:11`](../src/lib/markdown.ts#L11)) stays for now;
+  it is shared by both paths and grew bash/sql/json/yaml for notes.
 
 ---
 

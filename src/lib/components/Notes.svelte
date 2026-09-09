@@ -3,6 +3,7 @@
 	import { Note, type Duck } from '$lib/types';
 	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
 	import { formatDate } from '$lib/format';
+	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	export let duck: Duck;
@@ -12,6 +13,8 @@
 	let loading = false;
 	let loadedDuck = '';
 	let confirmingDelete = false;
+	// a note is read far more often than it is written, so reading is the default mode
+	let editing = false;
 
 	// editing buffers - the open note is not touched until the edit is committed
 	let draftTitle = '';
@@ -25,12 +28,14 @@
 		commit(); // captures the outgoing duck synchronously, before loadedDuck moves
 		loadedDuck = duck.uuid;
 		openUuid = null;
+		editing = false;
 		load(duck.uuid);
 	}
 
 	$: open = notes.find((n) => n.uuid === openUuid) ?? null;
 	$: dirty = open !== null && (draftTitle !== open.title || draftContent !== open.content);
 	$: ordered = [...notes].sort((a, b) => stamp(b) - stamp(a));
+	$: rendered = open && !editing ? renderMarkdown(open.content) : '';
 
 	function stamp(note: Note): number {
 		return (note.modified ?? note.created).getTime();
@@ -92,12 +97,31 @@
 		draftTitle = note.title;
 		draftContent = note.content;
 		openUuid = note.uuid;
+		editing = false;
+	}
+
+	async function startEditing() {
+		if (!open) return;
+		draftTitle = open.title;
+		draftContent = open.content;
+		editing = true;
+
+		await tick();
+		titleInput?.focus();
+	}
+
+	// leaving edit mode is the save, the same way closing the note is
+	function stopEditing() {
+		commit();
+		clearTimeout(idleTimer);
+		editing = false;
 	}
 
 	function close() {
 		commit();
 		clearTimeout(idleTimer);
 		openUuid = null;
+		editing = false;
 	}
 
 	async function addNote() {
@@ -110,6 +134,7 @@
 			draftTitle = '';
 			draftContent = '';
 			openUuid = note.uuid;
+			editing = true; // a brand new note has nothing to read
 
 			await tick();
 			titleInput?.focus();
@@ -130,6 +155,7 @@
 			await deleteNote(note.uuid);
 			notes = notes.filter((n) => n.uuid !== note.uuid);
 			openUuid = null;
+			editing = false;
 		} catch (err) {
 			console.error('notes', err);
 		}
@@ -142,8 +168,10 @@
 			event.preventDefault();
 			commit();
 		}
+		// escape steps back one level: edit -> read -> list
 		if (event.key === 'Escape') {
-			close();
+			if (editing) stopEditing();
+			else close();
 		}
 	}
 
@@ -162,14 +190,21 @@
 				<span class="notes-crumb notes-crumb-current">{displayTitle(open)}</span>
 				{#if dirty}<span class="notes-dirty" title="Unsaved">•</span>{/if}
 			</div>
-			<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
+			<div class="d-flex gap-2 flex-shrink-0">
+				{#if editing}
+					<button class="notes-btn notes-btn-primary" type="button" on:click={stopEditing}>Done</button>
+				{:else}
+					<button class="notes-btn" type="button" on:click={startEditing}>Edit</button>
+				{/if}
+				<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
+			</div>
 		{:else}
 			<span class="notes-title fw-semibold">Notes</span>
 			<button class="notes-btn" type="button" on:click={addNote} disabled={!duck.uuid}>New Note</button>
 		{/if}
 	</div>
 
-	{#if open}
+	{#if open && editing}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="note-editor d-flex flex-column flex-fill p-3" on:keydown={handleKeydown}>
 			<input
@@ -187,8 +222,21 @@
 				bind:value={draftContent}
 				on:input={touch}
 				class="note-content-input flex-fill mt-2"
-				placeholder="The thing worth keeping around..."
+				placeholder="Markdown. Fenced code blocks get highlighting and a copy button."
 			></textarea>
+		</div>
+	{:else if open}
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="note-reader flex-fill p-3" on:keydown={handleKeydown} tabindex="-1">
+			<h2 class="note-read-title m-0">{displayTitle(open)}</h2>
+			<div class="note-meta mb-3">
+				created {formatDate(open.created)}{#if open.modified} · edited {formatDate(open.modified)}{/if}
+			</div>
+			{#if open.content.trim() === ''}
+				<p class="notes-empty m-0">Empty. Hit Edit to write it.</p>
+			{:else}
+				<div class="note-markdown" use:enhanceMarkdown={rendered}>{@html rendered}</div>
+			{/if}
 		</div>
 	{:else}
 		<ul class="notes-list list-unstyled m-0 p-3">
@@ -278,6 +326,16 @@
 		color: rgba(150, 40, 50, 0.95);
 	}
 
+	.notes-btn-primary {
+		background: rgba(94, 106, 158, 0.9);
+		border-color: rgba(94, 106, 158, 0.9);
+		color: rgba(255, 255, 255, 0.96);
+	}
+
+	.notes-btn-primary:hover:not(:disabled) {
+		background: rgba(78, 89, 138, 1);
+	}
+
 	.notes-btn-danger:hover {
 		background: rgba(220, 53, 69, 0.12);
 	}
@@ -362,6 +420,120 @@
 		padding: 0.5rem 0.25rem;
 	}
 
+	.note-reader {
+		overflow-y: auto;
+		min-height: 0;
+	}
+
+	.note-reader:focus {
+		outline: none;
+	}
+
+	.note-read-title {
+		font-size: 1.05rem;
+		font-weight: 650;
+	}
+
+	/* a rendered document: comfortable to read, tight enough for a half-width panel */
+	.note-markdown {
+		font-size: 0.88rem;
+		line-height: 1.6;
+	}
+
+	.note-markdown :global(h1),
+	.note-markdown :global(h2),
+	.note-markdown :global(h3) {
+		font-size: 0.95rem;
+		font-weight: 650;
+		margin: 1rem 0 0.4rem;
+	}
+
+	.note-markdown :global(p),
+	.note-markdown :global(ul),
+	.note-markdown :global(ol) {
+		margin: 0 0 0.7rem;
+	}
+
+	.note-markdown :global(ul),
+	.note-markdown :global(ol) {
+		padding-left: 1.2rem;
+	}
+
+	.note-markdown :global(li) {
+		margin-bottom: 0.2rem;
+	}
+
+	.note-markdown :global(a) {
+		word-break: break-word;
+	}
+
+	.note-markdown :global(blockquote) {
+		margin: 0 0 0.7rem;
+		padding-left: 0.7rem;
+		border-left: 3px solid rgba(94, 106, 158, 0.4);
+		color: rgba(90, 90, 105, 0.9);
+	}
+
+	.note-markdown :global(code) {
+		font-family: 'GG Mono', 'Courier New', monospace;
+		font-size: 0.82rem;
+	}
+
+	.note-markdown :global(pre) {
+		position: relative;
+		background: rgba(120, 120, 130, 0.09);
+		border: 1px solid rgba(212, 212, 250, 0.45);
+		border-radius: 6px;
+		padding: 0.6rem 0.7rem;
+		margin: 0 0 0.7rem;
+		overflow-x: auto;
+	}
+
+	.note-markdown :global(pre code) {
+		background: none;
+		padding: 0;
+		font-size: 0.8rem;
+		line-height: 1.5;
+	}
+
+	/* always visible, not revealed on hover - it has to work on touch (T-12) */
+	.note-markdown :global(.md-copy) {
+		position: absolute;
+		top: 0.3rem;
+		right: 0.3rem;
+		font-size: 0.68rem;
+		font-weight: 600;
+		padding: 0.1rem 0.45rem;
+		border-radius: 4px;
+		border: 1px solid rgba(120, 120, 140, 0.35);
+		background: rgba(255, 255, 255, 0.85);
+		color: rgba(70, 70, 90, 0.9);
+		cursor: pointer;
+	}
+
+	.note-markdown :global(.md-copy:hover) {
+		background: rgba(255, 255, 255, 1);
+		border-color: rgba(94, 106, 158, 0.6);
+	}
+
+	.note-markdown :global(table) {
+		border-collapse: collapse;
+		margin-bottom: 0.7rem;
+		font-size: 0.82rem;
+	}
+
+	.note-markdown :global(th),
+	.note-markdown :global(td) {
+		border: 1px solid rgba(212, 212, 250, 0.5);
+		padding: 0.25rem 0.5rem;
+	}
+
+	.note-markdown :global(hr) {
+		border: none;
+		border-top: 1px solid rgba(212, 212, 250, 0.6);
+		margin: 0.9rem 0;
+	}
+
 	.note-title-input {
 		font-size: 1rem;
 		font-weight: 600;
@@ -430,6 +602,21 @@
 
 	:global(:root[data-theme="dark"]) .note-item:hover {
 		background: rgba(45, 45, 43, 0.9);
+	}
+
+	:global(:root[data-theme="dark"]) .note-markdown :global(pre) {
+		background: rgba(25, 25, 24, 0.6);
+		border-color: rgba(80, 80, 80, 0.5);
+	}
+
+	:global(:root[data-theme="dark"]) .note-markdown :global(.md-copy) {
+		background: rgba(45, 45, 43, 0.95);
+		border-color: rgba(120, 120, 130, 0.5);
+		color: rgba(215, 215, 225, 0.9);
+	}
+
+	:global(:root[data-theme="dark"]) .note-markdown :global(blockquote) {
+		color: rgba(196, 196, 205, 0.85);
 	}
 
 	:global(:root[data-theme="dark"]) .note-content-input {

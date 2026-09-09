@@ -1,6 +1,8 @@
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from './schema';
-import { badlings, ducks, messages, quests } from './schema';
+import { badlings, ducks, messages, notes, quests } from './schema';
+
+const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 
 export async function seed(db: PostgresJsDatabase<typeof schema>) {
     const existing = await db.select().from(badlings).limit(1);
@@ -46,5 +48,66 @@ export async function seed(db: PostgresJsDatabase<typeof schema>) {
         { id: 'f0000000-0000-0000-0000-000000000008', title: 'Replace icon with count', description: 'Show child count on the icon when a quest has subquests.', status: 'completed', done: true, createdOn: new Date(), updatedOn: new Date(), questParentId: 'f0000000-0000-0000-0000-000000000002', duckId: 'd0000000-0000-0000-0000-000000000001' },
         { id: 'f0000000-0000-0000-0000-000000000009', title: 'Add date input to modal', description: 'Swap the plain text due field for an <input type="date">.', status: 'active', done: false, createdOn: new Date(), updatedOn: new Date(), questParentId: 'f0000000-0000-0000-0000-000000000003', duckId: 'd0000000-0000-0000-0000-000000000001' },
         { id: 'f0000000-0000-0000-0000-000000000010', title: 'Format date for display', description: 'Show a human-readable date string on the quest card.', status: 'inactive', done: false, createdOn: new Date(), updatedOn: new Date(), questParentId: 'f0000000-0000-0000-0000-000000000003', duckId: 'd0000000-0000-0000-0000-000000000001' },
+    ]);
+
+    // notes are things that are currently true and worth looking up again - short, titled,
+    // and keyed by the question you will ask ("how do i start this?"). not a journal.
+    await db.insert(notes).values([
+        {
+            id: 'c0000000-0000-0000-0000-000000000001',
+            title: 'start command',
+            content: 'Build and run locally.\n\n```bash\nchmod +x build.sh\n./build.sh\n```\n\nDont forget the chmod, a fresh clone loses the bit.',
+            createdOn: daysAgo(31),
+            updatedOn: daysAgo(2),
+            duckId: 'd0000000-0000-0000-0000-000000000001',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000002',
+            title: 'reset the database',
+            content: 'Nuke it and start over.\n\n```bash\ndocker compose down -v\ndocker compose up -d\nbun run db:migrate\nbun run db:seed\n```\n\n`-v` is the important bit. Without it the old volume comes back.',
+            createdOn: daysAgo(24),
+            updatedOn: null,
+            duckId: 'd0000000-0000-0000-0000-000000000001',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000003',
+            title: 'psql into the container',
+            content: '```bash\ndocker exec -it rubber-ducky-postgres-1 psql -U postgres -d rubber_ducky\n```\n\nNeeds `-i` when piping a script in. Without it psql reads empty stdin and exits clean.',
+            createdOn: daysAgo(18),
+            updatedOn: null,
+            duckId: 'd0000000-0000-0000-0000-000000000001',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000004',
+            title: 'svelte 4 gotchas',
+            content: '- No TypeScript in markup expressions, the cast has to live in the `<script>` block\n- `safe_not_equal` treats every object as changed, so props holding objects always re-render\n- Scoped CSS keeps selectors it cannot prove unused, so dynamic class names survive',
+            createdOn: daysAgo(12),
+            updatedOn: daysAgo(9),
+            duckId: 'd0000000-0000-0000-0000-000000000001',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000005',
+            title: 'ollama model',
+            content: '```bash\nollama pull nomic-embed-text   # embeddings, 768 dim\nollama pull llama3.2           # qna\n```\n\n`OLLAMA_URL` defaults to <http://localhost:11434>.',
+            createdOn: daysAgo(6),
+            updatedOn: null,
+            duckId: 'd0000000-0000-0000-0000-000000000001',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000006',
+            title: 'quake cfg location',
+            content: '`~/.quakespasm/id1/autoexec.cfg`\n\n```\nsensitivity 2.4\ncl_bob 0\n```',
+            createdOn: daysAgo(40),
+            updatedOn: null,
+            duckId: 'd0000000-0000-0000-0000-000000000003',
+        },
+        {
+            id: 'c0000000-0000-0000-0000-000000000007',
+            title: 'to read',
+            content: '- [SvelteKit load](https://kit.svelte.dev/docs/load)\n- [Drizzle relational queries](https://orm.drizzle.team/docs/rqb)\n\nHuffman coding, the wikipedia article is enough to implement it.',
+            createdOn: daysAgo(3),
+            updatedOn: null,
+            duckId: 'd0000000-0000-0000-0000-000000000005',
+        },
     ]);
 }
