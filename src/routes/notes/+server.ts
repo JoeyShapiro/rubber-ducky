@@ -11,7 +11,9 @@ export async function GET({ url }) {
 	const [row] = await db.select().from(notesTable).where(eq(notesTable.duckId, duck));
 	if (!row) return json({ notes: null });
 
-	return json({ notes: new Note(row.id, row.content ?? '') });
+	// stale: this endpoint still serves the old one-blob-per-duck shape and has no title or
+	// timestamps to give. The UI no longer calls it - T-07 replaces both ends together.
+	return json({ notes: new Note(row.id, '', row.content ?? '') });
 }
 
 export async function POST({ request }) {

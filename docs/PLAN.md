@@ -275,6 +275,32 @@ badling-scoped items are unreachable — created and then lost.
 
 ### [ ] T-07 — Make notes a real entity instead of one blob per duck
 
+> **UI prototyped 2026-09-07, in memory only.** [`Notes.svelte`](../src/lib/components/Notes.svelte)
+> is the design spike: a list of titled items, click one to edit it in place, backed by
+> [`$lib/notes.ts`](../src/lib/notes.ts) — a `Map` that is wiped on reload and seeds every duck
+> with two examples. `Note` in [`types.ts`](../src/lib/types.ts) gained `title`, `created` and
+> `modified`. **No database work, no migration, no endpoint.** What remains for T-07 is the
+> persistence underneath, and the existing `/notes` endpoint is now stale and unused.
+>
+> Settled by the spike:
+> - **In place, not a modal.** The quest panel beside it already drills down with breadcrumbs;
+>   a modal would make two sibling panels answer the same gesture differently.
+> - **Closing the note is the save.** No save button, no per-keystroke autosave. Cmd/Ctrl-S
+>   commits without closing, Escape closes, and a 15s idle timer catches an abandoned edit.
+>   `modified` is only touched when the content actually changed, so open-and-close is free.
+>   This is what makes one discrete log event per edit possible (T-27).
+> - List shows title and date only. No content preview — the title is the lookup key, and a
+>   preview is the first step back toward a document.
+> - Delete lives in the open note, not on the row: one action once you are in, and no
+>   hover-only control on every list item (T-12).
+> - Monospace content area, because the content is usually a snippet.
+> - A filter box appears once there is more than one note.
+>
+> Still to decide: sort order is most-recently-touched first, which suits "the one I just made"
+> but not "find the one called *start command*" once there are twenty — alphabetical may be the
+> better default. And `modified` is implemented, but whether it earns its place in the UI is
+> still open.
+
 **Priority:** high · **Blocked by:** the design brief above (and coordinate with T-11, which
 moves notes into their own route)
 

@@ -81,24 +81,32 @@ export class Message {
     }
 }
 
+// a note is something currently true and worth having at hand. the title is a lookup key
+// ("start command"), not a headline, and there is deliberately no completion state - a note is
+// true or stale, and stale notes get deleted. see docs/PLAN.md, W3.
 export class Note {
     uuid: string;
+    title: string;
     content: string;
+    created: Date;
+    modified: Date | null;
 
-    constructor(uuid: string, content: string) {
+    constructor(uuid: string, title: string, content: string, created = new Date(), modified: Date | null = null) {
         this.uuid = uuid;
+        this.title = title;
         this.content = content;
+        this.created = created;
+        this.modified = modified;
     }
 
     static fromJSON(json: any): Note {
-        return new Note(json.uuid, json.content);
-    }
-
-    static fromWeaviate(n: any): Note {
-        let uuid = n.uuid;
-        let content = n.properties.content?.toString() || "";
-
-        return new Note(uuid, content);
+        return new Note(
+            json.uuid,
+            json.title ?? '',
+            json.content ?? '',
+            json.created ? new Date(json.created) : new Date(),
+            json.modified ? new Date(json.modified) : null,
+        );
     }
 }
 
