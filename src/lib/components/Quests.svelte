@@ -454,16 +454,21 @@
 		color: rgba(196, 196, 210, 0.85);
 	}
 
+	/* matches the notes header, so the two panels read as one surface */
+	:global(:root[data-theme="dark"]) .tasks-header {
+		background: rgba(52, 56, 72, 0.7);
+	}
+
 	:global(:root[data-theme="dark"]) .breadcrumb-btn {
-		color: rgba(0, 0, 0, 0.45);
+		color: rgba(232, 232, 232, 0.6);
 	}
 
 	:global(:root[data-theme="dark"]) .breadcrumb-btn:hover,
 	:global(:root[data-theme="dark"]) .breadcrumb-btn.breadcrumb-current {
-		color: rgba(0, 0, 0, 0.75);
+		color: rgba(232, 232, 232, 0.9);
 	}
 
 	:global(:root[data-theme="dark"]) .breadcrumb-sep {
-		color: rgba(0, 0, 0, 0.3);
+		color: rgba(232, 232, 232, 0.35);
 	}
 </style>

@@ -382,6 +382,7 @@
 
 	.note-item {
 		text-align: left;
+		color: inherit; /* a <button> does not inherit color, so dark mode left it near black */
 		background: rgba(255, 255, 255, 0.5);
 		border: 1px solid rgba(212, 212, 250, 0.35);
 		border-left: 3px solid rgba(94, 106, 158, 0.55);
@@ -538,6 +539,7 @@
 		font-size: 1rem;
 		font-weight: 600;
 		border: none;
+		color: inherit; /* same as .note-item - an <input> needs it spelled out */
 		background: transparent;
 		padding: 0;
 		width: 100%;
@@ -602,6 +604,12 @@
 
 	:global(:root[data-theme="dark"]) .note-item:hover {
 		background: rgba(45, 45, 43, 0.9);
+	}
+
+	:global(:root[data-theme="dark"]) .note-item-date,
+	:global(:root[data-theme="dark"]) .note-meta,
+	:global(:root[data-theme="dark"]) .notes-empty {
+		color: rgba(175, 180, 195, 0.8);
 	}
 
 	:global(:root[data-theme="dark"]) .note-markdown :global(pre) {

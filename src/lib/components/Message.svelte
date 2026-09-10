@@ -15,7 +15,7 @@
 		<span class="system-log-time">{formatDate(message.timestamp)}</span>
 	</div>
 {:else}
-	<div use:markdown class="toast fade show m-2 w-75 position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
+	<div use:markdown class="toast fade show m-2 message-box position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
 		<div class="toast-body text-body mb-2" style="min-height: 4rem;">
 			{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
 			{#if message.attachments.length > 0}
@@ -44,6 +44,12 @@
 {/if}
 
 <style>
+	/* bootstrap pins .toast to 350px; messages should use the width they are given */
+	.message-box {
+		width: auto;
+		max-width: none;
+	}
+
 	.acrylic {
 		background: rgba(212, 212, 250, 0.3);
 		-webkit-backdrop-filter: blur(10px);
@@ -102,7 +108,7 @@
 		display: flex;
 		align-items: baseline;
 		gap: 0.45rem;
-		width: 75%;
+		width: auto;
 		margin: 0.5rem;
 		padding: 0.5rem 0.75rem 1.6rem;
 		border-radius: 6px;

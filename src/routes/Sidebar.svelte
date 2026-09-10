@@ -184,7 +184,7 @@
     });
 </script>
 
-<div class="flex-shrink-0 p-3 position-relative" style="width: 280px;">
+<div class="sidebar d-flex flex-column flex-shrink-0 p-3 position-relative">
 	<a
 		href="/"
 		class="d-flex align-items-center pb-3 mb-3 link-body-emphasis text-decoration-none border-bottom"
@@ -192,7 +192,7 @@
 		<svg class="bi pe-none me-2" width="30" height="24"><use xlink:href="#bootstrap"></use></svg>
 		<span class="fs-5 fw-semibold">Ducks</span>
 	</a>
-	<ul class="list-unstyled ps-0">
+	<ul class="duck-list list-unstyled ps-0 flex-fill">
       {#each badlings as badling}
       <div class="position-relative">
       <li class="mb-1">
@@ -242,19 +242,19 @@
       </li>
       {/if}
 	</ul>
-  <div class="bar-hidden position-absolute bottom-0">
-    <button class="btn-hidden rounded border-0 m-3" on:click={() => newBadling = true}>
-      <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />
+  <div class="bar-hidden d-flex align-items-center gap-1 pt-2 flex-shrink-0">
+    <button class="btn-hidden rounded border-0" title="New badling" on:click={() => newBadling = true}>
+      <img src="/add.svg" alt="add" width="16" height="16" />
     </button>
     <!-- wanted skyrim symbols for hidden/detected -->
-    <button class="btn-hidden rounded border-0 m-3" on:click={() => hidden.set(!$hidden)}>
-      <img src={$hidden ? "/hidden.svg" : "/detected.svg"} alt="visibility" class="me-2" width="16" height="16" />
+    <button class="btn-hidden rounded border-0" title="Blur content" on:click={() => hidden.set(!$hidden)}>
+      <img src={$hidden ? "/hidden.svg" : "/detected.svg"} alt="visibility" width="16" height="16" />
     </button>
-    <button class="btn-hidden rounded border-0 mb-3 ms-3" on:click={() => darkMode.set(!$darkMode)}>
-      <img src={$darkMode ? "/sun.svg" : "/moon.svg"} alt="dark mode" class="me-2" width="16" height="16" />
+    <button class="btn-hidden rounded border-0" title="Toggle theme" on:click={() => darkMode.set(!$darkMode)}>
+      <img src={$darkMode ? "/sun.svg" : "/moon.svg"} alt="dark mode" width="16" height="16" />
     </button>
-    <button class="btn-hidden rounded border-0 mb-3 ms-3 import-btn" title="Import data" type="button" on:click={() => importFileInput?.click()}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="me-2">
+    <button class="btn-hidden rounded border-0 import-btn" title="Import data" type="button" on:click={() => importFileInput?.click()}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
         <path d="M8 1a.5.5 0 0 1 .5.5v6.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 .708-.708L7.5 8.293V1.5A.5.5 0 0 1 8 1z"/>
         <path d="M2.5 13a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"/>
       </svg>
@@ -279,6 +279,20 @@
 </div>
 
 <style>
+/* duck names are short; 280px was mostly empty */
+.sidebar {
+  width: 200px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* the list scrolls, the button row below it does not - which is why that row is in normal
+   flow now rather than position-absolute over the content */
+.duck-list {
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .btn-toggle {
   padding: .25rem .5rem;
   font-weight: 600;
@@ -327,7 +341,10 @@
 }
 
 .btn-hidden {
-  padding: .25rem .5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .35rem;
   font-weight: 600;
   color: var(--bs-emphasis-color);
   background-color: transparent;

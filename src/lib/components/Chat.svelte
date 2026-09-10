@@ -48,7 +48,7 @@
 </script>
 
 <div class="d-flex flex-column w-50 position-relative">
-	<div bind:this={chatbox} id="chatbox" class="flex-column bg-body-tertiary overflow-auto flex-fill">
+	<div bind:this={chatbox} id="chatbox" class="flex-column overflow-auto flex-fill">
 		{#if loading}
 			<div class="alert alert-info mt-2">Loading...</div>
 		{/if}
