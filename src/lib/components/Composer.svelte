@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { Attachment, type Duck } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { askQuestion, sendMessage, uploadAttachment } from '$lib/api';
@@ -85,6 +85,9 @@
 
 		messages.update((list) => [...list, created]);
 		text = '';
+		// svelte applies the clear on the next tick, so measuring before it means measuring the
+		// message you just sent - which is why the box never shrank back
+		await tick();
 		resize();
 
 		await Promise.all(
@@ -203,15 +206,15 @@
 		</div>
 	{/if}
 
-	<form class="input-group mb-2 w-100" on:submit|preventDefault={handleSubmit}>
+	<form class="composer-form d-flex align-items-end gap-2 mb-2 w-100" on:submit|preventDefault={handleSubmit}>
 		<button
 			type="button"
-			class="btn btn-outline-secondary position-relative"
+			class="composer-icon position-relative"
 			title="Attach a file"
 			aria-label="Attach a file"
 			on:click={() => fileInput?.click()}
 		>
-			<img src="/attachment.svg" alt="" class="me-2" width="16" height="16" />
+			<img src="/attachment.svg" alt="" width="18" height="18" />
 			{#if attachments.length > 0}
 				<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
 					{attachments.length}
@@ -223,20 +226,24 @@
 			bind:value={text}
 			on:input={resize}
 			on:keydown={handleKeydown}
-			style="width: auto;"
-			class="form-control auto-resize"
+			class="form-control auto-resize flex-fill"
 			placeholder={attachments.length > 0 ? 'Add a comment (optional)' : 'Message'}
 		></textarea>
 		<input bind:this={fileInput} type="file" accept="*" multiple on:change={handleFileSelect} style="display: none;" />
-		<div>
-			<input
-				style="width: auto; height: 100%; {question ? 'background-color: #ba34eb !important;' : ''}"
-				class="btn btn-warning"
-				type="submit"
-				value="Send"
-				disabled={!canSend}
-			/>
-		</div>
+		<button
+			type="submit"
+			class="composer-icon composer-send"
+			class:asking={question}
+			title={question ? 'Ask' : 'Send'}
+			aria-label={question ? 'Ask' : 'Send'}
+			disabled={!canSend}
+		>
+			<!-- inlined rather than <img src>, because app.css inverts every svg file in dark mode
+			     and a yellow plane would come out blue -->
+			<svg viewBox="0 0 640 640" fill="currentColor" aria-hidden="true">
+				<path d="M568.4 37.7C578.2 34.2 589 36.7 596.4 44C603.8 51.3 606.2 62.2 602.7 72L424.7 568.9C419.7 582.8 406.6 592 391.9 592C377.7 592 364.9 583.4 359.6 570.3L295.4 412.3C290.9 401.3 292.9 388.7 300.6 379.7L395.1 267.3C400.2 261.2 399.8 252.3 394.2 246.7C388.6 241.1 379.6 240.7 373.6 245.8L261.2 340.1C252.1 347.7 239.6 349.7 228.6 345.3L70.1 280.8C57 275.5 48.4 262.7 48.4 248.5C48.4 233.8 57.6 220.7 71.5 215.7L568.4 37.7z" />
+			</svg>
+		</button>
 	</form>
 
 	{#if dragging}
@@ -248,6 +255,53 @@
 	.auto-resize {
 		resize: none;
 		max-height: 33vh;
+	}
+
+	/* align-items:end keeps the buttons pinned to the last line as the textarea grows,
+	   instead of stretching to match it */
+	.composer-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 2.4rem;
+		height: 2.4rem;
+		padding: 0;
+		border: none;
+		border-radius: 8px;
+		background: none;
+		color: rgba(108, 117, 125, 0.9);
+		cursor: pointer;
+		transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+	}
+
+	.composer-icon:hover:not(:disabled) {
+		background: rgba(120, 120, 140, 0.12);
+	}
+
+	.composer-icon:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+
+	.composer-send {
+		color: #ffc107;
+	}
+
+	.composer-send svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		transition: transform 0.12s ease;
+	}
+
+	.composer-send:hover:not(:disabled) svg {
+		transform: translateX(1px) translateY(-1px);
+	}
+
+	/* the question toggle used to colour the send button's background; with the background gone
+	   the plane itself carries it */
+	.composer-send.asking {
+		color: #ba34eb;
 	}
 
 	.btn-toggle {
