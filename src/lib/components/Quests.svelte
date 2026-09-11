@@ -3,6 +3,7 @@
 	import { messages } from '$lib/stores';
 	import { createQuest, fetchQuests, setQuestStatus } from '$lib/api';
 	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
+	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
 
 	export let duck: Duck;
@@ -101,9 +102,10 @@
 				<span class="breadcrumb-btn {i === questPath.length - 1 ? 'breadcrumb-current' : ''}" on:click={() => breadcrumbTo(i + 1)}>{ancestor.title}</span>
 			{/each}
 		</div>
-		<button class="btn btn-sm btn-warning" on:click={() => (showModal = true)} type="button">
-			{questPath.length > 0 ? 'New Subquest' : 'New Quest'}
-		</button>
+		<AddButton
+			title={questPath.length > 0 ? 'New subquest' : 'New quest'}
+			on:click={() => (showModal = true)}
+		/>
 	</div>
 	<ul class="tasks-list list-unstyled m-0 p-3">
 		{#each visibleQuests as quest}

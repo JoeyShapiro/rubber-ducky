@@ -4,6 +4,7 @@
 	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
 	import { formatDate } from '$lib/format';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
+	import AddButton from './AddButton.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	export let duck: Duck;
@@ -200,7 +201,7 @@
 			</div>
 		{:else}
 			<span class="notes-title fw-semibold">Notes</span>
-			<button class="notes-btn" type="button" on:click={addNote} disabled={!duck.uuid}>New Note</button>
+			<AddButton title="New note" disabled={!duck.uuid} on:click={addNote} />
 		{/if}
 	</div>
 
