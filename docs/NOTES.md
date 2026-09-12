@@ -115,7 +115,9 @@ Choices already made, so later work does not re-open them.
 | 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
 | 2026-09-09 | notes | Deleting a note is confirmed, despite being the normal end of life. Notes are near-permanent by design with no undo and no history, so "one action, not buried" means reachable — not unguarded. |
 | 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
-| 2026-09-09 | markdown | `renderMarkdown()` = marked + DOMPurify, parsing the **source string**. Never regex over rendered html. DOMPurify is not optional: marked passes `<script>` through untouched by design. |
+| 2026-09-10 | logging | `postSystemMessage` is the only thing that writes a system entry, and it returns the message so the client can append it without refetching. A failed log never fails the action that caused it. |
+| 2026-09-10 | logging | Creating an empty note logs nothing; its first save logs `added`. Otherwise the log announces an Untitled note before anything is typed. |
+| 2026-09-10 | markdown | `renderMarkdown()` = marked + DOMPurify, parsing the **source string**. Never regex over rendered html. DOMPurify is not optional: marked passes `<script>` through untouched by design. |
 | 2026-09-09 | ui | Destructive confirms use `ConfirmDialog.svelte`: Cancel holds focus, Escape and backdrop cancel, and Cancel sits where the triggering button was so a double click lands on the safe option. Reuse it for quest delete in T-10. |
 | 2026-09-06 | notes | Notes are shaped like quests — name plus content, listed as items — with a visually distinct style. **If a note is a text box, something has gone wrong.** |
 | 2026-09-06 | notes | The title is a lookup key, not a headline. Optimise for "find the one called *start command*", not for reading top to bottom. |
@@ -133,6 +135,31 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-10 — T-27: quest and note activity reaches the log
+
+Every change to a quest or a note now writes a system entry into its duck's log. Quest *status*
+changes were the only thing ever logged before, and since the working duck had no quests, none
+had ever appeared — creation, and everything about notes, was never wired at all.
+
+`postSystemMessage(content, duckId?)` in [`system.ts`](../src/lib/system.ts) is the one writer;
+it returns the message so endpoints hand it straight back and the client appends it without a
+refetch. `logLine(kind, title, verb)` gives every entry one shape, which matters because
+`Message.svelte` colours entries off the trailing verb.
+
+| Action | Logged as |
+|---|---|
+| quest created / status changed | `created`, or the new status |
+| note first save | `added` |
+| note later save | `modified` |
+| note deleted | `removed` |
+
+**`POST /notes` logs nothing.** It creates an empty shell that the UI fills in place, so logging
+there would announce an Untitled note before anything was typed. `PATCH` checks whether the row
+was blank beforehand and calls that first save `added` instead of `modified`.
+
+A note's log entries **outlive the note** — `DELETE` reads the row for its title before removing
+it, and the entries are never cascaded away. The log is the history.
 
 ### 2026-09-09 — notes render markdown
 

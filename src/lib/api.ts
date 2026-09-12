@@ -83,16 +83,20 @@ export async function createNote(duck: string): Promise<Note> {
     return Note.fromJSON(data.note);
 }
 
-export async function updateNote(uuid: string, title: string, content: string): Promise<Note> {
-    const data = await request<{ note: unknown }>('/notes', {
+export async function updateNote(
+    uuid: string,
+    title: string,
+    content: string,
+): Promise<{ note: Note; systemMessage: Message | null }> {
+    const data = await request<{ note: unknown; systemMessage: Message | null }>('/notes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uuid, title, content }),
     });
-    return Note.fromJSON(data.note);
+    return { note: Note.fromJSON(data.note), systemMessage: data.systemMessage };
 }
 
-export function deleteNote(uuid: string): Promise<{ ok: boolean }> {
+export function deleteNote(uuid: string): Promise<{ ok: boolean; systemMessage: Message | null }> {
     return request(`/notes?uuid=${uuid}`, { method: 'DELETE' });
 }
 
@@ -103,7 +107,7 @@ export function fetchQuests(duck: string): Promise<{ quests: Quest[] }> {
 export function createQuest(
     duck: string,
     quest: { title: string; description: string; due: string; quest_parent: string },
-): Promise<{ quest: Quest }> {
+): Promise<{ quest: Quest; systemMessage: Message | null }> {
     return post('/quests', { duck, ...quest });
 }
 

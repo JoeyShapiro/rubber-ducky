@@ -2,6 +2,7 @@
 	import { onDestroy, tick } from 'svelte';
 	import { Note, type Duck } from '$lib/types';
 	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
+	import { messages } from '$lib/stores';
 	import { formatDate } from '$lib/format';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import AddButton from './AddButton.svelte';
@@ -80,9 +81,10 @@
 		const content = draftContent;
 
 		try {
-			const saved = await updateNote(note.uuid, title, content);
+			const { note: saved, systemMessage } = await updateNote(note.uuid, title, content);
 			if (loadedDuck !== duckId) return; // moved on while saving
 			notes = notes.map((n) => (n.uuid === saved.uuid ? saved : n));
+			if (systemMessage) messages.update((list) => [...list, systemMessage]);
 		} catch (err) {
 			console.error('notes', err);
 		}
@@ -153,10 +155,11 @@
 
 		clearTimeout(idleTimer);
 		try {
-			await deleteNote(note.uuid);
+			const { systemMessage } = await deleteNote(note.uuid);
 			notes = notes.filter((n) => n.uuid !== note.uuid);
 			openUuid = null;
 			editing = false;
+			if (systemMessage) messages.update((list) => [...list, systemMessage]);
 		} catch (err) {
 			console.error('notes', err);
 		}

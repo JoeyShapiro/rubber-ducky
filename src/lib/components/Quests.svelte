@@ -83,6 +83,7 @@
 		try {
 			const data = await createQuest(duck.uuid, { ...event.detail, quest_parent: currentParentId });
 			quests = [data.quest, ...quests];
+			if (data.systemMessage) messages.update(list => [...list, data.systemMessage!]);
 		} catch (err) {
 			console.error('quests', err);
 		}

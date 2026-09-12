@@ -350,31 +350,6 @@ design brief for why that was rejected.
 
 ---
 
-### [ ] T-27 — Note activity in the message log
-
-**Priority:** medium · **Blocked by:** T-07
-
-**Files:** [`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
-[`src/lib/system.ts`](../src/lib/system.ts)
-
-**Problem:** Notes change silently. The duck's log already records quest status changes as
-system messages, so the log is a partial history of the duck — notes being absent from it is an
-inconsistency, and it means nothing tells you a note you rely on was edited or deleted.
-
-**Acceptance criteria:**
-- Creating, deleting, and committing an edit to a note each post a system message to the duck's
-  log, styled like the existing quest-status entries.
-- One message per deliberate save, never per keystroke — this is why T-07 keeps an explicit save
-  or a long debounce.
-- The message references the note (T-24 once it exists), so the log entry is followable.
-- A deleted note's log entries survive the deletion and still say what was removed. The log is
-  the history; do not cascade it away.
-- Notes with global or badling scope have no duck log to post into. This is the same question
-  quests face — see *The consequence to decide with it* under *Where a loose task lives*.
-  **Answer it once for both**, in T-08, and follow that answer here.
-
----
-
 ### [ ] T-26 — Search messages
 
 **Priority:** high · **Blocked by:** none
@@ -756,10 +731,9 @@ Dependency-driven; W6 items are independent and can be interleaved.
 5. **T-10, T-12** — the UX work, now that the foundations hold.
 6. **T-24, T-25** — the reference table, then distilling notes from the log. These are what
    make notes stop feeling bolted on, but they need T-07 and T-08 underneath first.
-7. **T-27** — note activity in the log, once notes exist and can be referenced.
-8. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
+7. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
    thing that turns the log into something you can look things up in, and the design brief
    leans on it existing.
-9. **T-15 → T-16**, then the rest of W6, opportunistically.
+8. **T-15 → T-16**, then the rest of W6, opportunistically.
 
 T-05, T-22 (attachment storage) and T-17 (markdown) are deferrable without blocking anything.

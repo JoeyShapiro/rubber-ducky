@@ -172,6 +172,26 @@
 		border-left-color: rgba(255, 193, 7, 0.5);
 	}
 
+	/* note and quest lifecycle, keyed off the trailing verb the same way statuses are */
+	.system-log-created,
+	.system-log-added {
+		background: rgba(94, 106, 158, 0.08);
+		border-color: rgba(120, 120, 130, 0.18);
+		border-left-color: rgba(94, 106, 158, 0.6);
+	}
+
+	.system-log-modified {
+		background: rgba(94, 106, 158, 0.05);
+		border-color: rgba(120, 120, 130, 0.18);
+		border-left-color: rgba(94, 106, 158, 0.35);
+	}
+
+	.system-log-removed {
+		background: rgba(220, 53, 69, 0.06);
+		border-color: rgba(120, 120, 130, 0.18);
+		border-left-color: rgba(220, 53, 69, 0.4);
+	}
+
 	:global(:root[data-theme="dark"]) .system-log-entry {
 		background: rgba(80, 80, 90, 0.15);
 		border-color: rgba(160, 160, 170, 0.18);
@@ -201,5 +221,21 @@
 	:global(:root[data-theme="dark"]) .system-log-locked {
 		background: rgba(255, 193, 7, 0.08);
 		border-left-color: rgba(255, 193, 7, 0.5);
+	}
+
+	:global(:root[data-theme="dark"]) .system-log-created,
+	:global(:root[data-theme="dark"]) .system-log-added {
+		background: rgba(140, 150, 195, 0.1);
+		border-left-color: rgba(140, 150, 195, 0.65);
+	}
+
+	:global(:root[data-theme="dark"]) .system-log-modified {
+		background: rgba(140, 150, 195, 0.06);
+		border-left-color: rgba(140, 150, 195, 0.4);
+	}
+
+	:global(:root[data-theme="dark"]) .system-log-removed {
+		background: rgba(220, 53, 69, 0.1);
+		border-left-color: rgba(220, 53, 69, 0.45);
 	}
 </style>

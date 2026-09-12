@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { Quest, Message, type QuestStatus } from '$lib/types.js';
+import { Quest, type QuestStatus } from '$lib/types.js';
 import { db } from '$lib/db';
-import { quests, messages as messagesTable } from '$lib/db/schema';
+import { quests } from '$lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { logLine, postSystemMessage } from '$lib/system';
 
 export async function GET({ url }) {
 	const duck = url.searchParams.get('duck');
@@ -55,7 +56,9 @@ export async function POST({ request }) {
 		'active',
 		false,
 	);
-	return json({ quest });
+
+	const systemMessage = await postSystemMessage(logLine('Quest', quest.title, 'created'), data.duck);
+	return json({ quest, systemMessage });
 }
 
 export async function PATCH({ request }) {
@@ -72,16 +75,8 @@ export async function PATCH({ request }) {
 	}).where(eq(quests.id, data.uuid));
 
 	if (data.duck) {
-		const timestamp = new Date();
-		const title = data.title || 'Quest';
-		const content = `Quest &ldquo;${title}&rdquo; &rarr; ${data.status}`;
-		const [row] = await db.insert(messagesTable).values({
-			from: 'system',
-			content,
-			timestamp,
-			duckId: data.duck,
-		}).returning();
-		return json({ ok: true, systemMessage: new Message(row.id, 'system', content, timestamp) });
+		const systemMessage = await postSystemMessage(logLine('Quest', data.title ?? '', data.status), data.duck);
+		return json({ ok: true, systemMessage });
 	}
 
 	return json({ ok: true });
