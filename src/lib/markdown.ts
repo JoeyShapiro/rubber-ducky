@@ -67,9 +67,26 @@ function highlightBlocks(root: HTMLElement) {
     }
 }
 
-function addCopyButtons(root: HTMLElement) {
+/**
+ * Give each fenced block a header: the language it was tagged with on the left, a copy button on
+ * the right. The language label is the useful half of what the old renderer leaked by printing
+ * the ``` fences verbatim.
+ */
+function decorateBlocks(root: HTMLElement) {
     for (const pre of Array.from(root.querySelectorAll('pre'))) {
-        if (pre.querySelector('.md-copy')) continue;
+        if (pre.querySelector('.md-head')) continue;
+
+        const code = pre.querySelector('code');
+        const named = code ? Array.from(code.classList).find((c) => c.startsWith('language-')) : undefined;
+
+        const head = document.createElement('div');
+        head.className = 'md-head';
+
+        const label = document.createElement('span');
+        label.className = 'md-lang';
+        // the tag as written, not hljs's canonical name - ```sh should read "sh", not "Bash"
+        label.textContent = named ? named.slice('language-'.length) : '';
+        head.appendChild(label);
 
         const button = document.createElement('button');
         button.type = 'button';
@@ -77,7 +94,7 @@ function addCopyButtons(root: HTMLElement) {
         button.textContent = 'Copy';
         button.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
+                await navigator.clipboard.writeText(code?.textContent ?? '');
                 button.textContent = 'Copied';
                 setTimeout(() => (button.textContent = 'Copy'), 1200);
             } catch {
@@ -85,8 +102,9 @@ function addCopyButtons(root: HTMLElement) {
                 setTimeout(() => (button.textContent = 'Copy'), 1200);
             }
         });
+        head.appendChild(button);
 
-        pre.appendChild(button);
+        pre.prepend(head);
     }
 }
 
@@ -97,7 +115,7 @@ function addCopyButtons(root: HTMLElement) {
 export function enhanceMarkdown(node: HTMLElement, _html: string) {
     function run() {
         highlightBlocks(node);
-        addCopyButtons(node);
+        decorateBlocks(node);
     }
 
     run();

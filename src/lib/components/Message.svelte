@@ -18,7 +18,7 @@
 	</div>
 {:else}
 	<div class="toast fade show m-2 message-box position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
-		<div class="toast-body text-body mb-2">
+		<div class="toast-body message-body text-body">
 			{#if message.from != 'user'}<span class="message-from">{message.from}</span>{/if}
 			<div class="markdown" use:enhanceMarkdown={html}>{@html html}</div>
 			{#if message.attachments.length > 0}
@@ -51,6 +51,12 @@
 	.message-box {
 		width: auto;
 		max-width: none;
+	}
+
+	/* bootstrap's .toast-body is 0.75rem all round, which left the code block almost touching
+	   the message border. the extra bottom room is for the timestamp. */
+	.message-body {
+		padding: 0.85rem 1rem 1.6rem;
 	}
 
 	.message-from {

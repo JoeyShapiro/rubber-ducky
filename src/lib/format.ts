@@ -8,7 +8,7 @@ export function formatDate(date: Date): string {
     const formattedMinutes = minutes.toString().padStart(2, '0');
 
     if (date.toDateString() === now.toDateString()) {
-        return `today at ${formattedHours}:${formattedMinutes} ${ampm}`;
+        return `${formattedHours}:${formattedMinutes} ${ampm}`;
     } else if (date.getTime() - now.getTime() < 24 * 60 * 60 * 1000 &&
         date.getTime() > now.getTime()) {
         return `tomorrow at ${formattedHours}:${formattedMinutes} ${ampm}`;

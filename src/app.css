@@ -175,45 +175,68 @@ body {
 	color: rgba(90, 90, 105, 0.9);
 }
 
+/* inline code stays relative to the line it sits in */
 .markdown code {
 	font-family: 'GG Mono', 'Courier New', monospace;
-	font-size: 0.86em;
+	font-size: 0.92em;
 }
 
+/* no border: these sit inside a message or note that already has one, and two nested borders
+   read as a box in a box */
 .markdown pre {
-	position: relative;
 	background: rgba(120, 120, 130, 0.09);
-	border: 1px solid rgba(212, 212, 250, 0.45);
+	border: none;
 	border-radius: 6px;
-	padding: 0.6rem 0.7rem;
+	padding: 0.35rem 0.75rem 0.7rem;
 	margin: 0 0 0.7rem;
 	overflow-x: auto;
 }
 
+/* rem, not em: a code block should read the same size in a message and in a note, rather than
+   inheriting whatever its container happens to be. monospace also reads optically smaller than
+   proportional text at the same size, so it needs to sit close to body size to look right. */
 .markdown pre code {
 	background: none;
 	padding: 0;
 	display: block;
+	font-size: 0.95rem;
+	line-height: 1.55;
+}
+
+/* language on the left, copy on the right - in flow rather than floating over the code */
+.markdown .md-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-bottom: 0.35rem;
+	min-height: 1.25rem;
+}
+
+.markdown .md-lang {
+	font-family: 'GG Mono', 'Courier New', monospace;
+	font-size: 0.68rem;
+	letter-spacing: 0.04em;
+	color: rgba(90, 90, 110, 0.65);
+	user-select: none;
 }
 
 /* always visible, not revealed on hover - it has to work on touch */
 .markdown .md-copy {
-	position: absolute;
-	top: 0.3rem;
-	right: 0.3rem;
+	flex-shrink: 0;
 	font-size: 0.68rem;
 	font-weight: 600;
 	padding: 0.1rem 0.45rem;
 	border-radius: 4px;
-	border: 1px solid rgba(120, 120, 140, 0.35);
-	background: rgba(255, 255, 255, 0.85);
-	color: rgba(70, 70, 90, 0.9);
+	border: 1px solid rgba(120, 120, 140, 0.3);
+	background: transparent;
+	color: rgba(90, 90, 110, 0.8);
 	cursor: pointer;
 }
 
 .markdown .md-copy:hover {
-	background: rgba(255, 255, 255, 1);
-	border-color: rgba(94, 106, 158, 0.6);
+	background: rgba(120, 120, 140, 0.12);
+	color: rgba(60, 60, 80, 0.95);
 }
 
 .markdown table {
@@ -234,8 +257,11 @@ body {
 }
 
 :root[data-theme="dark"] .markdown pre {
-	background: rgba(0, 0, 0, 0.32);
-	border-color: rgba(80, 80, 80, 0.5);
+	background: rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .markdown .md-lang {
+	color: rgba(190, 195, 210, 0.5);
 }
 
 :root[data-theme="dark"] .markdown blockquote {
@@ -244,9 +270,13 @@ body {
 }
 
 :root[data-theme="dark"] .markdown .md-copy {
-	background: rgba(45, 45, 43, 0.95);
-	border-color: rgba(120, 120, 130, 0.5);
-	color: rgba(215, 215, 225, 0.9);
+	border-color: rgba(140, 145, 160, 0.3);
+	color: rgba(200, 205, 220, 0.75);
+}
+
+:root[data-theme="dark"] .markdown .md-copy:hover {
+	background: rgba(200, 205, 220, 0.12);
+	color: rgba(235, 238, 245, 0.95);
 }
 
 :root[data-theme="dark"] .markdown th,
