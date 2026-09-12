@@ -108,26 +108,11 @@
 	}
 </script>
 
-<div class="tasks-container mt-2 d-flex flex-column">
-	<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
-		<div class="breadcrumb-nav d-flex align-items-center gap-1">
-			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<span class="breadcrumb-btn {questPath.length === 0 ? 'breadcrumb-current' : ''}" on:click={() => breadcrumbTo(0)}>Quests</span>
-			{#each questPath as ancestor, i}
-				<span class="breadcrumb-sep">/</span>
-				<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-				<span class="breadcrumb-btn {i === questPath.length - 1 ? 'breadcrumb-current' : ''}" on:click={() => breadcrumbTo(i + 1)}>{ancestor.title}</span>
-			{/each}
-		</div>
-		<AddButton
-			title={questPath.length > 0 ? 'New subquest' : 'New quest'}
-			on:click={() => (showModal = true)}
-		/>
-	</div>
+<div class="tasks-container mt-2 d-flex flex-column position-relative">
 	<!-- drilled into a quest: its own description sits above its subquests -->
 	{#if currentQuest && currentQuest.description.trim() !== ''}
 		{@const html = renderMarkdown(currentQuest.description)}
-		<div class="quest-brief markdown" use:enhanceMarkdown={html}>{@html html}</div>
+		<div class="quest-brief markdown fade-bottom" use:enhanceMarkdown={html}>{@html html}</div>
 	{/if}
 
 	<ul class="tasks-list list-unstyled m-0 p-2">
@@ -200,8 +185,36 @@
 					</div>
 				{/if}
 			</li>
+		{:else}
+			<li class="task-empty-state">
+				{#if questPath.length > 0}
+					No subquests here yet.
+				{:else}
+					No quests yet. Things to do, one step at a time.
+				{/if}
+			</li>
 		{/each}
 	</ul>
+
+	<div class="panel-bar">
+		<AddButton
+			title={questPath.length > 0 ? 'New subquest' : 'New quest'}
+			on:click={() => (showModal = true)}
+		/>
+		{#if questPath.length > 0}
+			<nav class="breadcrumb-nav d-flex align-items-center gap-1" aria-label="Quest trail">
+				<button class="breadcrumb-btn" type="button" on:click={() => breadcrumbTo(0)}>Quests</button>
+				{#each questPath as ancestor, i}
+					<span class="breadcrumb-sep">/</span>
+					<button
+						class="breadcrumb-btn {i === questPath.length - 1 ? 'breadcrumb-current' : ''}"
+						type="button"
+						on:click={() => breadcrumbTo(i + 1)}
+					>{ancestor.title}</button>
+				{/each}
+			</nav>
+		{/if}
+	</div>
 </div>
 
 {#if showModal}
@@ -235,6 +248,22 @@
 
 	.tasks-list {
 		overflow-y: auto;
+		padding-top: 0.25rem !important;
+	}
+
+		/* an ::after spacer, not padding-bottom: chrome and safari leave a scroll container's
+		   padding-bottom out of the scrollable area, so it vanishes the moment you scroll */
+	.tasks-list::after {
+		content: '';
+		display: block;
+		height: 2.6rem;
+	}
+
+	.task-empty-state {
+		font-size: 0.82rem;
+		font-style: italic;
+		color: rgba(108, 117, 125, 0.85);
+		padding: 0.5rem 0.25rem;
 	}
 
 	/* caps at a third of the card and scrolls, so a long description can never crowd out the
@@ -243,12 +272,21 @@
 		flex: 0 1 auto;
 		max-height: 30%;
 		overflow-y: auto;
-		margin: 0.5rem 0.5rem 0;
+		/* a real bottom margin, not the list's padding-top: that scrolls away with the content,
+		   so the first row ends up flush against this box the moment you scroll */
+		margin: 0.5rem 0.5rem 0.5rem;
 		padding: 0.5rem 0.65rem;
+		flex-shrink: 0;
 		font-size: 0.84rem;
 		background: rgba(255, 255, 255, 0.45);
 		border: 1px solid rgba(212, 212, 250, 0.4);
 		border-radius: 6px;
+	}
+
+	.quest-brief::after {
+		content: '';
+		display: block;
+		height: 0.5rem;
 	}
 
 	.task-item {
@@ -470,18 +508,21 @@
 
 	.breadcrumb-nav {
 		min-width: 0;
-		overflow: hidden;
 	}
 
 	.breadcrumb-btn {
-		font-size: 0.85rem;
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: 0.8rem;
 		font-weight: 600;
+		line-height: 1.5; /* without this the button box is shorter than the glyphs */
 		color: rgba(0, 0, 0, 0.55);
 		cursor: pointer;
 		white-space: nowrap;
-		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 10rem;
+		overflow: hidden;
+		max-width: 9rem;
 		user-select: none;
 		transition: color 0.12s ease;
 	}
@@ -617,7 +658,8 @@
 		border-top-color: rgba(88, 88, 88, 0.5);
 	}
 
-	:global(:root[data-theme="dark"]) .task-empty {
+	:global(:root[data-theme="dark"]) .task-empty,
+	:global(:root[data-theme="dark"]) .task-empty-state {
 		color: rgba(175, 180, 195, 0.8);
 	}
 

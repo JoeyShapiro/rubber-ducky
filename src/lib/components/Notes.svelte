@@ -186,28 +186,6 @@
 </script>
 
 <div class="notes-container d-flex flex-column">
-	<div class="notes-header d-flex justify-content-between align-items-center px-3 py-2 gap-2">
-		{#if open}
-			<div class="d-flex align-items-center gap-1 min-w-0">
-				<button class="notes-crumb" type="button" on:click={close}>Notes</button>
-				<span class="notes-crumb-sep">/</span>
-				<span class="notes-crumb notes-crumb-current">{displayTitle(open)}</span>
-				{#if dirty}<span class="notes-dirty" title="Unsaved">•</span>{/if}
-			</div>
-			<div class="d-flex gap-2 flex-shrink-0">
-				{#if editing}
-					<button class="notes-btn notes-btn-primary" type="button" on:click={stopEditing}>Done</button>
-				{:else}
-					<button class="notes-btn" type="button" on:click={startEditing}>Edit</button>
-				{/if}
-				<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
-			</div>
-		{:else}
-			<span class="notes-title fw-semibold">Notes</span>
-			<AddButton title="New note" disabled={!duck.uuid} on:click={addNote} />
-		{/if}
-	</div>
-
 	{#if open && editing}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="note-editor d-flex flex-column flex-fill p-3" on:keydown={handleKeydown}>
@@ -260,6 +238,22 @@
 			{/if}
 		</ul>
 	{/if}
+
+	<div class="panel-bar">
+		{#if open}
+			<button class="panel-back" type="button" title="Back to notes" aria-label="Back to notes" on:click={close}>←</button>
+			{#if dirty}<span class="notes-dirty" title="Unsaved">•</span>{/if}
+			<div class="panel-spacer"></div>
+			{#if editing}
+				<button class="notes-btn notes-btn-primary" type="button" on:click={stopEditing}>Done</button>
+			{:else}
+				<button class="notes-btn" type="button" on:click={startEditing}>Edit</button>
+			{/if}
+			<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
+		{:else}
+			<AddButton title="New note" disabled={!duck.uuid} on:click={addNote} />
+		{/if}
+	</div>
 </div>
 
 {#if confirmingDelete && open}
@@ -276,6 +270,7 @@
 	/* notes are shaped like quests but must not read like them: cool slate instead of the
 	   amber/green status palette, an index-card stripe, and nothing that suggests completion */
 	.notes-container {
+		position: relative;
 		background: rgba(248, 248, 255, 0.4);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
@@ -285,23 +280,6 @@
 		overflow: hidden;
 		min-height: 0;
 		flex: 1 1 0;
-	}
-
-	.notes-header {
-		background: rgba(198, 205, 230, 0.5);
-		border-bottom: 1px solid rgba(212, 212, 250, 0.4);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
-	}
-
-	.notes-title {
-		color: rgba(0, 0, 0, 0.75);
-		font-size: 0.9rem;
-		user-select: none;
-	}
-
-	.min-w-0 {
-		min-width: 0;
 	}
 
 	.notes-btn {
@@ -344,35 +322,6 @@
 		background: rgba(220, 53, 69, 0.12);
 	}
 
-	.notes-crumb {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: rgba(0, 0, 0, 0.55);
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 12rem;
-	}
-
-	.notes-crumb:hover {
-		color: rgba(0, 0, 0, 0.85);
-	}
-
-	.notes-crumb-current {
-		color: rgba(0, 0, 0, 0.8);
-		cursor: default;
-	}
-
-	.notes-crumb-sep {
-		font-size: 0.8rem;
-		color: rgba(0, 0, 0, 0.3);
-		flex-shrink: 0;
-	}
-
 	.notes-dirty {
 		color: rgba(94, 106, 158, 0.9);
 		font-size: 1.1rem;
@@ -382,6 +331,14 @@
 
 	.notes-list {
 		overflow-y: auto;
+	}
+
+		/* an ::after spacer, not padding-bottom: chrome and safari leave a scroll container's
+		   padding-bottom out of the scrollable area, so it vanishes the moment you scroll */
+	.notes-list::after {
+		content: '';
+		display: block;
+		height: 2.6rem;
 	}
 
 	.note-item {
@@ -425,9 +382,20 @@
 		padding: 0.5rem 0.25rem;
 	}
 
+	/* plain padding is fine here: the editor does not scroll, the textarea inside it does */
+	.note-editor {
+		padding-bottom: 3rem !important;
+	}
+
 	.note-reader {
 		overflow-y: auto;
 		min-height: 0;
+	}
+
+	.note-reader::after {
+		content: '';
+		display: block;
+		height: 2.6rem;
 	}
 
 	.note-reader:focus {
@@ -482,14 +450,6 @@
 		border-color: rgba(94, 106, 158, 0.6);
 	}
 
-	:global(:root[data-theme="dark"]) .notes-header {
-		background: rgba(52, 56, 72, 0.7);
-	}
-
-	:global(:root[data-theme="dark"]) .notes-title {
-		color: rgba(232, 232, 232, 0.92);
-	}
-
 	:global(:root[data-theme="dark"]) .notes-btn {
 		background: rgba(45, 45, 43, 0.8);
 		border-color: rgba(140, 150, 195, 0.45);
@@ -498,11 +458,6 @@
 
 	:global(:root[data-theme="dark"]) .notes-btn:hover:not(:disabled) {
 		background: rgba(60, 60, 58, 0.9);
-	}
-
-	:global(:root[data-theme="dark"]) .notes-crumb,
-	:global(:root[data-theme="dark"]) .notes-crumb-current {
-		color: rgba(232, 232, 232, 0.85);
 	}
 
 	:global(:root[data-theme="dark"]) .note-item {
