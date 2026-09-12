@@ -1,23 +1,26 @@
 <script lang="ts">
 	import type { Message } from '$lib/types';
 	import { hidden } from '$lib/stores';
-	import { markdown } from '$lib/markdown';
+	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import { formatDate } from '$lib/format';
 	import { statusFromSystemMessage } from '$lib/quests';
 
 	export let message: Message;
+
+	$: html = renderMarkdown(message.content);
 </script>
 
 {#if message.from === 'system'}
-	<div use:markdown class="system-log-entry system-log-{statusFromSystemMessage(message.content)} {$hidden ? 'spoil' : ''}" role="log">
+	<div class="system-log-entry system-log-{statusFromSystemMessage(message.content)} {$hidden ? 'spoil' : ''}" role="log">
 		<span class="system-log-glyph">◈</span>
-		<span class="system-log-content">{@html message.content}</span>
+		<span class="system-log-content">{message.content}</span>
 		<span class="system-log-time">{formatDate(message.timestamp)}</span>
 	</div>
 {:else}
-	<div use:markdown class="toast fade show m-2 message-box position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
-		<div class="toast-body text-body mb-2" style="min-height: 4rem;">
-			{#if message.from != 'user'}{message.from}: {/if}{@html message.content}
+	<div class="toast fade show m-2 message-box position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="toast-body text-body mb-2">
+			{#if message.from != 'user'}<span class="message-from">{message.from}</span>{/if}
+			<div class="markdown" use:enhanceMarkdown={html}>{@html html}</div>
 			{#if message.attachments.length > 0}
 				<div class="attachments d-flex flex-column gap-2 mt-2">
 					{#each message.attachments as attachment}
@@ -48,6 +51,12 @@
 	.message-box {
 		width: auto;
 		max-width: none;
+	}
+
+	.message-from {
+		font-weight: 600;
+		font-size: 0.85rem;
+		opacity: 0.8;
 	}
 
 	.acrylic {

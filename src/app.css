@@ -135,3 +135,184 @@ body {
 	padding: 0.15rem 0.75rem;
 	color: var(--text-secondary);
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Rendered markdown. One definition shared by messages, notes and quest descriptions - anything
+   whose innerHTML came from renderMarkdown() gets class="markdown".
+   --------------------------------------------------------------------------------------------- */
+
+.markdown {
+	line-height: 1.6;
+}
+
+.markdown > *:first-child { margin-top: 0; }
+.markdown > *:last-child { margin-bottom: 0; }
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+	font-size: 1em;
+	font-weight: 650;
+	margin: 1rem 0 0.4rem;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol {
+	margin: 0 0 0.7rem;
+}
+
+.markdown ul,
+.markdown ol { padding-left: 1.2rem; }
+.markdown li { margin-bottom: 0.2rem; }
+.markdown a { word-break: break-word; }
+
+.markdown blockquote {
+	margin: 0 0 0.7rem;
+	padding-left: 0.7rem;
+	border-left: 3px solid rgba(94, 106, 158, 0.4);
+	color: rgba(90, 90, 105, 0.9);
+}
+
+.markdown code {
+	font-family: 'GG Mono', 'Courier New', monospace;
+	font-size: 0.86em;
+}
+
+.markdown pre {
+	position: relative;
+	background: rgba(120, 120, 130, 0.09);
+	border: 1px solid rgba(212, 212, 250, 0.45);
+	border-radius: 6px;
+	padding: 0.6rem 0.7rem;
+	margin: 0 0 0.7rem;
+	overflow-x: auto;
+}
+
+.markdown pre code {
+	background: none;
+	padding: 0;
+	display: block;
+}
+
+/* always visible, not revealed on hover - it has to work on touch */
+.markdown .md-copy {
+	position: absolute;
+	top: 0.3rem;
+	right: 0.3rem;
+	font-size: 0.68rem;
+	font-weight: 600;
+	padding: 0.1rem 0.45rem;
+	border-radius: 4px;
+	border: 1px solid rgba(120, 120, 140, 0.35);
+	background: rgba(255, 255, 255, 0.85);
+	color: rgba(70, 70, 90, 0.9);
+	cursor: pointer;
+}
+
+.markdown .md-copy:hover {
+	background: rgba(255, 255, 255, 1);
+	border-color: rgba(94, 106, 158, 0.6);
+}
+
+.markdown table {
+	border-collapse: collapse;
+	margin-bottom: 0.7rem;
+}
+
+.markdown th,
+.markdown td {
+	border: 1px solid rgba(212, 212, 250, 0.5);
+	padding: 0.25rem 0.5rem;
+}
+
+.markdown hr {
+	border: none;
+	border-top: 1px solid rgba(212, 212, 250, 0.6);
+	margin: 0.9rem 0;
+}
+
+:root[data-theme="dark"] .markdown pre {
+	background: rgba(0, 0, 0, 0.32);
+	border-color: rgba(80, 80, 80, 0.5);
+}
+
+:root[data-theme="dark"] .markdown blockquote {
+	color: rgba(196, 196, 205, 0.85);
+	border-left-color: rgba(140, 150, 195, 0.5);
+}
+
+:root[data-theme="dark"] .markdown .md-copy {
+	background: rgba(45, 45, 43, 0.95);
+	border-color: rgba(120, 120, 130, 0.5);
+	color: rgba(215, 215, 225, 0.9);
+}
+
+:root[data-theme="dark"] .markdown th,
+:root[data-theme="dark"] .markdown td {
+	border-color: rgba(88, 88, 88, 0.55);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   highlight.js tokens. Written here rather than importing one of its stylesheets, because those
+   are built for a single background and this app has two.
+   --------------------------------------------------------------------------------------------- */
+
+.hljs-comment,
+.hljs-quote { color: #6a737d; font-style: italic; }
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type { color: #b3006b; }
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition { color: #0a7d3f; }
+
+.hljs-number,
+.hljs-symbol,
+.hljs-meta { color: #9a5a00; }
+
+.hljs-title,
+.hljs-name,
+.hljs-section,
+.hljs-built_in { color: #2f5fd0; }
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable { color: #7a4bbd; }
+
+.hljs-deletion { color: #b31d28; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 600; }
+
+:root[data-theme="dark"] .hljs-comment,
+:root[data-theme="dark"] .hljs-quote { color: #8a949e; }
+
+:root[data-theme="dark"] .hljs-keyword,
+:root[data-theme="dark"] .hljs-selector-tag,
+:root[data-theme="dark"] .hljs-literal,
+:root[data-theme="dark"] .hljs-type { color: #ff7bc2; }
+
+:root[data-theme="dark"] .hljs-string,
+:root[data-theme="dark"] .hljs-regexp,
+:root[data-theme="dark"] .hljs-addition { color: #7ee2a8; }
+
+:root[data-theme="dark"] .hljs-number,
+:root[data-theme="dark"] .hljs-symbol,
+:root[data-theme="dark"] .hljs-meta { color: #ffc86b; }
+
+:root[data-theme="dark"] .hljs-title,
+:root[data-theme="dark"] .hljs-name,
+:root[data-theme="dark"] .hljs-section,
+:root[data-theme="dark"] .hljs-built_in { color: #8ab4ff; }
+
+:root[data-theme="dark"] .hljs-attr,
+:root[data-theme="dark"] .hljs-attribute,
+:root[data-theme="dark"] .hljs-variable,
+:root[data-theme="dark"] .hljs-template-variable { color: #d2a8ff; }
+
+:root[data-theme="dark"] .hljs-deletion { color: #ff9492; }

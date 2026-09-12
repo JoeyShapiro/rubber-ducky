@@ -38,8 +38,7 @@ problem and a large part of why notes and tasks feel bolted on. T-08 is the fix.
 src/lib/
   stores.ts              duck, hidden, darkMode, messages
   api.ts                 every fetch to our own endpoints, plus one shared 401 handler
-  markdown.ts            renderMarkdown (marked+dompurify, used by notes) and the legacy
-                         regex action still used by messages - T-17 closes the gap
+  markdown.ts            renderMarkdown + enhanceMarkdown - the one markdown path
   attachments.ts         reading the three attachment encodings; shared by both endpoints
   format.ts              formatDate
   quests.ts              status list, labels, css classes, svg icons
@@ -117,6 +116,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
 | 2026-09-10 | logging | `postSystemMessage` is the only thing that writes a system entry, and it returns the message so the client can append it without refetching. A failed log never fails the action that caused it. |
 | 2026-09-10 | logging | Creating an empty note logs nothing; its first save logs `added`. Otherwise the log announces an Untitled note before anything is typed. |
+| 2026-09-11 | markdown | One renderer for everything. System log entries are the exception: generated, so rendered as plain text with no `{@html}`. |
+| 2026-09-11 | markdown | hljs token colours live in `app.css`, not an imported hljs theme — those are built for a single background and this app has two. |
 | 2026-09-10 | markdown | `renderMarkdown()` = marked + DOMPurify, parsing the **source string**. Never regex over rendered html. DOMPurify is not optional: marked passes `<script>` through untouched by design. |
 | 2026-09-09 | ui | Destructive confirms use `ConfirmDialog.svelte`: Cancel holds focus, Escape and backdrop cancel, and Cancel sits where the triggering button was so a double click lands on the safe option. Reuse it for quest delete in T-10. |
 | 2026-09-06 | notes | Notes are shaped like quests — name plus content, listed as items — with a visually distinct style. **If a note is a text box, something has gone wrong.** |
@@ -135,6 +136,33 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-11 — T-17: one markdown renderer
+
+Messages and quest descriptions moved onto `renderMarkdown()`; the legacy regex-over-innerHTML
+action and `replaceAsync` are deleted. Nothing imports them any more.
+
+**highlight.js was never working in messages.** The old renderer passed the ``` fences *into*
+`hljs.highlight()`, so output contained the backticks verbatim and had zero highlight spans, and
+`sh` was not in the hand-written language list anyway so it threw first.
+
+The hand-written 19-case language `switch` is gone, replaced by `highlight.js/lib/common` — 36
+languages, aliases resolved (`sh`, `js`, `py`, `zsh` all work), and unknown languages are left
+plain rather than guessed at. The comment that started it (*"i cant get dynamic imports to
+work"*) is moot: the common bundle is a static import.
+
+Its stylesheet import is gone too. hljs ships themes built for one background and this app has
+two, so the token colours live in `app.css` with light and dark variants.
+
+Shared display styles are now a single `.markdown` class in `app.css`, used by messages, notes
+and quest descriptions — previously that CSS existed only inside `Notes.svelte`.
+
+**System entries no longer render as markdown.** They are generated, not written, so they render
+as plain text with no `{@html}` at all. `logLine` emits real `“ ” →` characters instead of HTML
+entities, and the rows already in the database were migrated to match.
+
+Preserved from the old renderer, verified: `||spoilers||` (a marked extension), bare-URL
+autolinking (gfm), and escaping — `\*\*stars\*\*` stays literal, which the old one could not do.
 
 ### 2026-09-10 — T-27: quest and note activity reaches the log
 

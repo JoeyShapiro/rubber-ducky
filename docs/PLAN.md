@@ -647,34 +647,6 @@ paginating will duplicate every AI answer.
 
 ---
 
-### [ ] T-17 — Move messages onto the real markdown renderer
-
-**Priority:** medium · **Blocked by:** none
-
-**Files:** [`src/lib/markdown.ts`](../src/lib/markdown.ts),
-[`src/lib/components/Message.svelte`](../src/lib/components/Message.svelte)
-
-**Problem:** Half done. `renderMarkdown()` (marked + DOMPurify) exists and notes use it, but
-messages still go through the legacy `markdown` action in the same file — the one that emits
-`{@html message.content}` unescaped and then runs eight regex passes over the rendered
-`innerHTML`. That is an XSS hole on stored data, quadratic, and it corrupts anything with
-HTML-significant characters. **Two renderers is drift; close it.**
-
-**Acceptance criteria:**
-- `Message.svelte` renders `{@html renderMarkdown(message.content)}` and the legacy `markdown`
-  action, `replaceAsync`, and their comments are deleted.
-- Custom syntax preserved: `||spoilers||` (a marked extension or a post-sanitise pass) and bare
-  URL autolinking (marked's gfm autolink covers it — verify).
-- Existing messages still render acceptably. Their content was written against the old renderer,
-  so check a fenced code block, an inline backtick, and a bare URL from the real log.
-- Escaping works: a literal `**` or backtick can be written.
-- Code blocks in messages get the same highlighting and copy button notes have — reuse
-  `enhanceMarkdown`.
-- The hardcoded language `switch` ([`markdown.ts:11`](../src/lib/markdown.ts#L11)) stays for now;
-  it is shared by both paths and grew bash/sql/json/yaml for notes.
-
----
-
 ### [ ] T-18 — Move Bootstrap out of a component and off the CDN
 
 **Priority:** medium · **Blocked by:** none
@@ -736,4 +708,4 @@ Dependency-driven; W6 items are independent and can be interleaved.
    leans on it existing.
 8. **T-15 → T-16**, then the rest of W6, opportunistically.
 
-T-05, T-22 (attachment storage) and T-17 (markdown) are deferrable without blocking anything.
+T-05 and T-22 (attachment storage) are deferrable without blocking anything.

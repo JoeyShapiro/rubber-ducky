@@ -3,6 +3,7 @@
 	import { messages } from '$lib/stores';
 	import { createQuest, fetchQuests, setQuestStatus } from '$lib/api';
 	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
+	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
 
@@ -129,7 +130,8 @@
 						{#if quest.due}<small class="task-due ms-auto">{quest.due}</small>{/if}
 					</div>
 					{#if quest.description !== ''}
-						<p class="task-description m-0">{quest.description}</p>
+						{@const html = renderMarkdown(quest.description)}
+						<div class="markdown task-description" use:enhanceMarkdown={html}>{@html html}</div>
 					{/if}
 				</div>
 				<select

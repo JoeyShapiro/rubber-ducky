@@ -36,5 +36,7 @@ export async function postSystemMessage(content: string, duckId = SYSTEM_DUCK_ID
  */
 export function logLine(kind: 'Quest' | 'Note', title: string, verb: string): string {
 	const name = title.trim() || 'Untitled';
-	return `${kind} &ldquo;${name}&rdquo; &rarr; ${verb}`;
+	// real characters, not html entities: system entries render as plain text now, so an entity
+	// would show up literally as "&ldquo;"
+	return `${kind} “${name}” → ${verb}`;
 }
