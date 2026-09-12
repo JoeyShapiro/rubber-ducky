@@ -243,7 +243,7 @@
 			{/if}
 		</div>
 	{:else}
-		<ul class="notes-list list-unstyled m-0 p-3">
+		<ul class="notes-list list-unstyled m-0 p-2">
 			{#each ordered as note (note.uuid)}
 				<li>
 					<button class="note-item d-flex align-items-center gap-2 w-100" type="button" on:click={() => openNote(note)}>

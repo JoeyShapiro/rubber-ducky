@@ -93,7 +93,7 @@
 	}
 </script>
 
-<div class="tasks-container mt-3 d-flex flex-column">
+<div class="tasks-container mt-2 d-flex flex-column">
 	<div class="tasks-header d-flex justify-content-between align-items-center px-3 py-2">
 		<div class="breadcrumb-nav d-flex align-items-center gap-1">
 			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -109,7 +109,7 @@
 			on:click={() => (showModal = true)}
 		/>
 	</div>
-	<ul class="tasks-list list-unstyled m-0 p-3">
+	<ul class="tasks-list list-unstyled m-0 p-2">
 		{#each visibleQuests as quest}
 			<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
 				{#if subquestCounts.get(quest.uuid)}
@@ -166,7 +166,8 @@
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 		overflow: hidden;
 		min-height: 0;
-		flex: 2 1 0;
+		/* was 2 against notes' 1, which left notes a third of the column */
+		flex: 1.5 1 0;
 	}
 
 	.tasks-header {
