@@ -13,10 +13,12 @@
 	let questPath: Quest[] = [];
 	let showModal = false;
 	let loadedDuck = '';
+	let expanded = new Set<string>();
 
 	$: if (duck.uuid !== loadedDuck) {
 		loadedDuck = duck.uuid;
 		questPath = [];
+		expanded = new Set();
 		load(duck.uuid);
 	}
 
@@ -28,6 +30,9 @@
 		return acc;
 	}, new Map<string, number>());
 	$: visibleQuests = quests.filter(q => (q.quest_parent_id || '') === currentParentId);
+	$: currentQuest = currentParentId
+		? quests.find(q => q.uuid === currentParentId) ?? questPath[questPath.length - 1]
+		: null;
 
 	async function load(uuid: string) {
 		if (!uuid) {
@@ -41,6 +46,16 @@
 		} catch (err) {
 			console.error('quests', err);
 		}
+	}
+
+	function childrenOf(uuid: string): Quest[] {
+		return quests.filter((q) => q.quest_parent_id === uuid);
+	}
+
+	function toggle(uuid: string) {
+		if (expanded.has(uuid)) expanded.delete(uuid);
+		else expanded.add(uuid);
+		expanded = expanded; // Set mutation needs the reassignment to be reactive
 	}
 
 	function drillInto(quest: Quest) {
@@ -109,40 +124,81 @@
 			on:click={() => (showModal = true)}
 		/>
 	</div>
+	<!-- drilled into a quest: its own description sits above its subquests -->
+	{#if currentQuest && currentQuest.description.trim() !== ''}
+		{@const html = renderMarkdown(currentQuest.description)}
+		<div class="quest-brief markdown" use:enhanceMarkdown={html}>{@html html}</div>
+	{/if}
+
 	<ul class="tasks-list list-unstyled m-0 p-2">
 		{#each visibleQuests as quest}
-			<li class="task-item d-flex align-items-start p-3 rounded-2 mb-2">
-				{#if subquestCounts.get(quest.uuid)}
-					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-					<div class="task-icon-wrap {toStatusClass(quest.status)} task-icon-drill" title="{subquestCounts.get(quest.uuid)} subquests" on:click={() => drillInto(quest)}>
-						<span class="task-subcount">{subquestCounts.get(quest.uuid)}</span>
-					</div>
-				{:else}
-					<div class="task-icon-wrap {toStatusClass(quest.status)}" title={toStatusLabel(quest.status)} aria-hidden="true">
-						<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor">
-							<path d={iconForStatus(quest.status)}></path>
-						</svg>
+			{@const children = childrenOf(quest.uuid)}
+			{@const isOpen = expanded.has(quest.uuid)}
+			<li class="task-item d-flex flex-column rounded-2 mb-1">
+				<div class="task-row d-flex align-items-center p-2 gap-2">
+					<!-- the count sits on the icon, but as a badge rather than replacing it - the
+					     status has to stay readable underneath -->
+					{#if children.length > 0}
+						<button
+							class="task-icon-wrap task-icon-drill {toStatusClass(quest.status)}"
+							type="button"
+							title="{children.length} subquests ({toStatusLabel(quest.status)})"
+							on:click={() => drillInto(quest)}
+						>
+							<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+								<path d={iconForStatus(quest.status)}></path>
+							</svg>
+							<span class="task-subcount">{children.length}</span>
+						</button>
+					{:else}
+						<span class="task-icon-wrap {toStatusClass(quest.status)}" title={toStatusLabel(quest.status)}>
+							<svg class="task-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+								<path d={iconForStatus(quest.status)}></path>
+							</svg>
+						</span>
+					{/if}
+
+					<button class="task-main d-flex align-items-center gap-2 flex-fill" type="button" on:click={() => toggle(quest.uuid)}>
+						<span class="task-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
+						{#if quest.due}<small class="task-due">{quest.due}</small>{/if}
+						<span class="task-chevron ms-auto" class:open={isOpen} aria-hidden="true">›</span>
+					</button>
+
+					<select
+						class="form-select form-select-sm task-status-select {toStatusClass(quest.status)} ms-2"
+						value={quest.status}
+						on:change={(e) => handleStatusChange(quest.uuid, e)}
+					>
+						{#each QUEST_STATUSES as status}
+							<option value={status}>{toStatusLabel(status)}</option>
+						{/each}
+					</select>
+				</div>
+
+				{#if isOpen}
+					<div class="task-detail px-2 pb-2">
+						{#if quest.description.trim() !== ''}
+							{@const html = renderMarkdown(quest.description)}
+							<div class="markdown task-description" use:enhanceMarkdown={html}>{@html html}</div>
+						{:else}
+							<p class="task-empty m-0">No description.</p>
+						{/if}
+
+						{#if children.length > 0}
+							<ul class="task-children list-unstyled m-0 mt-2">
+								{#each children as child}
+									<li class="task-child d-flex align-items-center gap-2">
+										<span class="task-dot {toStatusClass(child.status)}" title={toStatusLabel(child.status)}></span>
+										<span class="{child.done ? 'task-done' : ''}">{child.title}</span>
+									</li>
+								{/each}
+							</ul>
+							<button class="task-open-sub mt-2" type="button" on:click={() => drillInto(quest)}>
+								Open subquests →
+							</button>
+						{/if}
 					</div>
 				{/if}
-				<div class="task-copy d-flex flex-column w-100 gap-1">
-					<div class="d-flex align-items-center gap-2">
-						<span class="task-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
-						{#if quest.due}<small class="task-due ms-auto">{quest.due}</small>{/if}
-					</div>
-					{#if quest.description !== ''}
-						{@const html = renderMarkdown(quest.description)}
-						<div class="markdown task-description" use:enhanceMarkdown={html}>{@html html}</div>
-					{/if}
-				</div>
-				<select
-					class="form-select form-select-sm task-status-select {toStatusClass(quest.status)} align-self-center ms-2"
-					value={quest.status}
-					on:change={(e) => handleStatusChange(quest.uuid, e)}
-				>
-					{#each QUEST_STATUSES as status}
-						<option value={status}>{toStatusLabel(status)}</option>
-					{/each}
-				</select>
 			</li>
 		{/each}
 	</ul>
@@ -181,10 +237,88 @@
 		overflow-y: auto;
 	}
 
+	/* caps at a third of the card and scrolls, so a long description can never crowd out the
+	   subquests you drilled in to see */
+	.quest-brief {
+		flex: 0 1 auto;
+		max-height: 30%;
+		overflow-y: auto;
+		margin: 0.5rem 0.5rem 0;
+		padding: 0.5rem 0.65rem;
+		font-size: 0.84rem;
+		background: rgba(255, 255, 255, 0.45);
+		border: 1px solid rgba(212, 212, 250, 0.4);
+		border-radius: 6px;
+	}
+
 	.task-item {
 		background: rgba(255, 255, 255, 0.45);
 		border: 1px solid rgba(212, 212, 250, 0.35);
-		gap: 0.75rem;
+	}
+
+	/* the whole title area is the expand target, so it is a real button - the status select and
+	   the subquest chip sit outside it rather than nested inside an interactive element */
+	.task-main {
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+		min-width: 0;
+	}
+
+	.task-chevron {
+		font-size: 1.1rem;
+		line-height: 1;
+		opacity: 0.4;
+		transition: transform 0.15s ease;
+		transform: rotate(90deg);
+	}
+
+	.task-chevron.open {
+		transform: rotate(-90deg);
+	}
+
+	.task-detail {
+		font-size: 0.84rem;
+		border-top: 1px solid rgba(212, 212, 250, 0.4);
+		padding-top: 0.5rem;
+		margin: 0 0.25rem;
+	}
+
+	.task-empty {
+		font-size: 0.8rem;
+		font-style: italic;
+		color: rgba(108, 117, 125, 0.85);
+	}
+
+	.task-child {
+		font-size: 0.82rem;
+		padding: 0.15rem 0;
+	}
+
+	.task-dot {
+		width: 0.55rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		flex-shrink: 0;
+		background: currentColor;
+	}
+
+	.task-open-sub {
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.15rem 0.55rem;
+		border-radius: 999px;
+		border: 1px solid rgba(94, 106, 158, 0.4);
+		background: none;
+		color: inherit;
+		cursor: pointer;
+	}
+
+	.task-open-sub:hover {
+		background: rgba(94, 106, 158, 0.12);
 	}
 
 	.task-item:last-child {
@@ -197,8 +331,10 @@
 	}
 
 	.task-icon-wrap {
+		position: relative;
 		width: 1.8rem;
 		height: 1.8rem;
+		padding: 0;
 		border-radius: 999px;
 		display: inline-flex;
 		align-items: center;
@@ -249,12 +385,7 @@
 
 	.task-due {
 		color: rgba(108, 117, 125, 0.9);
-		opacity: 0;
-		transition: opacity 0.15s ease;
-	}
-
-	.task-item:hover .task-due {
-		opacity: 1;
+		flex-shrink: 0;
 	}
 
 	.task-description {
@@ -380,7 +511,19 @@
 	}
 
 	.task-subcount {
-		font-size: 0.75rem;
+		position: absolute;
+		top: -0.2rem;
+		right: -0.25rem;
+		min-width: 0.95rem;
+		height: 0.95rem;
+		padding: 0 0.18rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
+		background: rgba(55, 58, 75, 0.92);
+		color: rgba(255, 255, 255, 0.95);
+		font-size: 0.62rem;
 		font-weight: 700;
 		line-height: 1;
 	}
@@ -458,6 +601,28 @@
 
 	:global(:root[data-theme="dark"]) .task-description {
 		color: rgba(196, 196, 210, 0.85);
+	}
+
+	:global(:root[data-theme="dark"]) .task-subcount {
+		background: rgba(225, 228, 240, 0.92);
+		color: rgba(30, 30, 40, 0.95);
+	}
+
+	:global(:root[data-theme="dark"]) .quest-brief {
+		background: rgba(35, 35, 33, 0.7);
+		border-color: rgba(80, 80, 80, 0.45);
+	}
+
+	:global(:root[data-theme="dark"]) .task-detail {
+		border-top-color: rgba(88, 88, 88, 0.5);
+	}
+
+	:global(:root[data-theme="dark"]) .task-empty {
+		color: rgba(175, 180, 195, 0.8);
+	}
+
+	:global(:root[data-theme="dark"]) .task-open-sub {
+		border-color: rgba(140, 150, 195, 0.45);
 	}
 
 	/* matches the notes header, so the two panels read as one surface */
