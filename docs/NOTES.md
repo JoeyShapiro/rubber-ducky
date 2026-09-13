@@ -314,6 +314,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
 | 2026-09-09 | notes | Deleting a note is confirmed, despite being the normal end of life. Notes are near-permanent by design with no undo and no history, so "one action, not buried" means reachable — not unguarded. |
 | 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
+| 2026-09-13 | data | Data fix-ups go in a drizzle migration, not a hand-run script. `entrypoint.sh` migrates on every container start, so production is corrected by deploying; a script only helps if someone remembers it. |
+| 2026-09-13 | config | The database host stays hardcoded. Production is a single container talking to its own postgres on localhost, and the dev setup matches it — parameterising it would add configuration nobody sets. |
 | 2026-09-13 | auth | Sessions expire hard — no sliding renewal. Re-authenticating silently defeats the point of an expiry, so the app returns you to the login screen; the cost of that (a lost draft) is paid off by `$lib/drafts.ts` instead. |
 | 2026-09-13 | theming | Any translucent **white** surface has to be themed. `rgba(248,248,255,0.4)` reads as a soft wash over a light page and as a **mid-grey** over a dark one — that is what made the notes panel unreadable (note date measured 1.99:1). Panels use `--panel-surface`, which is near-white in light and `rgba(255,255,255,0.055)` in dark. |
 | 2026-09-13 | theming | Muted greys picked by eye fail on one side or the other: the dark ones were tuned against the accidental mid-grey, and the light ones sat at 3.8:1 on white. `--meta-color` and the code-label greys are now measured values, ≥4.5:1 in both themes. |
@@ -389,14 +391,22 @@ each rejected.
 
 ### 2026-09-13 — T-22: one attachment encoding
 
-`bun run db:normalize-attachments` (`--dry-run` supported) rewrites every row into the canonical
-shape, reusing `decode()` so it understands all three historical encodings. Rows it cannot decode
-are reported and left alone, never dropped; already-canonical rows are skipped, so it is safe to
-re-run. It fetches one row at a time on purpose — a single attachment can be megabytes.
+Migration `0002_normalize_attachment_encodings.sql` collapses the three historical shapes into the
+canonical one. It runs wherever migrations run — `entrypoint.sh` calls `run-migrate.ts` on every
+container start — so production is fixed by deploying rather than by remembering to run a script.
 
-Verified against synthetic rows in each legacy shape: both were rewritten and still served correct
-PNG bytes afterwards; a deliberately corrupt row was reported untouched. The live table was already
-canonical, so this exists mainly for the Weaviate export, which can still be imported.
+**No base64 is decoded.** Both legacy shapes turn out to be pure string rearrangements: the old
+file-picker rows just have `type` and `content` swapped, and the old paste rows need the two halves
+joined and the `data:` prefix stripped off the mime. Rows where the payload was never written match
+neither condition and are left alone.
+
+`toCanonical()` in [`$lib/attachments.ts`](../src/lib/attachments.ts) does the same job in TypeScript
+on the **import** path, so loading an old Weaviate export cannot put the legacy shapes back into a
+table the migration just cleaned. Attachments with no recoverable payload are counted and warned
+about rather than silently stored.
+
+Verified: one row of each legacy shape migrated to canonical and still served correct PNG bytes; an
+unrecoverable row was left untouched; an import of both legacy shapes landed canonical.
 
 ### 2026-09-12 — T-16: loading older messages
 

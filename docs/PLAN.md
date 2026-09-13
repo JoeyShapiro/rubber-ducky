@@ -426,21 +426,6 @@ spaces, punctuation, and a leading digit.
 
 ---
 
-### [ ] T-21 — Database host is hardcoded
-
-**Priority:** medium · **Blocked by:** none
-
-**Files:** [`src/lib/db/index.ts`](../src/lib/db/index.ts#L6-L12)
-
-**Problem:** `host: 'localhost'`, `port: 5432`, `database: 'rubber_ducky'`, all literal; only
-the password comes from the environment. Works only because Postgres runs in the same
-container.
-
-**Acceptance criteria:** Full connection config from the environment with the current values as
-defaults; `README.md`'s `.env` block updated.
-
----
-
 ## Suggested order
 
 Dependency-driven; W6 items are independent and can be interleaved.

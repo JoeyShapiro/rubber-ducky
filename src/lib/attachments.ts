@@ -42,6 +42,24 @@ export function isCanonical(attachment: { name?: string; type?: string; content?
     return Boolean(attachment?.name) && BARE_MIME.test(attachment.type ?? '') && DATA_URL.test(attachment.content ?? '');
 }
 
+/**
+ * The canonical form of a stored pair, or null if the payload is unrecoverable.
+ *
+ * Used on the import path so a Weaviate export cannot reintroduce the legacy shapes that
+ * migration 0002 just cleaned out of the table.
+ */
+export function toCanonical(type: string, content: string): { type: string; content: string } | null {
+    if (isNormalised(type, content)) return { type, content };
+
+    const decoded = decode(type, content);
+    if (!decoded.ok) return null;
+
+    return {
+        type: decoded.mime,
+        content: `data:${decoded.mime};base64,${decoded.bytes.toString('base64')}`,
+    };
+}
+
 export function decode(type: string, content: string): Decoded {
     const { payload, declared, swapped } = columns(type, content);
 

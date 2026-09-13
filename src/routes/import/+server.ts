@@ -10,6 +10,7 @@ import {
 	notes,
 } from '$lib/db/schema';
 import { postSystemMessage } from '$lib/system';
+import { toCanonical } from '$lib/attachments';
 
 function chunk<T>(arr: T[], size: number): T[][] {
 	const out: T[][] = [];
@@ -114,16 +115,23 @@ async function doImport(request: Request) {
 	// Attachments (depends on Messages)
 	if (cols.Attachment?.length) {
 		let n = 0;
-		for (const ch of chunk(
-			cols.Attachment.map((a: any) => ({
+		let unreadable = 0;
+		// an export predates the canonical encoding, so normalise on the way in rather than
+		// letting the legacy shapes back into a table migration 0002 just cleaned
+		const incoming = cols.Attachment.map((a: any) => {
+			const canonical = toCanonical(a.type ?? '', a.content ?? '');
+			if (!canonical) unreadable++;
+			return {
 				id: a.uuid,
 				name: a.name ?? null,
-				type: a.type ?? null,
-				content: a.content ?? null,
+				type: canonical?.type ?? a.type ?? null,
+				content: canonical?.content ?? a.content ?? null,
 				messageId: a.belongsToId,
-			})),
-			500,
-		)) {
+			};
+		});
+		if (unreadable) console.warn(`[import] ${unreadable} attachments had no recoverable payload`);
+
+		for (const ch of chunk(incoming, 500)) {
 			const r = await db.insert(attachments).values(ch).onConflictDoNothing().returning({ id: attachments.id });
 			n += r.length;
 		}
