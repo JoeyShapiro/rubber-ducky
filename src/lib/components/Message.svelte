@@ -222,7 +222,7 @@
 	:global(:root[data-theme="dark"]) .system-log-entry {
 		background: rgba(80, 80, 90, 0.15);
 		border-color: rgba(160, 160, 170, 0.18);
-		color: rgba(180, 180, 190, 0.7);
+		color: rgb(178, 178, 190);
 	}
 
 	:global(:root[data-theme="dark"]) .system-log-active {

@@ -271,10 +271,10 @@
 	   amber/green status palette, an index-card stripe, and nothing that suggests completion */
 	.notes-container {
 		position: relative;
-		background: rgba(248, 248, 255, 0.4);
+		background: var(--panel-surface);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
-		border: 1px solid rgba(212, 212, 250, 0.3);
+		border: 1px solid var(--item-hairline);
 		border-radius: 8px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 		overflow: hidden;

@@ -229,10 +229,10 @@
 
 <style>
 	.tasks-container {
-		background: rgba(248, 248, 255, 0.4);
+		background: var(--panel-surface);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
-		border: 1px solid rgba(212, 212, 250, 0.3);
+		border: 1px solid var(--item-hairline);
 		border-radius: 8px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 		overflow: hidden;
@@ -550,10 +550,6 @@
 		line-height: 1;
 	}
 
-	:global(:root[data-theme="dark"]) .task-item {
-		background: rgba(35, 35, 33, 0.75);
-		border-color: rgba(80, 80, 80, 0.45);
-	}
 
 	:global(:root[data-theme="dark"]) .task-icon-wrap.task-status-active {
 		background: rgba(32, 201, 151, 0.2);
