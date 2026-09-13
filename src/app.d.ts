@@ -2,8 +2,11 @@
 // for information about these interfaces
 declare global {
 	namespace App {
+		interface Locals {
+			/** id of the validated session, set by the guard in hooks.server.ts */
+			session: string | null;
+		}
 		// interface Error {}
-		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

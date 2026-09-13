@@ -344,6 +344,29 @@ Choices already made, so later work does not re-open them.
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
 
+### 2026-09-13 — T-13: one door, not seven
+
+Every request now passes a single guard in [`hooks.server.ts`](../src/hooks.server.ts). Before
+this only `GET /ducks` checked anything — `/messages`, `/notes`, `/quests`, `/attachments`,
+`/import`, `POST /ducks` and `POST /badlings` were all open, on a box published to port 80, with
+`/import` accepting arbitrary bulk writes.
+
+The session used to travel three different ways: a `Session` header from the sidebar, a `session`
+field inside the `/qna` request body, and a cookie everywhere else. It is now one **httpOnly**
+cookie, set by the server at login rather than by `document.cookie`, so page scripts cannot read
+or forge it. `getCookie` is gone from `api.ts`.
+
+Requests with no matching route (static assets, 404s) and `/login` are public. A request that
+wants HTML is redirected to the login page; anything else — which is every API call — gets a flat
+401. The guard is skipped while `building`, so prerendering still works.
+
+`secure` on the cookie follows `url.protocol` rather than being hardcoded: this is served over
+plain HTTP on a LAN, and a hardcoded `secure: true` would stop the cookie being sent at all.
+
+Verified: all eight endpoints 401 without a cookie, a page request 303s to `/login`, login sets an
+HttpOnly cookie and unlocks the API, and a wrong password, a forged uuid and an expired session are
+each rejected.
+
 ### 2026-09-13 — T-22: one attachment encoding
 
 `bun run db:normalize-attachments` (`--dry-run` supported) rewrites every row into the canonical

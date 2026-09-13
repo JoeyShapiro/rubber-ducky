@@ -22,7 +22,7 @@
                 return res.json();
             })
             .then(data => {
-                document.cookie = `session=${data.uuid}; expires=${data.expiresOn}; path=/`;
+                // the session cookie is set by the server; nothing to do here but go
                 window.location.href = `${window.location.origin}/`;
             })
             .catch(err => {

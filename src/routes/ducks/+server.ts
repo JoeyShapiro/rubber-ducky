@@ -1,19 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { db } from '$lib/db';
-import { badlings as badlingsTable, ducks as ducksTable, sessions } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { badlings as badlingsTable, ducks as ducksTable } from '$lib/db/schema';
 import { Duck, Badling } from '$lib/types';
 
-export async function GET({ request }) {
-	const sessionId = request.headers.get('session');
-	const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	if (!sessionId || !uuidPattern.test(sessionId)) return error(401, { message: 'Unauthorized' });
-
-	const [sess] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-	if (!sess || (sess.expiresOn && sess.expiresOn < new Date())) {
-		return error(401, { message: 'Unauthorized' });
-	}
-
+export async function GET() {
+	// authentication is handled once, in hooks.server.ts
 	const allBadlings = await db.select().from(badlingsTable);
 	const allDucks = await db.select().from(ducksTable);
 

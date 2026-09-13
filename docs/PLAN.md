@@ -368,29 +368,6 @@ prop, so this is mostly moving files and changing where `duck` comes from.
 Small independent fixes. Each is self-contained; they can be done in any order and in parallel
 with the workstreams above.
 
-### [ ] T-13 — Authenticate every endpoint
-
-**Priority:** critical · **Blocked by:** none
-
-**Files:** [`src/hooks.server.ts`](../src/hooks.server.ts), all of `src/routes/*/+server.ts`,
-[`src/lib/api.ts`](../src/lib/api.ts)
-
-**Problem:** Only `GET /ducks` validates a session
-([`ducks/+server.ts:8-15`](../src/routes/ducks/+server.ts#L8-L15)). `/messages`, `/notes`,
-`/quests`, `/attachments`, `/import`, `POST /ducks`, and `POST /badlings` are **unauthenticated** —
-and this is deployed on port 80. `/import` in particular accepts arbitrary bulk writes.
-
-**Acceptance criteria:**
-- Session validation moves into `hooks.server.ts` as a single guard covering every route
-  except `/login`, populating `event.locals`.
-- Per-route ad-hoc header checks are removed in favour of the guard.
-- The session is read consistently. Today it travels three ways: a `Session` header from
-  [`Sidebar.svelte`](../src/routes/Sidebar.svelte#L73), a `session` field in the `/qna` body
-  ([`api.ts:70`](../src/lib/api.ts#L70)), and a cookie everywhere else. Standardise on an
-  httpOnly cookie and delete `getCookie` from `api.ts`.
-
----
-
 ### [ ] T-14 — Session lifetime is 60 seconds
 
 **Priority:** critical · **Blocked by:** none
@@ -399,6 +376,10 @@ and this is deployed on port 80. `/import` in particular accepts arbitrary bulk 
 
 **Problem:** `new Date(now + 1000 * 60)` — sessions expire after one minute. Almost certainly
 meant to be days.
+
+**Now urgent.** Before T-13 nothing enforced expiry, so the short lifetime was harmless. The guard
+in `hooks.server.ts` enforces it, which means the app currently locks you out **sixty seconds
+after logging in**.
 
 **Acceptance criteria:** A sane configurable lifetime; expiry is actually enforced on every
 request (see T-13); the cookie's `max-age` matches the DB expiry.

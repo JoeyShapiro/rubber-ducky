@@ -1,16 +1,6 @@
 import { Note } from '$lib/types';
 import type { Attachment, Message, Quest, QuestStatus } from '$lib/types';
 
-export function getCookie(name: string): string | undefined {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-        const part = parts.pop();
-        if (!part) return undefined;
-        return part.split(';').shift();
-    }
-}
-
 export class ApiError extends Error {
     status: number;
 
@@ -68,7 +58,7 @@ export function uploadAttachment(
 }
 
 export function askQuestion(duck: string, prompt: string): Promise<{ message: Message }> {
-    return post('/qna', { duck, prompt, session: getCookie('session') || '' });
+    return post('/qna', { duck, prompt });
 }
 
 // notes are the one type revived into real instances here: the component compares and sorts by

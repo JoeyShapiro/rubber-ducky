@@ -68,10 +68,7 @@
         
         fetch('/ducks', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Session': getCookie('session') || ''
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 badling: badling,
                 duck: duckName
@@ -114,10 +111,7 @@
         
         fetch('/badlings', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Session': getCookie('session') || ''
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 badling: badlingName
             })
@@ -154,11 +148,7 @@
         }
       });
 
-        fetch('/ducks', {
-          headers: {
-            'Session': getCookie('session') || ''
-          }
-        })
+        fetch('/ducks')
 			.then(res => {
         if (res.status == 200) {
           return res.json()
