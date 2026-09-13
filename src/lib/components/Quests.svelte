@@ -4,6 +4,7 @@
 	import { createQuest, fetchQuests, setQuestStatus } from '$lib/api';
 	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
+	import { formatDate } from '$lib/format';
 	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
 
@@ -146,7 +147,6 @@
 					<button class="task-main panel-row" type="button" on:click={() => toggle(quest.uuid)}>
 						<span class="panel-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
 						{#if quest.due}<small class="meta">{quest.due}</small>{/if}
-						<span class="task-chevron ms-auto" class:open={isOpen} aria-hidden="true">›</span>
 					</button>
 
 					<select
@@ -162,6 +162,11 @@
 
 				{#if isOpen}
 					<div class="task-detail px-2 pb-2">
+						<div class="task-times meta">
+							{#if quest.created_on}created {formatDate(quest.created_on)}{/if}
+							{#if quest.updated_on}<span class="task-times-sep">·</span>changed {formatDate(quest.updated_on)}{/if}
+							{#if quest.due}<span class="task-times-sep">·</span>due {quest.due}{/if}
+						</div>
 						{#if quest.description.trim() !== ''}
 							{@const html = renderMarkdown(quest.description)}
 							<div class="markdown task-description" use:enhanceMarkdown={html}>{@html html}</div>
@@ -178,9 +183,6 @@
 									</li>
 								{/each}
 							</ul>
-							<button class="task-open-sub mt-2" type="button" on:click={() => drillInto(quest)}>
-								Open subquests →
-							</button>
 						{/if}
 					</div>
 				{/if}
@@ -307,16 +309,17 @@
 		min-width: 0;
 	}
 
-	.task-chevron {
-		font-size: 1.1rem;
-		line-height: 1;
-		opacity: 0.4;
-		transition: transform 0.15s ease;
-		transform: rotate(90deg);
+
+
+	.task-times {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+		margin-bottom: 0.5rem;
 	}
 
-	.task-chevron.open {
-		transform: rotate(-90deg);
+	.task-times-sep {
+		opacity: 0.5;
 	}
 
 	.task-detail {
@@ -345,20 +348,7 @@
 		background: currentColor;
 	}
 
-	.task-open-sub {
-		font-size: 0.75rem;
-		font-weight: 600;
-		padding: 0.15rem 0.55rem;
-		border-radius: 999px;
-		border: 1px solid rgba(94, 106, 158, 0.4);
-		background: none;
-		color: inherit;
-		cursor: pointer;
-	}
 
-	.task-open-sub:hover {
-		background: rgba(94, 106, 158, 0.12);
-	}
 
 	.task-item:last-child {
 		margin-bottom: 0 !important;
@@ -654,9 +644,6 @@
 		color: rgba(175, 180, 195, 0.8);
 	}
 
-	:global(:root[data-theme="dark"]) .task-open-sub {
-		border-color: rgba(140, 150, 195, 0.45);
-	}
 
 	/* matches the notes header, so the two panels read as one surface */
 	:global(:root[data-theme="dark"]) .tasks-header {

@@ -57,8 +57,8 @@ export async function PATCH({ request }) {
 
 	// filling in the empty shell POST created is the moment the note really came into being
 	const wasBlank = before.title.trim() === '' && before.content.trim() === '';
-	const verb = wasBlank ? 'added' : 'modified';
-	const systemMessage = await postSystemMessage(logLine('Note', row.title, verb), row.duckId);
+	const phrase = wasBlank ? 'was added' : 'was modified';
+	const systemMessage = await postSystemMessage(logLine('Note', row.title, phrase), row.duckId);
 
 	return json({ note: toNote(row), systemMessage });
 }
@@ -74,7 +74,7 @@ export async function DELETE({ url }) {
 	// deleting is the normal end of a note's life, not an exception. the log entry outlives the
 	// note on purpose - the log is the history, so it still says what was removed.
 	await db.delete(notesTable).where(eq(notesTable.id, uuid));
-	const systemMessage = await postSystemMessage(logLine('Note', row.title, 'removed'), row.duckId);
+	const systemMessage = await postSystemMessage(logLine('Note', row.title, 'was removed'), row.duckId);
 
 	return json({ ok: true, systemMessage });
 }

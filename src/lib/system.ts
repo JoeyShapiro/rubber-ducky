@@ -31,12 +31,11 @@ export async function postSystemMessage(content: string, duckId = SYSTEM_DUCK_ID
 }
 
 /**
- * One format for every entry, so the log reads consistently and the renderer can colour it by
- * the trailing verb (see statusFromSystemMessage / .system-log-* in Message.svelte).
+ * One shape for every log entry: what it is, which one, and what happened to it in words.
+ *
+ * The trailing word is load-bearing - Message.svelte colours entries by it (see
+ * statusFromSystemMessage), so phrases end on created / added / modified / removed / a status.
  */
-export function logLine(kind: 'Quest' | 'Note', title: string, verb: string): string {
-	const name = title.trim() || 'Untitled';
-	// real characters, not html entities: system entries render as plain text now, so an entity
-	// would show up literally as "&ldquo;"
-	return `${kind} “${name}” → ${verb}`;
+export function logLine(kind: 'Quest' | 'Note', name: string, phrase: string): string {
+	return `${kind} ${name.trim() || 'Untitled'} ${phrase}`;
 }
