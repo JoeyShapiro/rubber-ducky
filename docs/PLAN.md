@@ -62,6 +62,10 @@ anywhere in the stack (`BODY_SIZE_LIMIT=Infinity` is set in the documented `.env
 **Acceptance criteria:**
 - Bytes stored as `bytea` (or on disk / object storage with a path in the DB — decide and
   record the decision).
+- **Store each image's intrinsic width and height.** Without them an `<img>` measures zero until
+  it decodes, then shoves the layout down. That is why loading older messages needs the
+  element-anchoring and on-load re-pin in `Chat.svelte`; with real dimensions the browser
+  reserves the space and none of that is necessary.
 - Upload switches to `multipart/form-data`, not a JSON-embedded data URL.
 - An enforced max upload size with a clear client-side error.
 - Migration for existing rows, or a documented decision not to migrate.
