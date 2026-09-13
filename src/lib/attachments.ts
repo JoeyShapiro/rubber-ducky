@@ -32,6 +32,11 @@ export function mimeOf(type: string, content: string): string {
     return BARE_MIME.test(raw) ? raw : 'application/octet-stream';
 }
 
+/** Is a stored row already in the canonical shape? Used by the normaliser to skip untouched rows. */
+export function isNormalised(type: string, content: string): boolean {
+    return BARE_MIME.test(type) && DATA_URL.test(content);
+}
+
 /** What the client must send to POST /attachments - the canonical shape from T-01. */
 export function isCanonical(attachment: { name?: string; type?: string; content?: string }): boolean {
     return Boolean(attachment?.name) && BARE_MIME.test(attachment.type ?? '') && DATA_URL.test(attachment.content ?? '');
