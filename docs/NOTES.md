@@ -93,6 +93,174 @@ Two traps worth knowing if you touch that file:
 
 ---
 
+## Notes, quests and links: the model
+
+### Design brief: what a note actually is
+
+**Owner's framing, 2026-09-06.** Settled enough to build against; the open questions at the end
+are the remainder.
+
+A note is **something that is currently true and worth having at hand.** Not a record of what
+happened — that is the message log. Not something to do — that is a quest.
+
+The test for whether something is a note: **will I need to ask this again?** The title is the
+question, the content is the answer. The owner's example is the exact shape:
+
+```
+title:   "start command"
+content: "#dont forget to chmod\n./build.sh"
+```
+
+Small, titled, atomic, looked up by name. Not a document. The title is a **lookup key**, not a
+headline.
+
+**Notes have no completion.** A quest goes open → done. A note goes **true → stale**. You do not
+finish a note, you retire it when it stops being true. This is why the current textarea feels
+wrong — it has no lifecycle at all — and why a Done checkbox would be equally wrong. Deleting a
+note is normal and healthy, not data loss.
+
+**What is *not* a note:** "tried X, didn't work". That is a log entry — post it to the duck's
+message log. Notes are not a transcript. Academic notes are mostly transcript, which is why they
+are a misleading model here; the transcript already exists and wants search, not curation.
+
+#### The intended flow
+
+1. Add a quest: "check the wiki" (the link lives in the quest)
+2. Do it — read, dig
+3. Post messages about progress and findings as you go (**this is the log, not notes**)
+4. Complete the quest
+5. Distil **one note** from it: the part worth keeping around
+6. Possibly spawn further quests from what was learned ("impl huffman encoding", algorithm in
+   the description)
+
+Notes are the *residue* of work, written deliberately at the end. They are not captured
+continuously — that is what the message stream is for.
+
+#### References, not pinning
+
+Message pinning is **rejected**, on the owner's reasoning: a pin list becomes a second, worse
+message history, and it is redundant once messages are searchable (T-26).
+
+What is actually wanted is the opposite direction — **backtracing**. A pin marks a message and
+hopes you find it later. A reference starts from the durable thing and points back at where it
+came from. You do not browse a pin list; you are reading a note and want its origin.
+
+Backtracing, note→quest, quest→note and message→note are all **one primitive**: a reference
+between two things, where one end may be a point in the stream. That is one table (T-24), not
+four features.
+
+A reference carries an **optional label**, so "trace back to where the build broke" is just a
+titled link on a quest or a note. It does not require inventing a note whose only content is a
+link.
+
+**Guardrail: a reference always hangs off something.** If a labelled backtrace can exist with no
+parent, the app has grown a list of saved links — which is pinning with extra steps, and the
+whole objection to pinning was that it becomes a second, worse message history. Attached to a
+note or a quest it is context for that thing; floating free it is a pin.
+
+On the name: *backtrace* already means a stack trace in programming, so the schema and code use
+**reference** (the edge) and **backlinks** (the reverse query). The UI can say whatever reads
+best.
+
+**Scratchpads** fall out of the same primitive: a scratchpad is a note anchored at a position in
+the log, and the anchor is just a reference. Deferred until T-24 exists; do not build it as a
+separate entity.
+
+#### Why notes and quests stay separate tables
+
+"Notes are like tasks that never complete" pulls toward one table with a `kind` flag. Resist it.
+Different lifecycles (done vs. stale), different fields (due/priority/status vs. none), different
+UI (a status list vs. lookup by title). Merging them produces something where neither is fast —
+which is the existing complaint about the quest list. Share the **scope model** and the
+**reference table**; keep the rows apart.
+
+#### Still open
+
+1. Is staleness explicit (a retired flag, a last-verified date) or is deleting enough?
+   *Recommended: deleting is enough. `updatedOn` plus search answers "is this still true?" without
+   inventing a review workflow nobody will run.*
+
+*(Settled since: notes are shaped like quests and never a text box; create/delete/save post to the
+duck log; no message pinning; backtracing wanted with optional labels; scope is T-28; plain text
+rendered as markdown. All in the decisions log below.)*
+
+### Where a "project" fits
+
+Also unsettled, and it decides how much T-08 has to carry. The existing hierarchy already has
+the shape, with no new entity needed:
+
+```
+badling   category / space     Work, Personal, Side projects
+duck      project or topic     has its own chat, notes, tasks
+quest     task                 subquests for smaller decomposition
+```
+
+**Rule of thumb: if it deserves its own conversation, it is a duck; if it does not, it is a
+quest with subquests.** A three-step project does not need a chat log, so it stays a quest and
+never crowds the sidebar. A project that has grown a real history gets promoted to a duck.
+
+The alternative considered — one "Projects" duck whose quests are each a project — **does not
+work.** A quest cannot hold a chat log or notes, so a project modelled that way hits a wall the
+moment it needs either. Worth adding later: a way to promote a quest into its own duck, carrying
+its subquests across.
+
+---
+
+### Where a loose task lives
+
+"Make snack box for office coworkers" is not a project, has no conversation, and needs no duck.
+
+**It binds to the badling.** T-08's scope model already expresses this, and no new concept is
+needed — the same rule as projects, applied one level down:
+
+| Scope | Means | Example |
+|---|---|---|
+| duck | belongs to this project or topic | "fix the attachment encoding" |
+| badling | belongs to this area of life, nothing narrower | "make snack box for coworkers" (Work) |
+| global | belongs to nothing | "buy milk" |
+
+**A "general" duck per badling is the wrong default.** A duck's reason to exist is a
+conversation; a general duck is one auto-created for tasks that explicitly do not want one, and
+it becomes the junk drawer every `#general` becomes. Nothing stops the owner *choosing* to make
+a duck called "general" for loose work chat — that is a normal duck, created because there is
+talking to do. The app should not create one on your behalf.
+
+This is the same rule again: **if it deserves its own conversation, it is a duck.** A snack box
+does not. If it grows one, it was never a loose task.
+
+**Notes for a loose task** follow the same scoping — "office snack preferences: Sarah is
+gluten-free" is reference material for Work, so a badling-scoped note. This is the argument that
+settles open question 1 in the brief: notes need the same three-level scope as quests, or
+knowledge that belongs to an area of life has nowhere to live. **Confirm before building T-07.**
+
+#### The consequence to decide with it
+
+Quest status changes currently post a system message to the duck's log
+([`quests/+server.ts:74-85`](../src/routes/quests/+server.ts#L74-L85)). **A badling-scoped or
+global quest has no duck log to post into**, and T-27 raises exactly the same problem for notes.
+Decide once, for both:
+
+1. *No system message when there is no duck log.* **Recommended.** The system message exists to
+   weave activity into a conversation; with no conversation there is nothing to weave. Ticking
+   off a snack box does not need an audit trail.
+2. Give badlings their own log — which is a general duck by another name, and reintroduces what
+   was just rejected.
+3. Send them to a global system log, alongside the existing "Server started" messages
+   ([`system.ts`](../src/lib/system.ts)).
+
+Option 1 means the badling view has no activity feed. That is fine for loose tasks and is the
+honest consequence of them being loose.
+
+#### What this requires of the UI
+
+The badling view (`/g/[badling]` in T-11) has to be a real destination, not a folder in the
+sidebar: its own loose quests and notes, plus a rollup of the quests in its ducks. Without it,
+badling-scoped items are unreachable — created and then lost.
+
+---
+
+---
+
 ## Item styling: stream vs list
 
 Messages, notes and quests share one material and differ by **elevation only**. Before this they
@@ -175,6 +343,24 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-13 — T-22: one attachment encoding
+
+`bun run db:normalize-attachments` (`--dry-run` supported) rewrites every row into the canonical
+shape, reusing `decode()` so it understands all three historical encodings. Rows it cannot decode
+are reported and left alone, never dropped; already-canonical rows are skipped, so it is safe to
+re-run. It fetches one row at a time on purpose — a single attachment can be megabytes.
+
+Verified against synthetic rows in each legacy shape: both were rewritten and still served correct
+PNG bytes afterwards; a deliberately corrupt row was reported untouched. The live table was already
+canonical, so this exists mainly for the Weaviate export, which can still be imported.
+
+### 2026-09-12 — T-16: loading older messages
+
+Rebuilt from scratch after three failed attempts built on Chrome-only behaviour. Sentinel plus
+`IntersectionObserver` rather than a scroll handler, `overflow-anchor: none`, and the scroll offset
+restored by measuring immediately before the splice. See the two chat entries in the decisions log
+for why each of those is the way it is. Verified in both WebKit and Chromium.
 
 ### 2026-09-11 — T-17: one markdown renderer
 

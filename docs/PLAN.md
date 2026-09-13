@@ -27,26 +27,6 @@ choice.
 The reported "uploading pictures doesn't always work" bug is fixed (T-01 → T-04, T-06). What is
 left is storage-level tidying, neither of which blocks anything.
 
-### [ ] T-22 — Normalise legacy attachment rows to the canonical encoding
-
-**Priority:** low · **Blocked by:** none · **Optional**
-
-**Files:** a one-off migration or script
-
-**Problem:** The endpoints read all three historical encodings (see *Attachment encodings* in
-[NOTES.md](NOTES.md)), which fixed the symptom but keeps three shapes alive in the table
-forever. Every future reader has to know about all of them.
-
-**Acceptance criteria:**
-- One-off pass rewriting legacy rows into the canonical shape (`type` = bare MIME,
-  `content` = full data URL), reusing `decode()` from [`$lib/attachments.ts`](../src/lib/attachments.ts).
-- Rows that `decode()` rejects are reported, not silently dropped.
-- Once no legacy rows remain, `decode()`'s legacy branches could be deleted — but only after
-  confirming no un-imported Weaviate export will be loaded later.
-- Fold into T-05 if that lands first, since it rewrites every row anyway.
-
----
-
 ### [ ] T-05 — Stop storing attachment bytes as base64 text
 
 **Priority:** medium · **Blocked by:** none · **May be deferred**
@@ -96,186 +76,9 @@ up in one JSON POST.
 
 ## W3 — Notes
 
-### Design brief: what a note actually is
-
-**Owner's framing, 2026-09-06.** Settled enough to build against; the open questions at the end
-are the remainder.
-
-A note is **something that is currently true and worth having at hand.** Not a record of what
-happened — that is the message log. Not something to do — that is a quest.
-
-The test for whether something is a note: **will I need to ask this again?** The title is the
-question, the content is the answer. The owner's example is the exact shape:
-
-```
-title:   "start command"
-content: "#dont forget to chmod\n./build.sh"
-```
-
-Small, titled, atomic, looked up by name. Not a document. The title is a **lookup key**, not a
-headline.
-
-**Notes have no completion.** A quest goes open → done. A note goes **true → stale**. You do not
-finish a note, you retire it when it stops being true. This is why the current textarea feels
-wrong — it has no lifecycle at all — and why a Done checkbox would be equally wrong. Deleting a
-note is normal and healthy, not data loss.
-
-**What is *not* a note:** "tried X, didn't work". That is a log entry — post it to the duck's
-message log. Notes are not a transcript. Academic notes are mostly transcript, which is why they
-are a misleading model here; the transcript already exists and wants search, not curation.
-
-#### The intended flow
-
-1. Add a quest: "check the wiki" (the link lives in the quest)
-2. Do it — read, dig
-3. Post messages about progress and findings as you go (**this is the log, not notes**)
-4. Complete the quest
-5. Distil **one note** from it: the part worth keeping around
-6. Possibly spawn further quests from what was learned ("impl huffman encoding", algorithm in
-   the description)
-
-Notes are the *residue* of work, written deliberately at the end. They are not captured
-continuously — that is what the message stream is for.
-
-#### References, not pinning
-
-Message pinning is **rejected**, on the owner's reasoning: a pin list becomes a second, worse
-message history, and it is redundant once messages are searchable (T-26).
-
-What is actually wanted is the opposite direction — **backtracing**. A pin marks a message and
-hopes you find it later. A reference starts from the durable thing and points back at where it
-came from. You do not browse a pin list; you are reading a note and want its origin.
-
-Backtracing, note→quest, quest→note and message→note are all **one primitive**: a reference
-between two things, where one end may be a point in the stream. That is one table (T-24), not
-four features.
-
-A reference carries an **optional label**, so "trace back to where the build broke" is just a
-titled link on a quest or a note. It does not require inventing a note whose only content is a
-link.
-
-**Guardrail: a reference always hangs off something.** If a labelled backtrace can exist with no
-parent, the app has grown a list of saved links — which is pinning with extra steps, and the
-whole objection to pinning was that it becomes a second, worse message history. Attached to a
-note or a quest it is context for that thing; floating free it is a pin.
-
-On the name: *backtrace* already means a stack trace in programming, so the schema and code use
-**reference** (the edge) and **backlinks** (the reverse query). The UI can say whatever reads
-best.
-
-**Scratchpads** fall out of the same primitive: a scratchpad is a note anchored at a position in
-the log, and the anchor is just a reference. Deferred until T-24 exists; do not build it as a
-separate entity.
-
-#### Why notes and quests stay separate tables
-
-"Notes are like tasks that never complete" pulls toward one table with a `kind` flag. Resist it.
-Different lifecycles (done vs. stale), different fields (due/priority/status vs. none), different
-UI (a status list vs. lookup by title). Merging them produces something where neither is fast —
-which is the existing complaint about the quest list. Share the **scope model** and the
-**reference table**; keep the rows apart.
-
-#### Decided by the owner, 2026-09-06
-
-- **Notes are shaped like quests** — name plus content, listed as items — but they never
-  complete, and they get a visually distinct style so the two are not confused at a glance.
-- **If a note is a text box, something has gone wrong.** The notes pane is a list of small
-  titled things, not a document editor. This is the guardrail for T-07.
-- **Note changes post to the duck's message log**: added, removed, and modified — the same
-  treatment quest status changes already get.
-- **No message pinning.** Settled.
-- **Backtracing is wanted**, allowed on any durable thing, with an optional link title.
-
-The logging decision constrains the save model: "modified" can only be logged if edits are
-committed deliberately, by an explicit save or a very long debounce. A short autosave would
-fill the log with a system message per keystroke burst. **T-07 therefore keeps a save action
-rather than the quiet autosave originally sketched.**
-
-#### Still open
-
-1. Do notes get the same nullable scope as quests in T-08 (duck / badling / global)?
-   *Recommended: yes — "how to get on the VPN" belongs to no single duck.*
-2. Is staleness explicit (a retired flag, a last-verified date) or is deleting enough?
-   *Recommended: deleting is enough to start. `updatedOn` plus search answers "is this still
-   true?" without inventing a review workflow nobody will run.*
-3. Plain text or rich? *Recommended: plain, rendered as markdown once T-17 lands, so notes and
-   messages render through one path. The motivating example is a shell snippet, so code blocks
-   matter more than formatting.*
-
-### Where a "project" fits
-
-Also unsettled, and it decides how much T-08 has to carry. The existing hierarchy already has
-the shape, with no new entity needed:
-
-```
-badling   category / space     Work, Personal, Side projects
-duck      project or topic     has its own chat, notes, tasks
-quest     task                 subquests for smaller decomposition
-```
-
-**Rule of thumb: if it deserves its own conversation, it is a duck; if it does not, it is a
-quest with subquests.** A three-step project does not need a chat log, so it stays a quest and
-never crowds the sidebar. A project that has grown a real history gets promoted to a duck.
-
-The alternative considered — one "Projects" duck whose quests are each a project — **does not
-work.** A quest cannot hold a chat log or notes, so a project modelled that way hits a wall the
-moment it needs either. Worth adding later: a way to promote a quest into its own duck, carrying
-its subquests across.
-
----
-
-### Where a loose task lives
-
-"Make snack box for office coworkers" is not a project, has no conversation, and needs no duck.
-
-**It binds to the badling.** T-08's scope model already expresses this, and no new concept is
-needed — the same rule as projects, applied one level down:
-
-| Scope | Means | Example |
-|---|---|---|
-| duck | belongs to this project or topic | "fix the attachment encoding" |
-| badling | belongs to this area of life, nothing narrower | "make snack box for coworkers" (Work) |
-| global | belongs to nothing | "buy milk" |
-
-**A "general" duck per badling is the wrong default.** A duck's reason to exist is a
-conversation; a general duck is one auto-created for tasks that explicitly do not want one, and
-it becomes the junk drawer every `#general` becomes. Nothing stops the owner *choosing* to make
-a duck called "general" for loose work chat — that is a normal duck, created because there is
-talking to do. The app should not create one on your behalf.
-
-This is the same rule again: **if it deserves its own conversation, it is a duck.** A snack box
-does not. If it grows one, it was never a loose task.
-
-**Notes for a loose task** follow the same scoping — "office snack preferences: Sarah is
-gluten-free" is reference material for Work, so a badling-scoped note. This is the argument that
-settles open question 1 in the brief: notes need the same three-level scope as quests, or
-knowledge that belongs to an area of life has nowhere to live. **Confirm before building T-07.**
-
-#### The consequence to decide with it
-
-Quest status changes currently post a system message to the duck's log
-([`quests/+server.ts:74-85`](../src/routes/quests/+server.ts#L74-L85)). **A badling-scoped or
-global quest has no duck log to post into**, and T-27 raises exactly the same problem for notes.
-Decide once, for both:
-
-1. *No system message when there is no duck log.* **Recommended.** The system message exists to
-   weave activity into a conversation; with no conversation there is nothing to weave. Ticking
-   off a snack box does not need an audit trail.
-2. Give badlings their own log — which is a general duck by another name, and reintroduces what
-   was just rejected.
-3. Send them to a global system log, alongside the existing "Server started" messages
-   ([`system.ts`](../src/lib/system.ts)).
-
-Option 1 means the badling view has no activity feed. That is fine for loose tasks and is the
-honest consequence of them being loose.
-
-#### What this requires of the UI
-
-The badling view (`/g/[badling]` in T-11) has to be a real destination, not a folder in the
-sidebar: its own loose quests and notes, plus a rollup of the quests in its ducks. Without it,
-badling-scoped items are unreachable — created and then lost.
-
----
+The design brief — what a note is, why references rather than pinning, where a project fits, and
+where a loose task lives — is settled and lives in [NOTES.md](NOTES.md). Read it before starting
+anything here.
 
 ### [ ] T-28 — Give notes the same scope as quests
 
@@ -462,19 +265,18 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 [`src/lib/components/QuestModal.svelte`](../src/lib/components/QuestModal.svelte),
 [`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts)
 
-**Problem:** The list is cumbersome to operate:
+**Problem:** Partly addressed. Rows now expand on click to show the description, the status icon
+and the subquest count are visible at the same time, the due date is no longer hover-only, and the
+breadcrumbs are real buttons. What remains:
 - No edit and no delete — `PATCH` only accepts a status change
-  ([`quests/+server.ts:61`](../src/routes/quests/+server.ts#L61)); there is no `DELETE`.
+  ([`quests/+server.ts`](../src/routes/quests/+server.ts)); there is no `DELETE`.
 - The only creation path is a modal.
-- The status dropdown is `opacity: 0; visibility: hidden` until hover
-  ([`Quests.svelte:283-284`](../src/lib/components/Quests.svelte#L283-L284)) — unusable on touch.
-- The due date is also hover-only ([`Quests.svelte:244-250`](../src/lib/components/Quests.svelte#L244-L250)).
-- Sub-quests are reachable only by clicking the count badge, and that badge **replaces** the
-  status icon ([`Quests.svelte:111-114`](../src/lib/components/Quests.svelte#L111-L114)) — a
-  quest with children shows no status at all.
-- Five statuses (`active`/`inactive`/`completed`/`aborted`/`locked`) plus a separate `done`
-  boolean that merely mirrors `status === 'completed'`. Confirm whether all five earn their
-  place; the redundant `done` column should probably go.
+- The status dropdown is still `opacity: 0` until hover
+  ([`Quests.svelte:439`](../src/lib/components/Quests.svelte#L439)) — unusable on touch, and the
+  last hover-only control in this panel.
+- Five statuses (`active`/`inactive`/`completed`/`aborted`/`locked`) plus a `done` boolean that
+  only mirrors `status === 'completed'`. Confirm all five earn their place; the redundant column
+  should probably go.
 
 **Acceptance criteria:**
 - Inline quick-add (type a title, press Enter) alongside the full modal.
@@ -483,7 +285,6 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
   [`ConfirmDialog.svelte`](../src/lib/components/ConfirmDialog.svelte); deleting a quest with
   subquests especially needs to say what else goes with it.
 - No control is hover-only; everything is reachable by tap.
-- Status and sub-quest count are visible simultaneously.
 - Drag-to-reorder writing `sortOrder`.
 
 ---
@@ -618,6 +419,10 @@ therefore re-appends the same answers on every page.
 ([`schema.ts:54-60`](../src/lib/db/schema.ts#L54-L60)), so they are correlated by timestamp
 window instead of by relationship.
 
+**Partly masked, not fixed:** `Chat.svelte` drops messages whose uuid it has already seen, so
+duplicates do not render. The endpoint still returns them, and the root cause — `answers` having no
+relationship to a duck — is untouched.
+
 **Acceptance criteria:**
 - `answers` gains a proper relationship (a `duckId`, or a FK to the triggering message).
 - Answers are fetched with the same window/offset as the messages page, not globally.
@@ -625,29 +430,6 @@ window instead of by relationship.
 - (While here: the schema's `promt` typo at [`schema.ts:56`](../src/lib/db/schema.ts#L56) is
   also baked into [`import/+server.ts:139`](../src/routes/import/+server.ts#L139) — rename both
   together or leave both alone.)
-
----
-
-### [ ] T-16 — Implement infinite scroll
-
-**Priority:** medium · **Blocked by:** none (but see T-15)
-
-**Files:** [`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte)
-
-**Problem:** There is no way to see older messages; only the most recent 10 ever load. The
-original attempt was deleted during the frontend split rather than transplanted — it listened on
-`window` (which never scrolls here, the scroller is the chatbox) and its condition was inverted,
-so it was unreachable dead code. This is a fresh implementation.
-
-`GET /messages` already accepts `?offset=`, and `fetchMessages(duck, offset)` in
-[`api.ts`](../src/lib/api.ts) already passes it — the server side is ready. Do T-15 first, or
-paginating will duplicate every AI answer.
-
-**Acceptance criteria:**
-- Listener on the `chatbox` element, firing when scrolled near the **top** (older messages).
-- Scroll position is preserved when older messages are prepended — naive prepending jumps the view.
-- A `loading` guard that actually prevents overlapping fetches (`Chat.svelte` already has the
-  flag and renders the indicator; it is currently only used for the initial load).
 
 ---
 
@@ -703,13 +485,12 @@ Dependency-driven; W6 items are independent and can be interleaved.
 1. **T-13, T-14** — auth and session lifetime. Small, and the app is currently wide open.
 2. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
    It also decides whether notes gain badling/global scope (T-28).
-4. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
-5. **T-10, T-12** — the UX work, now that the foundations hold.
-6. **T-24, T-25** — the reference table, then distilling notes from the log. These are what
-   make notes stop feeling bolted on, but they need T-07 and T-08 underneath first.
-7. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
-   thing that turns the log into something you can look things up in, and the design brief
-   leans on it existing.
-8. **T-15 → T-16**, then the rest of W6, opportunistically.
+3. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
+4. **T-10, T-12** — the UX work, now that the foundations hold.
+5. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
+   notes stop feeling bolted on, but they need T-08 and T-28 underneath.
+6. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
+   thing that turns the log into something you can look things up in.
+7. **T-15**, then the rest of W6, opportunistically.
 
-T-05 and T-22 (attachment storage) are deferrable without blocking anything.
+T-05 (attachment storage) is deferrable without blocking anything.
