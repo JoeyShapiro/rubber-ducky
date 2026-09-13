@@ -223,10 +223,10 @@
 	{:else}
 		<ul class="notes-list list-unstyled m-0 p-2">
 			{#each ordered as note (note.uuid)}
-				<li>
-					<button class="note-item d-flex align-items-center gap-2 w-100" type="button" on:click={() => openNote(note)}>
-						<span class="note-item-title flex-fill">{displayTitle(note)}</span>
-						<span class="note-item-date">{formatDate(note.modified ?? note.created)}</span>
+				<li class="panel-row-wrap">
+					<button class="panel-row" type="button" on:click={() => openNote(note)}>
+						<span class="panel-title">{displayTitle(note)}</span>
+						<span class="meta">{formatDate(note.modified ?? note.created)}</span>
 					</button>
 				</li>
 			{/each}
@@ -341,39 +341,9 @@
 		height: 2.6rem;
 	}
 
-	.note-item {
-		text-align: left;
-		color: inherit; /* a <button> does not inherit color, so dark mode left it near black */
-		background: rgba(255, 255, 255, 0.5);
-		border: 1px solid rgba(212, 212, 250, 0.35);
-		border-left: 3px solid rgba(94, 106, 158, 0.55);
-		border-radius: 4px;
-		padding: 0.55rem 0.75rem;
-		margin-bottom: 0.4rem;
-		cursor: pointer;
-		transition: border-color 0.12s ease, background 0.12s ease;
-	}
 
-	.note-item:hover {
-		background: rgba(255, 255, 255, 0.8);
-		border-left-color: rgba(94, 106, 158, 0.95);
-	}
 
-	.note-item-title {
-		font-size: 0.88rem;
-		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		min-width: 0;
-	}
 
-	.note-item-date {
-		font-size: 0.7rem;
-		color: rgba(108, 117, 125, 0.85);
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
 
 	.notes-empty {
 		font-size: 0.82rem;
@@ -460,17 +430,8 @@
 		background: rgba(60, 60, 58, 0.9);
 	}
 
-	:global(:root[data-theme="dark"]) .note-item {
-		background: rgba(35, 35, 33, 0.75);
-		border-color: rgba(80, 80, 80, 0.45);
-		border-left-color: rgba(140, 150, 195, 0.65);
-	}
 
-	:global(:root[data-theme="dark"]) .note-item:hover {
-		background: rgba(45, 45, 43, 0.9);
-	}
 
-	:global(:root[data-theme="dark"]) .note-item-date,
 	:global(:root[data-theme="dark"]) .note-meta,
 	:global(:root[data-theme="dark"]) .notes-empty {
 		color: rgba(175, 180, 195, 0.8);

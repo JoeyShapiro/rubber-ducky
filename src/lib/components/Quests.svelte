@@ -119,8 +119,8 @@
 		{#each visibleQuests as quest}
 			{@const children = childrenOf(quest.uuid)}
 			{@const isOpen = expanded.has(quest.uuid)}
-			<li class="task-item d-flex flex-column rounded-2 mb-1">
-				<div class="task-row d-flex align-items-center p-2 gap-2">
+			<li class="task-item panel-row-wrap d-flex flex-column">
+				<div class="task-row d-flex align-items-center gap-2">
 					<!-- the count sits on the icon, but as a badge rather than replacing it - the
 					     status has to stay readable underneath -->
 					{#if children.length > 0}
@@ -143,9 +143,9 @@
 						</span>
 					{/if}
 
-					<button class="task-main d-flex align-items-center gap-2 flex-fill" type="button" on:click={() => toggle(quest.uuid)}>
-						<span class="task-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
-						{#if quest.due}<small class="task-due">{quest.due}</small>{/if}
+					<button class="task-main panel-row" type="button" on:click={() => toggle(quest.uuid)}>
+						<span class="panel-title {quest.done ? 'task-done' : ''}">{quest.title}</span>
+						{#if quest.due}<small class="meta">{quest.due}</small>{/if}
 						<span class="task-chevron ms-auto" class:open={isOpen} aria-hidden="true">›</span>
 					</button>
 
@@ -289,20 +289,21 @@
 		height: 0.5rem;
 	}
 
+	/* a row cut into the panel, not a card floating on it - the raised treatment belongs to the
+	   message stream */
 	.task-item {
-		background: rgba(255, 255, 255, 0.45);
-		border: 1px solid rgba(212, 212, 250, 0.35);
+		padding: 0.15rem 0;
+	}
+
+	.task-row {
+		padding-left: 0.35rem;
 	}
 
 	/* the whole title area is the expand target, so it is a real button - the status select and
 	   the subquest chip sit outside it rather than nested inside an interactive element */
+	/* .panel-row carries the shared row treatment; only the drill icon sits outside it */
 	.task-main {
-		background: none;
-		border: none;
-		padding: 0.25rem;
-		color: inherit;
-		text-align: left;
-		cursor: pointer;
+		flex: 1 1 auto;
 		min-width: 0;
 	}
 
@@ -363,11 +364,6 @@
 		margin-bottom: 0 !important;
 	}
 
-	.task-title {
-		font-size: 0.92rem;
-		font-weight: 500;
-	}
-
 	.task-icon-wrap {
 		position: relative;
 		width: 1.8rem;
@@ -419,11 +415,6 @@
 	.task-done {
 		text-decoration: line-through;
 		opacity: 0.65;
-	}
-
-	.task-due {
-		color: rgba(108, 117, 125, 0.9);
-		flex-shrink: 0;
 	}
 
 	.task-description {

@@ -11,7 +11,7 @@
 </svelte:head>
 
 <!-- the background lives here, not on the chat pane, so both columns sit on one surface -->
-<section class="d-flex flex-row bg-body-tertiary bg-gradient w-100" style="max-height: 100vh;">
+<section class="app-surface d-flex flex-row w-100" style="max-height: 100vh;">
 	<Chat duck={$duck} />
 
 	<div class="d-flex flex-column w-50 p-2 right-panel">

@@ -6,6 +6,21 @@
 	--text-primary: #1a1a1a;
 	--text-secondary: #4a4a4a;
 	--border-color: #d1d1d1;
+
+	/* ---- shared item surface ----------------------------------------------------------------
+	   One material for messages, notes and quests. They differ by ELEVATION, not decoration:
+	   the stream is raised off the background, the panel lists are flat rows cut into it.     */
+	--item-raised: rgba(255, 255, 255, 0.72);   /* stream: a card that floats */
+	--item-hairline: rgba(212, 212, 250, 0.5);  /* the one border colour */
+	--item-radius: 8px;
+	--row-radius: 5px;
+	--row-hover: rgba(120, 120, 140, 0.09);
+	--meta-color: rgba(108, 117, 125, 0.9);     /* timestamps, counts, anything secondary */
+
+	/* the app surface is graded rather than flat - that darkening is what gives the raised
+	   message cards their depth, now that they cast no shadow */
+	--surface-top: rgb(241, 241, 245);
+	--surface-bottom: rgb(220, 220, 229);
 }
 
 /* Dark mode (off-dark) - inspired by claude.ai */
@@ -16,6 +31,13 @@
 	--text-primary: #e8e8e8;
 	--text-secondary: #b8b8b8;
 	--border-color: #3a3a3a;
+
+	--item-raised: rgba(52, 52, 50, 0.85);
+	--item-hairline: rgba(150, 150, 170, 0.2);
+	--row-hover: rgba(210, 215, 230, 0.07);
+	--meta-color: rgba(175, 180, 195, 0.8);
+	--surface-top: rgb(36, 36, 38);
+	--surface-bottom: rgb(20, 20, 22);
 	
 	/* Override Bootstrap variables for dark mode */
 	--bs-body-bg: rgb(25, 25, 24);
@@ -70,12 +92,6 @@ body {
 
 :root[data-theme="dark"] textarea::placeholder {
 	color: var(--text-secondary);
-}
-
-/* Dark mode toast styling */
-:root[data-theme="dark"] .toast {
-	background-color: var(--bs-secondary-bg);
-	color: var(--text-primary);
 }
 
 /* Dark mode card styling */
@@ -447,4 +463,58 @@ body {
 
 :root[data-theme="dark"] .panel-back:hover {
 	background: rgba(60, 60, 58, 1);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Flat list rows - the "list" half of the stream/list split. Notes and quests share this; the
+   raised card in the message stream is deliberately the opposite treatment.
+   --------------------------------------------------------------------------------------------- */
+
+.panel-row {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	width: 100%;
+	padding: 0.5rem 0.6rem;
+	background: none;
+	border: none;
+	border-radius: var(--row-radius);
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.12s ease;
+}
+
+.panel-row:hover {
+	background: var(--row-hover);
+}
+
+/* hairline between rows rather than a border around each - a list, not a stack of cards */
+.panel-row-wrap + .panel-row-wrap {
+	border-top: 1px solid var(--item-hairline);
+}
+
+
+.panel-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-size: 0.88rem;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* every secondary bit of text in the app: timestamps, due dates, counts */
+.meta {
+	font-size: 0.7rem;
+	color: var(--meta-color);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* The page behind the panes. Replaces bootstrap's .bg-gradient, which is a barely-there white
+   wash over a flat colour - too flat to give the message cards anything to sit on. */
+.app-surface {
+	background: linear-gradient(180deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
 }

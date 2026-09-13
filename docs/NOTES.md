@@ -93,6 +93,38 @@ Two traps worth knowing if you touch that file:
 
 ---
 
+## Item styling: stream vs list
+
+Messages, notes and quests share one material and differ by **elevation only**. Before this they
+differed on five unplanned axes at once — four radius/shadow combinations, three timestamp
+positions, two stripe conventions — which read as inconsistency rather than hierarchy.
+
+| | treatment |
+|---|---|
+| message | **raised**: own card on a graded surface, roomy padding, timestamp in the bottom-right corner |
+| system log | in the stream but subordinate: same geometry, no elevation, monospace + `◈` + status stripe |
+| note | **flat row** cut into the panel: title, right-aligned date |
+| quest | **flat row**: status icon, title, right-aligned due date |
+
+The shared values are tokens in `app.css` — `--item-raised`, `--item-hairline`, `--item-radius`,
+`--row-radius`, `--row-hover`, `--meta-color` — plus the `.panel-row` / `.panel-title` / `.meta`
+classes that notes and quests both use. Change the material in one place, not three.
+
+**Depth comes from the background, not from shadows.** The cards cast none; `.app-surface` is a
+vertical gradient (`--surface-top` → `--surface-bottom`) and the raised cards read against that
+darkening. Bootstrap's `.bg-gradient` was a near-invisible white wash over a flat colour, which
+left the whole pane looking flat and made the cards need a shadow to separate at all.
+
+**The message card is no longer Bootstrap's `.toast`.** That component pinned it to 350px and
+brought its own colours, which is why messages could never match anything else. The silhouette is
+unchanged; the CSS is ours. The corner timestamp is the deliberate signature — it is what made the
+original feel like a journal rather than a chat bubble, so it stayed and the rest was built around
+it.
+
+**Direction of the merge matters:** notes and quests were pulled toward messages, not the reverse.
+
+---
+
 ## Decisions log
 
 Choices already made, so later work does not re-open them.

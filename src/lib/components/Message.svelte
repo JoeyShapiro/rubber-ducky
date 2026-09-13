@@ -17,8 +17,8 @@
 		<span class="system-log-time">{formatDate(message.timestamp)}</span>
 	</div>
 {:else}
-	<div class="toast fade show m-2 message-box position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
-		<div class="toast-body message-body text-body">
+	<div class="message-card position-relative {$hidden ? 'spoil' : ''}" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="message-body">
 			{#if message.from != 'user'}<span class="message-from">{message.from}</span>{/if}
 			<div class="markdown" use:enhanceMarkdown={html}>{@html html}</div>
 			{#if message.attachments.length > 0}
@@ -42,21 +42,31 @@
 				</div>
 			{/if}
 		</div>
-		<small class="text-muted position-absolute m-1 bottom-0 end-0">{formatDate(message.timestamp)}</small>
+		<small class="meta message-time">{formatDate(message.timestamp)}</small>
 	</div>
 {/if}
 
 <style>
-	/* bootstrap pins .toast to 350px; messages should use the width they are given */
-	.message-box {
-		width: auto;
-		max-width: none;
+	/* The stream: raised off the background. This was bootstrap's .toast, which pinned it to
+	   350px and brought its own colours - same silhouette, owned here, so it shares one surface
+	   with notes and quests while keeping the timestamp corner. */
+	.message-card {
+		margin: 0.5rem;
+		background: var(--item-raised);
+		border: 1px solid var(--item-hairline);
+		border-radius: var(--item-radius);
 	}
 
-	/* bootstrap's .toast-body is 0.75rem all round, which left the code block almost touching
-	   the message border. the extra bottom room is for the timestamp. */
+	/* the extra room at the bottom is for the corner timestamp */
 	.message-body {
 		padding: 0.85rem 1rem 1.6rem;
+	}
+
+	/* the signature: time tucked into the corner rather than beside the author */
+	.message-time {
+		position: absolute;
+		right: 0.7rem;
+		bottom: 0.5rem;
 	}
 
 	.message-from {
@@ -119,6 +129,7 @@
 		border-color: rgba(88, 88, 88, 0.55);
 	}
 
+	/* also in the stream, but subordinate: same geometry, no elevation */
 	.system-log-entry {
 		display: flex;
 		align-items: baseline;
@@ -126,7 +137,7 @@
 		width: auto;
 		margin: 0.5rem;
 		padding: 0.5rem 0.75rem 1.6rem;
-		border-radius: 6px;
+		border-radius: var(--item-radius);
 		border: 1px solid rgba(130, 130, 140, 0.22);
 		border-left-width: 3px;
 		background: rgba(120, 120, 130, 0.08);
@@ -148,12 +159,13 @@
 		min-width: 0;
 	}
 
+	/* same corner as a message's timestamp */
 	.system-log-time {
 		position: absolute;
-		bottom: 0.25rem;
-		right: 0.5rem;
+		bottom: 0.5rem;
+		right: 0.7rem;
 		font-size: 0.68rem;
-		opacity: 0.5;
+		opacity: 0.55;
 		white-space: nowrap;
 	}
 
