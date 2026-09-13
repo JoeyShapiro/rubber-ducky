@@ -15,6 +15,7 @@ docker run -d -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env joeysh
 # .env
 PASSWORD=??? # should be pre hashed
 PORT=80
+SESSION_HOURS=4 # how long a login lasts; expiry means logging in again, not a silent refresh
 POSTGRES_PASSWORD=???
 OLLAMA_URL=http://host.docker.internal:11434
 # for proper importing of data

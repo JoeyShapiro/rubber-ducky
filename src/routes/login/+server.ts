@@ -3,13 +3,17 @@ import { env } from '$lib/env';
 import { db } from '$lib/db';
 import { sessions } from '$lib/db/schema';
 
+// How long a login lasts. Deliberately not renewed on activity: an expired session means logging
+// in again, not a silent refresh. The draft you were typing is preserved across it ($lib/drafts).
+const SESSION_HOURS = Number(env.SESSION_HOURS ?? 4);
+
 export async function POST({ request, cookies, url }) {
 	const data = await request.json();
 	if (data.password !== env.PASSWORD) {
 		return error(401, { message: 'Unauthorized' });
 	}
 
-	const expires = new Date(new Date().getTime() + 1000 * 60);
+	const expires = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000);
 	const [session] = await db.insert(sessions).values({
 		createdOn: new Date(),
 		expiresOn: expires,

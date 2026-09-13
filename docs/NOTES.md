@@ -314,6 +314,7 @@ Choices already made, so later work does not re-open them.
 | 2026-09-06 | notes | A note is something currently *true*, not something done. Lifecycle is true → stale, with no completion state; deleting is the normal end of life. |
 | 2026-09-09 | notes | Deleting a note is confirmed, despite being the normal end of life. Notes are near-permanent by design with no undo and no history, so "one action, not buried" means reachable — not unguarded. |
 | 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
+| 2026-09-13 | auth | Sessions expire hard — no sliding renewal. Re-authenticating silently defeats the point of an expiry, so the app returns you to the login screen; the cost of that (a lost draft) is paid off by `$lib/drafts.ts` instead. |
 | 2026-09-13 | theming | Any translucent **white** surface has to be themed. `rgba(248,248,255,0.4)` reads as a soft wash over a light page and as a **mid-grey** over a dark one — that is what made the notes panel unreadable (note date measured 1.99:1). Panels use `--panel-surface`, which is near-white in light and `rgba(255,255,255,0.055)` in dark. |
 | 2026-09-13 | theming | Muted greys picked by eye fail on one side or the other: the dark ones were tuned against the accidental mid-grey, and the light ones sat at 3.8:1 on white. `--meta-color` and the code-label greys are now measured values, ≥4.5:1 in both themes. |
 | 2026-09-13 | logging | Entries read as sentences: `Quest <path> was created`, `Quest <path> is completed`, `Note <title> was removed`. No quotes, no arrow. The **trailing word stays load-bearing** — `Message.svelte` colours entries by it — so any new phrase must end on created/added/modified/removed or a status. |
@@ -343,6 +344,25 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-13 — T-14: sessions last four hours, and drafts outlive them
+
+`SESSION_HOURS` (default 4) replaces the one-minute lifetime, and the cookie's expiry is set from
+the same value as the database row, so the two cannot drift.
+
+**Expiry deliberately does not renew on activity.** An expired session means logging in again, not
+a silent refresh — that is the point of having one. What re-logging-in must not cost you is the
+message you were part-way through typing, so [`$lib/drafts.ts`](../src/lib/drafts.ts) keeps it in
+`localStorage`, keyed per duck: written debounced as you type, flushed synchronously on `pagehide`
+(the last chance before a 401 redirect), restored on load, and cleared once the message sends.
+
+Text only — staged attachments are base64 and would blow the storage quota. Every `localStorage`
+access is wrapped, because it throws rather than returning null in private windows and with site
+data blocked; a lost draft must never break the composer.
+
+Verified: with a session aged out in the database, an API call 401s, the app lands on `/login`, and
+after logging back in the half-written message is still in the box. Drafts stay separate per duck
+and the right one is cleared on send.
 
 ### 2026-09-13 — T-13: one door, not seven
 

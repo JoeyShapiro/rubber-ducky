@@ -3,6 +3,7 @@
 	import { Attachment, type Duck } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { askQuestion, sendMessage, uploadAttachment } from '$lib/api';
+	import { clearDraft, loadDraft, saveDraft } from '$lib/drafts';
 
 	export let duck: Duck;
 
@@ -13,8 +14,20 @@
 	let dragDepth = 0;
 	let textarea: HTMLTextAreaElement;
 	let fileInput: HTMLInputElement;
+	let draftDuck = '';
+	let draftTimer: ReturnType<typeof setTimeout>;
 
 	$: dragging = dragDepth > 0;
+
+	// drafts are per duck: switching away parks what you were writing and brings back whatever
+	// was waiting in the duck you moved to
+	$: if (duck.uuid !== draftDuck) {
+		if (draftDuck) saveDraft(draftDuck, text);
+		draftDuck = duck.uuid;
+		text = loadDraft(duck.uuid);
+		tick().then(resize);
+	}
+
 	$: canSend = !sending && duck.uuid !== '' && (text.trim() !== '' || attachments.length > 0);
 
 	// every attachment, however it got here, goes through this
@@ -52,6 +65,11 @@
 		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	}
 
+	function rememberDraft() {
+		clearTimeout(draftTimer);
+		draftTimer = setTimeout(() => saveDraft(draftDuck, text), 300);
+	}
+
 	function resize() {
 		if (!textarea) return;
 		textarea.style.height = 'auto';
@@ -85,6 +103,8 @@
 
 		messages.update((list) => [...list, created]);
 		text = '';
+		clearTimeout(draftTimer);
+		clearDraft(draftDuck);
 		// svelte applies the clear on the next tick, so measuring before it means measuring the
 		// message you just sent - which is why the box never shrank back
 		await tick();
@@ -150,8 +170,20 @@
 			addFiles(files);
 		}
 
+		// the debounce may not have fired when the page goes away - a 401 redirect to the login
+		// screen being the case this exists for. pagehide is the last synchronous chance to write.
+		function flushDraft() {
+			clearTimeout(draftTimer);
+			saveDraft(draftDuck, text);
+		}
+
 		document.addEventListener('paste', handlePaste);
-		return () => document.removeEventListener('paste', handlePaste);
+		window.addEventListener('pagehide', flushDraft);
+		return () => {
+			document.removeEventListener('paste', handlePaste);
+			window.removeEventListener('pagehide', flushDraft);
+			flushDraft();
+		};
 	});
 </script>
 
@@ -226,7 +258,7 @@
 		<textarea
 			bind:this={textarea}
 			bind:value={text}
-			on:input={resize}
+			on:input={() => { resize(); rememberDraft(); }}
 			on:keydown={handleKeydown}
 			class="form-control auto-resize flex-fill"
 			placeholder={attachments.length > 0 ? 'Add a comment (optional)' : 'Message'}

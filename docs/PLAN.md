@@ -368,24 +368,6 @@ prop, so this is mostly moving files and changing where `duck` comes from.
 Small independent fixes. Each is self-contained; they can be done in any order and in parallel
 with the workstreams above.
 
-### [ ] T-14 — Session lifetime is 60 seconds
-
-**Priority:** critical · **Blocked by:** none
-
-**Files:** [`src/routes/login/+server.ts`](../src/routes/login/+server.ts#L14)
-
-**Problem:** `new Date(now + 1000 * 60)` — sessions expire after one minute. Almost certainly
-meant to be days.
-
-**Now urgent.** Before T-13 nothing enforced expiry, so the short lifetime was harmless. The guard
-in `hooks.server.ts` enforces it, which means the app currently locks you out **sixty seconds
-after logging in**.
-
-**Acceptance criteria:** A sane configurable lifetime; expiry is actually enforced on every
-request (see T-13); the cookie's `max-age` matches the DB expiry.
-
----
-
 ### [ ] T-15 — Paginated message loads duplicate every AI answer
 
 **Priority:** high · **Blocked by:** none
@@ -463,15 +445,14 @@ defaults; `README.md`'s `.env` block updated.
 
 Dependency-driven; W6 items are independent and can be interleaved.
 
-1. **T-13, T-14** — auth and session lifetime. Small, and the app is currently wide open.
-2. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
+1. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
    It also decides whether notes gain badling/global scope (T-28).
-3. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
-4. **T-10, T-12** — the UX work, now that the foundations hold.
-5. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
+2. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
+3. **T-10, T-12** — the UX work, now that the foundations hold.
+4. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
    notes stop feeling bolted on, but they need T-08 and T-28 underneath.
-6. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
+5. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
    thing that turns the log into something you can look things up in.
-7. **T-15**, then the rest of W6, opportunistically.
+6. **T-15**, then the rest of W6, opportunistically.
 
 T-05 (attachment storage) is deferrable without blocking anything.
