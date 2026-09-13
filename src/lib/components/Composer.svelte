@@ -15,6 +15,10 @@
 	let textarea: HTMLTextAreaElement;
 	let fileInput: HTMLInputElement;
 	let draftDuck = '';
+	// shift+enter starts a multiline message: enter then makes newlines, and only a second enter
+	// at the very end sends. `armed` is that first enter waiting for its partner.
+	let multiline = false;
+	let armed = false;
 	let draftTimer: ReturnType<typeof setTimeout>;
 
 	$: dragging = dragDepth > 0;
@@ -103,6 +107,8 @@
 
 		messages.update((list) => [...list, created]);
 		text = '';
+		multiline = false;
+		armed = false;
 		clearTimeout(draftTimer);
 		clearDraft(draftDuck);
 		// svelte applies the clear on the next tick, so measuring before it means measuring the
@@ -135,12 +141,42 @@
 		sending = false;
 	}
 
+	function caretAtEnd(): boolean {
+		return !!textarea && textarea.selectionStart === text.length && textarea.selectionEnd === text.length;
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
-		// submit on enter, shift+enter for newline
-		if (event.key === 'Enter' && !event.shiftKey) {
+		if (event.key !== 'Enter') {
+			armed = false;
+			return;
+		}
+
+		// shift+enter always makes a newline, and switches this message into multiline mode so
+		// you do not have to hold the modifier for every line after it
+		if (event.shiftKey) {
+			multiline = true;
+			// deliberately NOT armed: you just asked for a newline, so the next enter should give
+			// you another one rather than sending
+			armed = false;
+			return;
+		}
+
+		if (!multiline) {
 			event.preventDefault();
 			handleSubmit();
+			return;
 		}
+
+		// Only a double enter *at the end* sends. Pressing enter twice in the middle of a message
+		// is how you make a blank line, and stealing that would be worse than the problem this
+		// solves. handleSubmit trims, so the pending newlines never reach the message.
+		if (armed && caretAtEnd()) {
+			event.preventDefault();
+			handleSubmit();
+			return;
+		}
+
+		armed = caretAtEnd();
 	}
 
 	function hasFiles(event: DragEvent): boolean {
@@ -229,6 +265,16 @@
 		</div>
 	{/if}
 
+	{#if multiline}
+		<div class="composer-hint" class:armed>
+			{#if armed}
+				press <kbd>enter</kbd> again to send
+			{:else}
+				<kbd>enter</kbd> makes a new line · twice at the end sends
+			{/if}
+		</div>
+	{/if}
+
 	<form class="composer-form d-flex align-items-stretch gap-2 mb-2 w-100" on:submit|preventDefault={handleSubmit}>
 		<div class="composer-side d-flex flex-column justify-content-between">
 			<!-- placeholder: does nothing until message search exists (T-26) -->
@@ -260,6 +306,8 @@
 			bind:value={text}
 			on:input={() => { resize(); rememberDraft(); }}
 			on:keydown={handleKeydown}
+			on:click={() => (armed = false)}
+			on:select={() => (armed = false)}
 			class="form-control auto-resize flex-fill"
 			placeholder={attachments.length > 0 ? 'Add a comment (optional)' : 'Message'}
 		></textarea>
@@ -268,15 +316,23 @@
 		<div class="composer-side d-flex flex-column justify-content-between">
 			<button
 				type="submit"
-				class="composer-icon composer-send"
+				class="composer-icon composer-send position-relative"
 				class:asking={question}
-				title={question ? 'Ask' : 'Send'}
+				class:locked={multiline}
+				class:armed
+				title={multiline ? 'Multiline — enter twice at the end to send' : question ? 'Ask' : 'Send'}
 				aria-label={question ? 'Ask' : 'Send'}
 				disabled={!canSend}
 			>
 				<svg viewBox="0 0 640 640" fill="currentColor" aria-hidden="true">
 					<path d="M568.4 37.7C578.2 34.2 589 36.7 596.4 44C603.8 51.3 606.2 62.2 602.7 72L424.7 568.9C419.7 582.8 406.6 592 391.9 592C377.7 592 364.9 583.4 359.6 570.3L295.4 412.3C290.9 401.3 292.9 388.7 300.6 379.7L395.1 267.3C400.2 261.2 399.8 252.3 394.2 246.7C388.6 241.1 379.6 240.7 373.6 245.8L261.2 340.1C252.1 347.7 239.6 349.7 228.6 345.3L70.1 280.8C57 275.5 48.4 262.7 48.4 248.5C48.4 233.8 57.6 220.7 71.5 215.7L568.4 37.7z" />
 				</svg>
+				{#if multiline}
+					<svg class="composer-lock" viewBox="0 0 12 12" aria-hidden="true">
+						<path d="M4 5.6V4a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+						<rect x="2.4" y="5.4" width="7.2" height="5" rx="1.3" fill="currentColor" />
+					</svg>
+				{/if}
 			</button>
 			<button
 				type="button"
@@ -379,6 +435,47 @@
 	   the plane itself carries it */
 	.composer-send.asking {
 		color: #ba34eb;
+	}
+
+	/* the lock rides on the corner of the plane, so the button still reads as "send" */
+	.composer-lock {
+		position: absolute;
+		right: -0.1rem;
+		bottom: -0.1rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		color: var(--meta-color);
+	}
+
+	/* armed: one more enter and it goes */
+	.composer-send.armed {
+		box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.45);
+		border-radius: 8px;
+	}
+
+	.composer-hint {
+		font-size: 0.7rem;
+		color: var(--meta-color);
+		padding: 0 0.5rem 0.25rem;
+		text-align: right;
+		user-select: none;
+	}
+
+	.composer-hint.armed {
+		color: #d39e00;
+		font-weight: 600;
+	}
+
+	/* bootstrap's reboot sets kbd to `color: var(--bs-body-bg)` for a dark-on-light chip; once the
+	   background is overridden that leaves the text the same colour as what is behind it */
+	.composer-hint kbd {
+		font-family: 'GG Mono', 'Courier New', monospace;
+		font-size: 0.68rem;
+		padding: 0 0.25rem;
+		border: 1px solid var(--item-hairline);
+		border-radius: 3px;
+		background: var(--row-hover);
+		color: inherit;
 	}
 
 	.attachment-tray {
