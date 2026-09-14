@@ -181,8 +181,8 @@ which is the existing complaint about the quest list. Share the **scope model** 
    inventing a review workflow nobody will run.*
 
 *(Settled since: notes are shaped like quests and never a text box; create/delete/save post to the
-duck log; no message pinning; backtracing wanted with optional labels; scope is T-28; plain text
-rendered as markdown. All in the decisions log below.)*
+duck log; no message pinning; backtracing wanted with optional labels; scope is duck-or-badling,
+no global (2026-09-14); plain text rendered as markdown. All in the decisions log below.)*
 
 ### Where a "project" fits
 
@@ -345,7 +345,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-06 | links | Code and schema say `reference` / `backlinks`; `backtrace` already means a stack trace elsewhere. UI wording is free. |
 | 2026-09-06 | model | Notes and quests stay separate tables despite the similar shape. Different lifecycles, fields, and UI; merging produces something where neither is fast. They share the scope model and the reference table. |
 | 2026-09-14 | model | `messages`, `notes`, and `quests` take a single `parent_id` — a duck's or a badling's uuid, never both — instead of a duck-only FK. No `scopeType` discriminator column and no foreign key: a column can't reference two tables, both ends are `defaultRandom()` uuids from disjoint tables so collision isn't a real risk, and every caller already knows which kind of id it is holding (it just fetched the duck or badling it is now asking about). Deleting a duck or badling has to clean up its own rows by hand — there is no cascade to lean on. |
-| 2026-09-14 | model | Badlings are a first-class scope now, not just a folder of ducks: clicking one in the sidebar loads it the same way a duck does, with its own chat log, notes, and quests. This is a deliberate, narrow exception to "if it deserves its own conversation, it is a duck" (see *Where a loose task lives*) — a badling is still not a general-purpose duck substitute, but it gets a light log of its own rather than forcing every loose thing into a manufactured "general" duck. It also resolves *the consequence to decide with it*, below: every scope now has a log to post a status-change system message into, so option 1 (no system message for a scopeless quest) only still applies once T-28 adds true global scope. |
+| 2026-09-14 | model | Badlings are a first-class scope now, not just a folder of ducks: clicking one in the sidebar loads it the same way a duck does, with its own chat log, notes, and quests. This is a deliberate, narrow exception to "if it deserves its own conversation, it is a duck" (see *Where a loose task lives*) — a badling is still not a general-purpose duck substitute, but it gets a light log of its own rather than forcing every loose thing into a manufactured "general" duck. It also resolves *the consequence to decide with it*, below: every scope now has a log to post a status-change system message into, so the "no duck log" case that option 1 was written for no longer exists. |
+| 2026-09-14 | model | **No global scope, decided against** (T-28 dropped). `messages`, `notes`, and `quests` stay `parent_id NOT NULL` — a duck or a badling, always, never neither. "Buy milk" still needs a badling. If an all-up view is wanted later (e.g. clicking "Ducks" opens a home page), it reads *across* the existing per-duck / per-badling scopes rather than adding a third, scopeless one. |
 
 ---
 
