@@ -198,14 +198,16 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 [`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte),
 [`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte)
 
-**First pass landed 2026-09-14** (see decisions log) — a Discord-style drawer system, four
-full-screen "screens" below the 768px breakpoint instead of the desktop two/three-column layout:
-sidebar → chat → {notes, quests}. `mobileView` (`$lib/stores.ts`) tracks which one is showing;
-each screen's own root carries `data-screen="sidebar|chat|notes|quests"`, `.app` carries
+**First pass landed 2026-09-14, navigation flattened same day** (see decisions log) — a
+Discord-style drawer system, four full-screen "screens" below the 768px breakpoint instead of the
+desktop two/three-column layout. `mobileView` (`$lib/stores.ts`) tracks which one is showing; each
+screen's own root carries `data-screen="sidebar|chat|notes|quests"`, `.app` carries
 `data-mobile-view`, and `app.css`'s media query does the hide/show — no route, no new component
-state duplicated per screen. `MobileTopBar.svelte` is the back-arrow + title bar shown on chat
-(back → sidebar, plus notes/quests icons) and notes/quests (back → chat); the sidebar itself has
-no top bar. Desktop renders exactly as before — verified untouched by the same pass.
+state duplicated per screen. `MobileTopBar.svelte` is the back-arrow + title bar shown on chat,
+notes, and quests: back always goes straight to the sidebar, and the two icons on the right jump
+directly to the other two screens (chat ↔ notes ↔ quests, all peers - not a stack routed through
+chat). The sidebar itself has no top bar. Desktop renders exactly as before — verified untouched
+by the same pass.
 
 Also done as part of this pass: hover-only controls (sidebar's bottom icon row, the per-badling
 add-duck button, the quest status dropdown) are always visible below the breakpoint instead of

@@ -74,9 +74,16 @@ Rules of thumb for anyone adding to this:
 Below 768px the desktop's two/three columns become four full-screen "drawers" — sidebar, chat,
 notes, quests — Discord-style, but client state rather than a route (2026-09-14; a route split
 was considered and dropped, see decisions log). `mobileView` (`$lib/stores.ts`) holds which one is
-showing. Navigation is a small stack, not a flat set of tabs: sidebar → chat is the only way in,
-chat → {notes, quests} branches off it, and back always retraces one step (notes/quests → chat →
-sidebar), never straight to sidebar from notes/quests.
+showing.
+
+**Navigation is flat, not a stack** (revised 2026-09-14, same day as the first pass): chat, notes,
+and quests are three peers, each reachable directly from either of the other two via an icon on
+the right of `MobileTopBar`, and **back always goes to the sidebar** regardless of which of the
+three you're on — never "back one step." The first version of this made chat the hub (notes/quests
+could only reach each other by going through it, and their own back arrow returned to chat, not
+sidebar); this flatter model reads more like the rest of the app, where the duck/badling list is
+always one tap away. `MobileTopBar`'s `current` prop is what drives it - given `current`, it shows
+the *other two* screens' icons and hard-codes the back arrow to `sidebar`.
 
 The mechanism is two attributes, not per-component conditionals:
 - Each screen's own root element carries `data-screen="sidebar" | "chat" | "notes" | "quests"`
@@ -85,11 +92,10 @@ The mechanism is two attributes, not per-component conditionals:
 - `app.css`'s media query hides every `[data-screen]` by default and re-shows only the one
   matching `[data-mobile-view]`, full width and `100dvh`.
 
-`MobileTopBar.svelte` is the back-arrow bar shown on chat (back → sidebar, plus notes/quests
-icons on the right) and on notes/quests (back → chat); the sidebar has no top bar of its own —
-its existing bottom icon row is what you use instead, made always-visible rather than
-hover-reveal for the same reason (see below). A component always renders its `MobileTopBar`; it
-just has no width on desktop, since `.mobile-topbar` is `display: none` above the breakpoint.
+The sidebar has no top bar of its own — its existing bottom icon row is what you use instead,
+made always-visible rather than hover-reveal for the same reason (see below). A component always
+renders its `MobileTopBar`; it just has no width on desktop, since `.mobile-topbar` is
+`display: none` above the breakpoint.
 
 This first pass is deliberately not polished — see PLAN.md T-12 for what's still open.
 
@@ -381,7 +387,7 @@ Choices already made, so later work does not re-open them.
 | 2026-09-14 | quests | Editing opens the same `QuestModal` used to create one, pre-filled via an optional `quest` prop, header and button text swapping to "Edit …" / "Save". One form for both, rather than a second edit-only component. |
 | 2026-09-14 | frontend | **No route split, decided against** (T-11 dropped). Ids in the URL buy deep-linking, refresh-safety, and real browser back/forward — genuine, but nobody asked for them on a single-user local app, and dropping them removes a real cost: two ids (duck, badling) sharing one url space would need a lookup per page load just to know which table an id belongs to. Stays one route, scope kept in the `writable` store, restored via the `lastScope` cookie. Reversible later if a real need shows up — nothing here forecloses it. |
 | 2026-09-14 | frontend | Mobile does **not** need the route split either. What T-11 would have solved for mobile (only one of chat/notes/tasks visible at a time on a narrow screen) is client-side state, same mechanism as the sidebar's badling/duck selection — no URL segment required. (Landed as a back-arrow drawer stack, not a bottom tab bar — see the next entries.) |
-| 2026-09-14 | frontend | Mobile navigation is a **stack, not four flat tabs**: sidebar → chat → {notes, quests}, back always retraces one step. A tab bar would suggest notes and quests are peers of chat rather than views *of* it, and would need its own "which of four am I in" state; the stack instead reuses the same back-button idea already familiar from every other app, and each screen only needs to know the one screen behind it (`MobileTopBar`'s `backTo` prop). |
+| 2026-09-14 | frontend | ~~Mobile navigation is a stack, not four flat tabs: sidebar → chat → {notes, quests}, back always retraces one step.~~ **Reversed same day.** Chat as the hub meant notes and quests could only reach each other by detouring through it, and their back arrow landed on chat rather than the duck list - worse flow than the app's own back button suggested. Chat, notes, and quests are peers now: each reaches the other two directly, and back always returns to the sidebar (`MobileTopBar`'s `current` prop drives both - see the "Mobile: four drawers" section above). |
 | 2026-09-14 | frontend | The four mobile screens are toggled by two DOM attributes, not per-component `{#if}` conditionals: each screen's root carries `data-screen="sidebar｜chat｜notes｜quests"`, `.app` carries `data-mobile-view` (from the `mobileView` store), and one `app.css` media query does the hiding. Keeps the show/hide logic in one place instead of four components each re-deriving it, and costs nothing on desktop, where the whole media query is inert. |
 | 2026-09-14 | frontend | `MobileTopBar.svelte` always renders (one instance per chat/notes/quests component) rather than being conditionally mounted - it is simply `display: none` above the breakpoint. Simpler than mounting/unmounting on resize, and there is nothing stateful in it to reset. |
 | 2026-09-14 | mobile | **Bug caught on a real device, not a resized desktop browser:** `mobileView` defaults to `'sidebar'`, and `app.css` hides `<main>` whenever it does, on the assumption `<Sidebar>` is showing instead. True everywhere except `/login`, which renders no `<Sidebar>` and has its whole form inside `<main>` - the login screen went **completely blank**. Fix: `+layout.svelte` only stamps `data-mobile-view` onto `.app` off the login route (`isLogin ? undefined : $mobileView`), so the whole drawer mechanism is inert there rather than special-cased per rule. **Testing note:** a Chromium window resized to 390px never caught this - it needs real WebKit plus an actual device profile (`playwright`'s `devices['iPhone 14']`: correct `deviceScaleFactor`, mobile UA, touch) to reproduce browser-specific and viewport-specific bugs. Default to that, not a resized desktop window, for any further mobile verification. |

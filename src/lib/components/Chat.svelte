@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
 	import type { Scope } from '$lib/types';
-	import { messages, mobileView } from '$lib/stores';
+	import { messages } from '$lib/stores';
 	import { fetchMessages } from '$lib/api';
 	import Message from './Message.svelte';
 	import Composer from './Composer.svelte';
@@ -145,24 +145,7 @@
 </script>
 
 <div class="d-flex flex-column w-50 position-relative" data-screen="chat">
-	<MobileTopBar backTo="sidebar" title={scope.name}>
-		<svelte:fragment slot="actions">
-			<button type="button" class="mobile-topbar-action" aria-label="Notes" on:click={() => mobileView.set('notes')}>
-				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-					<path d="M3 3h10M3 6.5h10M3 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
-			</button>
-			<button type="button" class="mobile-topbar-action" aria-label="Quests" on:click={() => mobileView.set('quests')}>
-				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-					<rect x="2" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
-					<path d="M2.7 4 3.4 4.7 4.5 3.4" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
-					<path d="M7 4h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					<rect x="2" y="9.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
-					<path d="M7 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
-			</button>
-		</svelte:fragment>
-	</MobileTopBar>
+	<MobileTopBar current="chat" title={scope.name} />
 	<div bind:this={chatbox} id="chatbox" class="flex-column overflow-auto flex-fill fade-y">
 		{#if loading}
 			<div class="chat-loading">Loading…</div>

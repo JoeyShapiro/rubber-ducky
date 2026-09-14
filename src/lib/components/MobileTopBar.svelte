@@ -1,9 +1,20 @@
 <script lang="ts">
 	import { mobileView, type MobileView } from '$lib/stores';
 
-	// where the back arrow goes: chat -> sidebar, notes/quests -> chat
-	export let backTo: MobileView;
+	// which content screen this bar belongs to - the other two get a jump-to icon on the right
+	export let current: Exclude<MobileView, 'sidebar'>;
 	export let title = '';
+
+	// flat navigation, not a stack: every content screen is a peer, reachable from every other
+	// one, and back always retraces to the duck/badling list rather than the previous screen
+	// (2026-09-14, see NOTES.md decisions log - this replaces the earlier chat-is-the-hub model)
+	const SCREENS: { id: Exclude<MobileView, 'sidebar'>; label: string }[] = [
+		{ id: 'chat', label: 'Messages' },
+		{ id: 'notes', label: 'Notes' },
+		{ id: 'quests', label: 'Quests' },
+	];
+
+	$: others = SCREENS.filter((s) => s.id !== current);
 </script>
 
 <!--
@@ -14,8 +25,8 @@
 	<button
 		type="button"
 		class="mobile-topbar-back"
-		aria-label="Back"
-		on:click={() => mobileView.set(backTo)}
+		aria-label="Back to Ducks"
+		on:click={() => mobileView.set('sidebar')}
 	>
 		<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
 			<path d="M10 13 5 8l5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -23,7 +34,32 @@
 	</button>
 	{#if title}<span class="mobile-topbar-title">{title}</span>{/if}
 	<div class="mobile-topbar-spacer"></div>
-	<slot name="actions" />
+	{#each others as screen (screen.id)}
+		<button
+			type="button"
+			class="mobile-topbar-action"
+			aria-label={screen.label}
+			on:click={() => mobileView.set(screen.id)}
+		>
+			{#if screen.id === 'chat'}
+				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v6A1.5 1.5 0 0 1 12.5 11H6l-3 3v-3H3.5A1.5 1.5 0 0 1 2 9.5v-6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+				</svg>
+			{:else if screen.id === 'notes'}
+				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<path d="M3 3h10M3 6.5h10M3 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			{:else}
+				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<rect x="2" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
+					<path d="M2.7 4 3.4 4.7 4.5 3.4" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+					<path d="M7 4h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<rect x="2" y="9.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
+					<path d="M7 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			{/if}
+		</button>
+	{/each}
 </div>
 
 <style>
@@ -46,7 +82,8 @@
 		}
 	}
 
-	.mobile-topbar-back {
+	.mobile-topbar-back,
+	.mobile-topbar-action {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -61,12 +98,14 @@
 		cursor: pointer;
 	}
 
-	.mobile-topbar-back svg {
-		width: 1.1rem;
-		height: 1.1rem;
+	.mobile-topbar-back svg,
+	.mobile-topbar-action svg {
+		width: 1.15rem;
+		height: 1.15rem;
 	}
 
-	.mobile-topbar-back:active {
+	.mobile-topbar-back:active,
+	.mobile-topbar-action:active {
 		background: var(--row-hover);
 	}
 
@@ -80,29 +119,5 @@
 
 	.mobile-topbar-spacer {
 		flex: 1 1 auto;
-	}
-
-	.mobile-topbar :global(.mobile-topbar-action) {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.75rem;
-		height: 2.75rem;
-		flex-shrink: 0;
-		padding: 0;
-		border: none;
-		border-radius: 6px;
-		background: none;
-		color: var(--text-primary);
-		cursor: pointer;
-	}
-
-	.mobile-topbar :global(.mobile-topbar-action svg) {
-		width: 1.15rem;
-		height: 1.15rem;
-	}
-
-	.mobile-topbar :global(.mobile-topbar-action:active) {
-		background: var(--row-hover);
 	}
 </style>
