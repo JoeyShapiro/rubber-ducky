@@ -478,4 +478,63 @@ div:hover > .bar-hidden {
 .import-close:hover {
   color: var(--bs-emphasis-color);
 }
+
+/* the desktop sizing is deliberately dense - "duck names are short; 280px was mostly empty",
+   above - but that reasoning doesn't hold once this is a full-screen phone drawer read at arm's
+   length and tapped rather than clicked. Bigger text and bigger tap targets, this screen only. */
+@media (max-width: 768px) {
+  .fs-5 {
+    font-size: 1.55rem !important;
+  }
+
+  .sidebar > a img {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .btn-toggle {
+    font-size: 1.2rem;
+    padding: .65rem .75rem;
+  }
+
+  .btn-toggle-chevron {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .btn-toggle-chevron::before {
+    width: 1.6em;
+  }
+
+  .btn-toggle-nav {
+    font-size: 1.05rem !important;
+  }
+
+  .btn-toggle-nav a {
+    padding: .65rem .75rem;
+    gap: .1rem;
+  }
+
+  .btn-toggle-nav a img {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .btn-hidden {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .btn-hidden img,
+  .btn-hidden svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  #new-duck,
+  #new-badling {
+    font-size: 1.05rem;
+    padding: .2rem 0 !important;
+  }
+}
 </style>
