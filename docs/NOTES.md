@@ -12,53 +12,57 @@ Nothing here is a task. Open work lives in [PLAN.md](PLAN.md).
 SvelteKit 2 / Svelte 4, Postgres via Drizzle, Bootstrap 5 from CDN, optional Ollama for
 embeddings and Q&A. Deployed as a single Node container on port 80.
 
-The application is still **one route**. [`Sidebar.svelte`](../src/routes/Sidebar.svelte) selects
-a duck and writes it into a `writable` store ([`$lib/stores.ts`](../src/lib/stores.ts)); each
-panel component loads its own data when that duck changes. T-11 turns this into real routes.
+The application is **one route, deliberately** (2026-09-14, see decisions log — a route split
+was considered and dropped; no deep-linking need, and mobile doesn't require it either).
+[`Sidebar.svelte`](../src/routes/Sidebar.svelte) selects a duck or a badling and writes it into a
+`writable` store ([`$lib/stores.ts`](../src/lib/stores.ts)); each panel component loads its own
+data when that scope changes.
 
 ### Data model
 
 ```
-badlings (groups)
+badlings (groups - and a scope in their own right, not just a folder)
   └── ducks (channels)
-        ├── messages ──── attachments
-        ├── notes      (many per duck; title + content, no completion state)
-        └── quests     (self-referencing parent, duckId NOT NULL)
+messages, notes, quests: parent_id -> a duck's or a badling's uuid, never both, never neither
+  ├── messages ──── attachments
+  ├── notes      (title + content, no completion state)
+  └── quests     (self-referencing parent via quest_parent_id)
 answers (AI responses — no FK to anything, merged into message lists by timestamp)
 ```
 
-**The single most consequential constraint:** every child table has `duckId` as `NOT NULL`
-([`schema.ts:66`](../src/lib/db/schema.ts#L66), [`schema.ts:79`](../src/lib/db/schema.ts#L79)).
-Nothing can exist outside a channel. This is the root cause of the "no global todo list"
-problem and a large part of why notes and tasks feel bolted on. T-08 is the fix.
+**The single most consequential constraint:** every child table has `parent_id` `NOT NULL`
+([`schema.ts`](../src/lib/db/schema.ts)). Nothing can exist outside a duck or a badling — a
+global, scopeless list was considered and decided against (2026-09-14).
 
 ### Frontend layout
 
 ```
 src/lib/
-  stores.ts              duck, hidden, darkMode, messages
+  stores.ts              scope (a Duck or a Badling), hidden, darkMode, messages
   api.ts                 every fetch to our own endpoints, plus one shared 401 handler
   markdown.ts            renderMarkdown + enhanceMarkdown - the one markdown path
   attachments.ts         reading the three attachment encodings; shared by both endpoints
   format.ts              formatDate
   quests.ts              status list, labels, css classes, svg icons
-  types.ts               Attachment / Message / Note / Quest / Duck / Badling
+  types.ts               Attachment / Message / Note / Quest / Duck / Badling / Scope
   components/
     Chat.svelte          left column: message list + composer, owns loading and scroll
     Message.svelte       one message, system or normal, with its attachments
     Composer.svelte      textarea, attachments, paste, submit, the qna toggle
     Notes.svelte         the notes pane: titled items, opened in place
     Quests.svelte        breadcrumbs + quest list
-    QuestModal.svelte    create-quest dialog
+    QuestModal.svelte    create/edit quest dialog
     ConfirmDialog.svelte reusable destructive-action confirm
 src/routes/
-  +page.svelte           layout only - two columns, passes $duck down
+  +page.svelte           layout only - two columns, passes $scope down
 ```
 
 Rules of thumb for anyone adding to this:
 
-- **Components own their own data loading**, keyed on the `duck` prop. That is deliberate — it
-  is what makes T-11 (route split) cheap, since each component already stands alone.
+- **Components own their own data loading**, keyed on the `scope` prop (a `Duck` or a `Badling` -
+  see `$lib/types.ts`). That is deliberate — each panel stands alone regardless of what is
+  selected, which is also why a route split was easy to decide against: there was nothing to
+  restructure to get there.
 - **No component calls `fetch` directly.** Add a function to `api.ts` instead, so 401 handling
   and error shape stay in one place.
 - **Cross-panel state goes in `stores.ts`.** Today that is only `messages`, which both the
@@ -186,8 +190,7 @@ no global (2026-09-14); plain text rendered as markdown. All in the decisions lo
 
 ### Where a "project" fits
 
-Also unsettled, and it decides how much T-08 has to carry. The existing hierarchy already has
-the shape, with no new entity needed:
+The existing hierarchy already has the shape, with no new entity needed:
 
 ```
 badling   category / space     Work, Personal, Side projects
@@ -210,7 +213,7 @@ its subquests across.
 
 "Make snack box for office coworkers" is not a project, has no conversation, and needs no duck.
 
-**It binds to the badling.** T-08's scope model already expresses this, and no new concept is
+**It binds to the badling.** The duck-or-badling scope model already expresses this, and no new concept is
 needed — the same rule as projects, applied one level down:
 
 | Scope | Means | Example |
@@ -253,9 +256,11 @@ honest consequence of them being loose.
 
 #### What this requires of the UI
 
-The badling view (`/g/[badling]` in T-11) has to be a real destination, not a folder in the
-sidebar: its own loose quests and notes, plus a rollup of the quests in its ducks. Without it,
-badling-scoped items are unreachable — created and then lost.
+The badling view has to be a real destination, not a folder in the sidebar: its own loose quests
+and notes, plus a rollup of the quests in its ducks. **Landed 2026-09-14** — clicking a badling in
+the sidebar loads it as a scope with its own chat/notes/quests, same as a duck (see decisions
+log). Still open: a rollup of the quests/notes in its ducks — today a badling's items are its
+own, separate from its ducks' items.
 
 ---
 
@@ -303,10 +308,10 @@ Choices already made, so later work does not re-open them.
 | 2026-08-31 | attachments | `Attachment.fromFile` is the only sanctioned way to build an attachment from a file. New entry points must use it rather than reading a `File` themselves. |
 | 2026-08-31 | attachments | Read all three legacy encodings rather than migrating the data. Reading is reversible; a migration (T-22) can follow once the endpoints are known good. |
 | 2026-08-31 | attachments | `POST /attachments` validates the canonical shape and 400s otherwise. The invariant is enforced at the write boundary. |
-| 2026-08-31 | frontend | Components own their data loading (keyed on the `duck` prop) rather than a parent orchestrating fetches. Makes each one liftable into its own route in T-11 with no rewiring. |
+| 2026-08-31 | frontend | Components own their data loading (keyed on the `duck` prop, now `scope`) rather than a parent orchestrating fetches. Kept each panel standalone regardless of what's selected. |
 | 2026-08-31 | frontend | `messages` is a store; notes and quests are component-local. Only messages is written by more than one panel (composer + quest status changes), so only it needs to be shared. |
 | 2026-08-31 | frontend | All endpoint calls go through `api.ts`. Ad-hoc `fetch` in a component is the thing that let six copies of broken 401 handling drift apart. |
-| 2026-08-31 | frontend | Did **not** split routes during the component extraction. That is T-11, blocked by T-08, since the task-scope schema decides what routes need to exist. |
+| 2026-08-31 | frontend | Did **not** split routes during the component extraction, deliberately leaving that decision for later. **Settled 2026-09-14: it stays one route** — see decisions log. |
 | 2026-09-05 | attachments | `GET /messages` returns attachment metadata only, never bytes. Keeps a page of messages small and lets the browser cache bytes per uuid. |
 | 2026-09-05 | attachments | Encoding knowledge lives in `$lib/attachments.ts`, not in a route. Two endpoints need it; T-22's migration will too. |
 | 2026-09-05 | ui | The remove button on a staged attachment is always visible, not revealed on hover. Hover-only controls are exactly what makes the current UI unusable on touch (T-12). |
@@ -349,6 +354,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-14 | model | **No global scope, decided against** (T-28 dropped). `messages`, `notes`, and `quests` stay `parent_id NOT NULL` — a duck or a badling, always, never neither. "Buy milk" still needs a badling. If an all-up view is wanted later (e.g. clicking "Ducks" opens a home page), it reads *across* the existing per-duck / per-badling scopes rather than adding a third, scopeless one. |
 | 2026-09-14 | quests | **No quest delete, decided against** (dropped from T-10). `aborted` is the delete equivalent — a quest that didn't happen is marked aborted, not removed. `PATCH /quests` gained a second mode instead: sending `title` (no `status`) edits the quest's own content and logs `was modified`, the same phrase notes use for the same thing. |
 | 2026-09-14 | quests | Editing opens the same `QuestModal` used to create one, pre-filled via an optional `quest` prop, header and button text swapping to "Edit …" / "Save". One form for both, rather than a second edit-only component. |
+| 2026-09-14 | frontend | **No route split, decided against** (T-11 dropped). Ids in the URL buy deep-linking, refresh-safety, and real browser back/forward — genuine, but nobody asked for them on a single-user local app, and dropping them removes a real cost: two ids (duck, badling) sharing one url space would need a lookup per page load just to know which table an id belongs to. Stays one route, scope kept in the `writable` store, restored via the `lastScope` cookie. Reversible later if a real need shows up — nothing here forecloses it. |
+| 2026-09-14 | frontend | Mobile does **not** need the route split either. What T-11 would have solved for mobile (only one of chat/notes/tasks visible at a time on a narrow screen) is a client-side `activePanel` toggle and a bottom tab bar, same mechanism as the sidebar's badling/duck selection — no URL segment required. |
 
 ---
 

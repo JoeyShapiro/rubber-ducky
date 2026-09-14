@@ -184,61 +184,11 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 
 ---
 
-## W5 — Route restructure and mobile
-
-The Discord-style answer to "each section gets its own page" also resolves most of the layout
-jank and makes notes and tasks feel native rather than bolted on. T-11 is the large one; read
-it fully before starting.
-
-### [ ] T-11 — Split the single route into real routes
-
-**Priority:** high · **Blocked by:** none
-
-**Files:** all of [`src/routes/`](../src/routes/), moving components from
-[`src/lib/components/`](../src/lib/components/)
-
-**Problem:** Everything is `/`. Panels are shown or hidden by CSS width, selection lives in a
-client-side store, and there is no URL you can link to or refresh into.
-
-The frontend split already did the hard part: each component loads its own data from a `scope`
-prop (a duck or a badling, since 2026-09-14 — see decisions log), so this is mostly moving files
-and changing where `scope` comes from.
-
-**Proposed structure** (adjust if a better shape emerges — record what you chose):
-
-```
-/                      home page, shown when nothing is selected (click "Ducks") - not a scope
-/g/[badling]           badling's own chat/notes/tasks - it is a scope in its own right now
-/g/[badling]/chat
-/g/[badling]/notes
-/g/[badling]/tasks
-/d/[duck]              redirects to /d/[duck]/chat
-/d/[duck]/chat
-/d/[duck]/notes
-/d/[duck]/tasks
-```
-
-- Desktop: sub-routes render as side-by-side panes within the duck/badling layout.
-- Mobile: each is a full page, with a bottom tab bar to switch between them.
-- The selected scope comes from the URL params, not from the `writable` store.
-- No `/tasks` or other cross-scope aggregate route — there is no scopeless data to list (see
-  decisions log, 2026-09-14). If a badling view ends up wanting a rollup of its ducks' tasks,
-  that reads across the existing per-duck and per-badling scopes; it does not need one of its own.
-
-**Acceptance criteria:**
-- Data loads in `+page.server.ts` / `load` functions rather than component-level fetches.
-- `+page.ts`'s `prerender = true` ([`+page.ts:3`](../src/routes/+page.ts#L3)) is removed or
-  correctly scoped — today the only page is prerendered while all its data is client-fetched,
-  producing a blank flash on every load.
-- Deep links work: refreshing `/d/<uuid>/notes` lands on that duck's notes.
-- The `lastScope` cookie behaviour is preserved (redirect `/` → last duck or badling, or keep `/`
-  as the home page and drop it — decide and record).
-
----
+## W5 — Mobile
 
 ### [ ] T-12 — Make it work on a phone
 
-**Priority:** high · **Blocked by:** T-11
+**Priority:** high · **Blocked by:** none
 
 **Files:** [`src/routes/+layout.svelte`](../src/routes/+layout.svelte),
 [`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte), [`src/app.css`](../src/app.css),
@@ -246,7 +196,10 @@ and changing where `scope` comes from.
 
 **Problem:** There is essentially no responsive handling.
 - Hard `w-50` / `w-50` split ([`+page.svelte:16`](../src/routes/+page.svelte#L16),
-  [`Chat.svelte:50`](../src/lib/components/Chat.svelte#L50)).
+  [`Chat.svelte:50`](../src/lib/components/Chat.svelte#L50)) — two columns side by side does not
+  fit a phone screen, so only one of chat / notes / tasks can be visible at a time below the
+  breakpoint. No route split is needed for this (2026-09-14, see decisions log) — which pane is
+  showing is client state, the same way the selected duck or badling already is.
 - Fixed `280px` sidebar with no drawer ([`Sidebar.svelte:187`](../src/routes/Sidebar.svelte#L187)).
 - `max-height: 100vh` in [`+page.svelte`](../src/routes/+page.svelte) — wrong on mobile Safari,
   needs `dvh`.
@@ -260,6 +213,8 @@ and changing where `scope` comes from.
 
 **Acceptance criteria:**
 - Sidebar becomes an off-canvas drawer below a breakpoint, with a visible trigger.
+- Below the breakpoint, a bottom tab bar switches which one of chat / notes / tasks is showing —
+  a plain `activePanel` store, not a route change.
 - No functionality gated behind `:hover`. In particular, the quest status dropdown becomes
   **always visible**, not tap-to-reveal (2026-09-14, see decisions log) — it is not worth a
   second interaction just to see it.
@@ -275,10 +230,9 @@ Dependency-driven; W6 items are independent and can be interleaved.
 
 1. **T-09** — task schema (due date, sort order, priority, tags). Unblocks everything task-shaped;
    do it before building task UI.
-2. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
-3. **T-12** — the mobile pass, now that the foundations hold.
-4. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
+2. **T-12** — the mobile pass. No longer waits on anything.
+3. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
    notes stop feeling bolted on.
-5. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
+4. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
    thing that turns the log into something you can look things up in.
 T-05 (attachment storage) is deferrable without blocking anything.
