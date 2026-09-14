@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Duck, Quest, QuestStatus } from '$lib/types';
+	import type { Scope, Quest, QuestStatus } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { createQuest, fetchQuests, setQuestStatus } from '$lib/api';
 	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
@@ -8,19 +8,19 @@
 	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
 
-	export let duck: Duck;
+	export let scope: Scope;
 
 	let quests: Quest[] = [];
 	let questPath: Quest[] = [];
 	let showModal = false;
-	let loadedDuck = '';
+	let loadedScope = '';
 	let expanded = new Set<string>();
 
-	$: if (duck.uuid !== loadedDuck) {
-		loadedDuck = duck.uuid;
+	$: if (scope.uuid !== loadedScope) {
+		loadedScope = scope.uuid;
 		questPath = [];
 		expanded = new Set();
-		load(duck.uuid);
+		load(scope.uuid);
 	}
 
 	$: currentParentId = questPath.length > 0 ? questPath[questPath.length - 1].uuid : '';
@@ -71,7 +71,7 @@
 		const quest = quests.find(q => q.uuid === questUuid);
 
 		try {
-			const result = await setQuestStatus(questUuid, status, duck.uuid, quest?.title);
+			const result = await setQuestStatus(questUuid, status, scope.uuid, quest?.title);
 
 			const idx = quests.findIndex(q => q.uuid === questUuid);
 			if (idx !== -1) {
@@ -95,10 +95,10 @@
 	}
 
 	async function handleAccept(event: CustomEvent<{ title: string; description: string; due: string }>) {
-		if (!duck.uuid) return;
+		if (!scope.uuid) return;
 
 		try {
-			const data = await createQuest(duck.uuid, { ...event.detail, quest_parent: currentParentId });
+			const data = await createQuest(scope.uuid, { ...event.detail, quest_parent: currentParentId });
 			quests = [data.quest, ...quests];
 			if (data.systemMessage) messages.update(list => [...list, data.systemMessage!]);
 		} catch (err) {

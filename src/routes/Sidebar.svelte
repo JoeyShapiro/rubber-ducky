@@ -5,7 +5,7 @@
   import { Duck, Badling } from '$lib/types';
 
 	let badlings: Badling[] = [];
-  let duck_v = new Duck('', '');
+  let active_v: Duck | Badling = new Duck('', '');
   let newDuckTo: string = '';
   let newBadling: boolean = false;
   let hidden = store.hidden;
@@ -68,9 +68,18 @@
 	}
 
     function loadDuck(duck: Duck) {
-        store.duck.set(duck);
-        duck_v = duck;
-        document.cookie = `lastDuck=${duck.uuid}; path=/; max-age=31536000`;
+        store.scope.set(duck);
+        active_v = duck;
+        document.cookie = `lastScope=duck:${duck.uuid}; path=/; max-age=31536000`;
+    }
+
+    // a badling is clickable in its own right now - it can hold messages, notes, and quests
+    // directly, not only through a duck underneath it. Toggling its ducks open and loading it as
+    // the active scope happen on the same click; see NOTES.md, 2026-09-14.
+    function loadBadling(badling: Badling) {
+        store.scope.set(badling);
+        active_v = badling;
+        document.cookie = `lastScope=badling:${badling.uuid}; path=/; max-age=31536000`;
     }
 
     function addDuck(badling: string) {
@@ -171,10 +180,14 @@
       })
 			.then(data => {
 				badlings = data.badlings;
-				const lastDuckUuid = getCookie('lastDuck');
-				if (lastDuckUuid) {
+				const last = getCookie('lastScope');
+				const [kind, uuid] = last?.split(':') ?? [];
+				if (kind === 'badling') {
+					const found = badlings.find(b => b.uuid === uuid);
+					if (found) loadBadling(found);
+				} else if (kind === 'duck') {
 					for (const b of badlings) {
-						const found = b.ducks.find((d: Duck) => d.uuid === lastDuckUuid);
+						const found = b.ducks.find((d: Duck) => d.uuid === uuid);
 						if (found) { loadDuck(found); break; }
 					}
 				}
@@ -201,20 +214,29 @@
       {#each badlings as badling}
       <div class="position-relative">
       <li class="mb-1">
-			<button
-				class="btn btn-toggle d-inline-flex align-items-center rounded border-0"
-				type="button"
-				aria-expanded={!collapsed.has(badling.uuid)}
-				on:click={() => toggleBadling(badling.uuid)}
-			>
-				{badling.name}
-			</button>
+			<div class="d-flex align-items-center">
+				<button
+					class="btn-toggle-chevron rounded border-0"
+					type="button"
+					aria-expanded={!collapsed.has(badling.uuid)}
+					aria-label="{collapsed.has(badling.uuid) ? 'Expand' : 'Collapse'} {badling.name}"
+					on:click={() => toggleBadling(badling.uuid)}
+				></button>
+				<button
+					class="btn btn-toggle d-inline-flex align-items-center rounded border-0 {badling.uuid == active_v.uuid ? 'active' : ''}"
+					type="button"
+					title="View {badling.name}"
+					on:click={() => loadBadling(badling)}
+				>
+					{badling.name}
+				</button>
+			</div>
 			{#if !collapsed.has(badling.uuid)}
 				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small" transition:slide={{ duration: 180 }}>
           {#each badling.ducks as duck}
 					<li>
 						<!-- svelte-ignore a11y-invalid-attribute -->
-						<a href="#" on:click={() => loadDuck(duck)} class="{duck.name == duck_v.name ? 'active' : ''} link-body-emphasis d-inline-flex text-decoration-none rounded">
+						<a href="#" on:click={() => loadDuck(duck)} class="{duck.uuid == active_v.uuid ? 'active' : ''} link-body-emphasis d-inline-flex text-decoration-none rounded">
                 <img src="/duck.svg" alt="duck" class="me-2" width="16" height="16" />
                 {duck.name}
             </a>
@@ -310,23 +332,41 @@
   background-color: var(--bs-tertiary-bg);
 }
 
-.btn-toggle::before {
+.chevron {
+  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
+}
+
+/* expand/collapse only - selecting the badling is a separate button now, so this one carries
+   just the arrow and never the "view this badling" click */
+.btn-toggle-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  background-color: transparent;
+  color: var(--bs-emphasis-color);
+}
+.btn-toggle-chevron:hover,
+.btn-toggle-chevron:focus {
+  background-color: var(--bs-tertiary-bg);
+}
+.btn-toggle-chevron::before {
   width: 1.25em;
   line-height: 0;
   content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
   transition: transform .35s ease;
   transform-origin: .5em 50%;
 }
-
-.chevron {
-  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
-}
-
-.btn-toggle[aria-expanded="true"] {
-  color: rgba(var(--bs-emphasis-color-rgb), .85);
-}
-.btn-toggle[aria-expanded="true"]::before {
+.btn-toggle-chevron[aria-expanded="true"]::before {
   transform: rotate(90deg);
+}
+
+/* a badling is a selectable scope now, same active treatment as a duck link */
+.btn-toggle.active {
+  background-color: var(--bs-warning-bg-subtle);
 }
 
 .btn-toggle-nav a {

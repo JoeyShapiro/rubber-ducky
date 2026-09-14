@@ -58,31 +58,37 @@ The design brief — what a note is, why references rather than pinning, where a
 where a loose task lives — is settled and lives in [NOTES.md](NOTES.md). Read it before starting
 anything here.
 
-### [ ] T-28 — Give notes the same scope as quests
+### [ ] T-28 — Give notes (and messages, and quests) a global scope too
 
-**Priority:** medium · **Blocked by:** T-08
+**Priority:** medium · **Blocked by:** none
 
 **Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts),
 [`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
-[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte), a migration
+[`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts),
+[`src/routes/messages/+server.ts`](../src/routes/messages/+server.ts), a migration
 
-**Problem:** T-07 shipped notes as duck-only, because T-08's scope model does not exist yet.
-"Office snack preferences: Sarah is gluten-free" is reference material for an area of life, not
-for one project, and today it has nowhere to live — the same gap loose tasks have. See *Where a
-loose task lives*.
+**Problem:** Duck-or-badling scoping landed (2026-09-14, see decisions log): `messages`, `notes`,
+and `quests` all take a single `parent_id` — a duck's or a badling's uuid, `NOT NULL`. A badling
+is a real destination now, clickable in the sidebar with its own log, notes, and quests. What's
+still missing is **global** — "buy milk" belongs to nothing, and there is nowhere for it to go.
 
 **Acceptance criteria:**
-- `notes.duckId` becomes nullable alongside a nullable `badlingId`, matching whatever shape T-08
-  settles on. Do not invent a second scope model.
-- `GET /notes` accepts `?duck=`, `?badling=`, or neither (global), like `GET /quests`.
-- Existing notes keep their duck; the migration is non-destructive.
-- The badling and global views can list and create notes, not just ducks.
+- `parent_id` becomes nullable on `notes` and `quests` (`NULL` = global). Leave `messages.parent_id`
+  `NOT NULL` — a message is always part of some log, never a global one.
+- `GET /notes` and `GET /quests` accept `?parent=<uuid>` or neither (global, i.e. `parent_id IS
+  NULL`).
+- Existing rows are untouched; the migration only relaxes the constraint.
+- A global view can list and create notes and quests.
+- **Not in scope here:** a badling view aggregating the quests/notes of the ducks underneath it.
+  Today a badling's items are its own, separate from its ducks' items. Rolling child ducks up
+  into a badling view (if still wanted) is a different, later feature — decide when the badling
+  view (T-11) is actually built.
 
 ---
 
 ### [ ] T-24 — One reference table for links between things
 
-**Priority:** medium · **Blocked by:** T-07, T-08
+**Priority:** medium · **Blocked by:** T-07, T-28
 
 **Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts), the notes and quests routes,
 [`src/lib/components/`](../src/lib/components/), a migration
@@ -181,42 +187,14 @@ The stated goal: one task system usable for everything — projects, a plain tod
 with a global list, per-group lists, and a root list that aggregates all children. Today none
 of that is expressible.
 
-See *Where a "project" fits* and *Where a loose task lives* in W3 before starting T-08. The
-conclusions there — a project is a duck, and a loose task binds to its badling — are what make
-T-08's three-level scope both necessary and sufficient. The second section also flags a
-consequence T-08 must settle: what happens to the system message a status change posts, when the
-quest has no duck log.
-
-### [ ] T-08 — Give quests a nullable scope so global and group-level tasks exist
-
-**Priority:** critical · **Blocked by:** none · **Do this before any task-UI work**
-
-**Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts#L69-L80),
-[`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts),
-[`src/lib/types.ts`](../src/lib/types.ts#L87-L122), a Drizzle migration
-
-**Problem:** `quests.duckId` is `NOT NULL` ([`schema.ts:79`](../src/lib/db/schema.ts#L79)), so a
-quest **cannot** exist outside a single channel. `GET /quests` filters by exactly one duck
-([`quests/+server.ts:12`](../src/routes/quests/+server.ts#L12)). A global list, a per-group
-list, and a root list aggregating children are all impossible without this change.
-
-**Acceptance criteria:**
-- `duckId` nullable, plus a nullable `badlingId` — or a single `scopeType`/`scopeId` pair.
-  Pick one and record the choice and reasoning. (Recommendation: nullable `duckId` + nullable
-  `badlingId`, with a CHECK constraint that at most one is set; simpler to query with Drizzle
-  than a polymorphic pair, and "both null" cleanly means global.)
-- `GET /quests` accepts a scope: `?duck=`, `?badling=` (aggregating that group's ducks), or
-  none (everything). Add the matching functions to [`api.ts`](../src/lib/api.ts).
-- Existing rows keep their current duck. Migration is non-destructive.
-- The `parent_id` / `quest_parent_id` naming confusion in `Quest`
-  ([`types.ts:89-90`](../src/lib/types.ts#L89-L90)) is resolved — one means "owning duck",
-  the other "parent quest", and the names should say so.
-
----
+See *Where a "project" fits* and *Where a loose task lives* in W3 before starting on scope. A
+quest already carries `parent_id` — a duck's or a badling's uuid, `NOT NULL` (2026-09-14; see
+decisions log). Group-level tasks exist today; **T-28** is what's left before a global, scopeless
+list does too.
 
 ### [ ] T-09 — Sortable, filterable task fields
 
-**Priority:** high · **Blocked by:** T-08
+**Priority:** high · **Blocked by:** T-28
 
 **Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts#L69-L80),
 [`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts), a migration
@@ -237,7 +215,7 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 
 ### [ ] T-10 — Task list interaction overhaul
 
-**Priority:** high · **Blocked by:** T-08, T-09
+**Priority:** high · **Blocked by:** T-28, T-09
 
 **Files:** [`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte),
 [`src/lib/components/QuestModal.svelte`](../src/lib/components/QuestModal.svelte),
@@ -275,7 +253,7 @@ it fully before starting.
 
 ### [ ] T-11 — Split the single route into real routes
 
-**Priority:** high · **Blocked by:** T-08 (task scope should be settled first)
+**Priority:** high · **Blocked by:** T-28 (global scope should be settled first)
 
 **Files:** all of [`src/routes/`](../src/routes/), moving components from
 [`src/lib/components/`](../src/lib/components/)
@@ -283,14 +261,18 @@ it fully before starting.
 **Problem:** Everything is `/`. Panels are shown or hidden by CSS width, selection lives in a
 client-side store, and there is no URL you can link to or refresh into.
 
-The frontend split already did the hard part: each component loads its own data from a `duck`
-prop, so this is mostly moving files and changing where `duck` comes from.
+The frontend split already did the hard part: each component loads its own data from a `scope`
+prop (a duck or a badling, since 2026-09-14 — see decisions log), so this is mostly moving files
+and changing where `scope` comes from.
 
 **Proposed structure** (adjust if a better shape emerges — record what you chose):
 
 ```
 /                      global home: aggregated tasks, recent activity
-/g/[badling]           group view
+/g/[badling]           badling's own chat/notes/tasks - it is a scope in its own right now
+/g/[badling]/chat
+/g/[badling]/notes
+/g/[badling]/tasks
 /d/[duck]              redirects to /d/[duck]/chat
 /d/[duck]/chat
 /d/[duck]/notes
@@ -298,9 +280,9 @@ prop, so this is mostly moving files and changing where `duck` comes from.
 /tasks                 global task list with a scope selector
 ```
 
-- Desktop: sub-routes render as side-by-side panes within the duck layout.
+- Desktop: sub-routes render as side-by-side panes within the duck/badling layout.
 - Mobile: each is a full page, with a bottom tab bar to switch between them.
-- The selected duck comes from the URL params, not from the `writable` store.
+- The selected scope comes from the URL params, not from the `writable` store.
 
 **Acceptance criteria:**
 - Data loads in `+page.server.ts` / `load` functions rather than component-level fetches.
@@ -308,8 +290,8 @@ prop, so this is mostly moving files and changing where `duck` comes from.
   correctly scoped — today the only page is prerendered while all its data is client-fetched,
   producing a blank flash on every load.
 - Deep links work: refreshing `/d/<uuid>/notes` lands on that duck's notes.
-- The `lastDuck` cookie behaviour is preserved (redirect `/` → last duck, or keep `/` as the
-  global home and drop it — decide and record).
+- The `lastScope` cookie behaviour is preserved (redirect `/` → last duck or badling, or keep `/`
+  as the global home and drop it — decide and record).
 
 ---
 
@@ -345,12 +327,12 @@ prop, so this is mostly moving files and changing where `duck` comes from.
 
 Dependency-driven; W6 items are independent and can be interleaved.
 
-1. **T-08 → T-09** — task schema. Unblocks everything task-shaped; do it before building task UI.
-   It also decides whether notes gain badling/global scope (T-28).
+1. **T-28 → T-09** — global scope, then task schema. Unblocks everything task-shaped; do it
+   before building task UI.
 2. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
 3. **T-10, T-12** — the UX work, now that the foundations hold.
 4. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
-   notes stop feeling bolted on, but they need T-08 and T-28 underneath.
+   notes stop feeling bolted on, but they need T-28 underneath.
 5. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
    thing that turns the log into something you can look things up in.
 T-05 (attachment storage) is deferrable without blocking anything.

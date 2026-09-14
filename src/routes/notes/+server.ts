@@ -13,14 +13,14 @@ function toNote(row: Row): Note {
 }
 
 export async function GET({ url }) {
-	const duck = url.searchParams.get('duck');
-	if (!duck) return json({ notes: [] });
+	const parent = url.searchParams.get('parent');
+	if (!parent) return json({ notes: [] });
 
 	// most recently touched first, so a note you just wrote is at the top
 	const rows = await db
 		.select()
 		.from(notesTable)
-		.where(eq(notesTable.duckId, duck))
+		.where(eq(notesTable.parentId, parent))
 		.orderBy(desc(sql`coalesce(${notesTable.updatedOn}, ${notesTable.createdOn})`));
 
 	return json({ notes: rows.map(toNote) });
@@ -28,11 +28,11 @@ export async function GET({ url }) {
 
 export async function POST({ request }) {
 	const data = await request.json();
-	if (!data.duck) return error(400, 'Missing duck');
+	if (!data.parent) return error(400, 'Missing parent');
 
 	// a new note starts empty and is filled in place - no dialog, no required title.
 	// nothing is logged yet: the first save is what counts as adding it (see PATCH).
-	const [row] = await db.insert(notesTable).values({ duckId: data.duck }).returning();
+	const [row] = await db.insert(notesTable).values({ parentId: data.parent }).returning();
 	return json({ note: toNote(row) });
 }
 
@@ -58,7 +58,7 @@ export async function PATCH({ request }) {
 	// filling in the empty shell POST created is the moment the note really came into being
 	const wasBlank = before.title.trim() === '' && before.content.trim() === '';
 	const phrase = wasBlank ? 'was added' : 'was modified';
-	const systemMessage = await postSystemMessage(logLine('Note', row.title, phrase), row.duckId);
+	const systemMessage = await postSystemMessage(logLine('Note', row.title, phrase), row.parentId);
 
 	return json({ note: toNote(row), systemMessage });
 }
@@ -74,7 +74,7 @@ export async function DELETE({ url }) {
 	// deleting is the normal end of a note's life, not an exception. the log entry outlives the
 	// note on purpose - the log is the history, so it still says what was removed.
 	await db.delete(notesTable).where(eq(notesTable.id, uuid));
-	const systemMessage = await postSystemMessage(logLine('Note', row.title, 'was removed'), row.duckId);
+	const systemMessage = await postSystemMessage(logLine('Note', row.title, 'was removed'), row.parentId);
 
 	return json({ ok: true, systemMessage });
 }

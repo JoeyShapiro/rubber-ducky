@@ -42,12 +42,12 @@ function post<T>(url: string, body: unknown): Promise<T> {
     });
 }
 
-export function fetchMessages(duck: string, offset = 0): Promise<{ messages: Message[] }> {
-    return request(`/messages?duck=${duck}&offset=${offset}`);
+export function fetchMessages(parent: string, offset = 0): Promise<{ messages: Message[] }> {
+    return request(`/messages?parent=${parent}&offset=${offset}`);
 }
 
-export function sendMessage(duck: string, message: string): Promise<{ message: Message }> {
-    return post('/messages', { duck, message });
+export function sendMessage(parent: string, message: string): Promise<{ message: Message }> {
+    return post('/messages', { parent, message });
 }
 
 export function uploadAttachment(
@@ -57,19 +57,19 @@ export function uploadAttachment(
     return post('/attachments', { message, attachment });
 }
 
-export function askQuestion(duck: string, prompt: string): Promise<{ message: Message }> {
-    return post('/qna', { duck, prompt });
+export function askQuestion(parent: string, prompt: string): Promise<{ message: Message }> {
+    return post('/qna', { parent, prompt });
 }
 
 // notes are the one type revived into real instances here: the component compares and sorts by
 // their dates, and JSON hands them back as strings
-export async function fetchNotes(duck: string): Promise<Note[]> {
-    const data = await request<{ notes: unknown[] }>(`/notes?duck=${duck}`);
+export async function fetchNotes(parent: string): Promise<Note[]> {
+    const data = await request<{ notes: unknown[] }>(`/notes?parent=${parent}`);
     return data.notes.map(Note.fromJSON);
 }
 
-export async function createNote(duck: string): Promise<Note> {
-    const data = await post<{ note: unknown }>('/notes', { duck });
+export async function createNote(parent: string): Promise<Note> {
+    const data = await post<{ note: unknown }>('/notes', { parent });
     return Note.fromJSON(data.note);
 }
 
@@ -90,26 +90,26 @@ export function deleteNote(uuid: string): Promise<{ ok: boolean; systemMessage: 
     return request(`/notes?uuid=${uuid}`, { method: 'DELETE' });
 }
 
-export function fetchQuests(duck: string): Promise<{ quests: Quest[] }> {
-    return request(`/quests?duck=${duck}`);
+export function fetchQuests(parent: string): Promise<{ quests: Quest[] }> {
+    return request(`/quests?parent=${parent}`);
 }
 
 export function createQuest(
-    duck: string,
+    parent: string,
     quest: { title: string; description: string; due: string; quest_parent: string },
 ): Promise<{ quest: Quest; systemMessage: Message | null }> {
-    return post('/quests', { duck, ...quest });
+    return post('/quests', { parent, ...quest });
 }
 
 export function setQuestStatus(
     uuid: string,
     status: QuestStatus,
-    duck: string,
+    parent: string,
     title?: string,
 ): Promise<{ ok: boolean; systemMessage?: Message }> {
     return request('/quests', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid, status, duck, title }),
+        body: JSON.stringify({ uuid, status, parent, title }),
     });
 }

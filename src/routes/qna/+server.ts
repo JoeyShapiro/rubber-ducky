@@ -40,7 +40,7 @@ export async function POST({ request }) {
 		from: 'ai',
 		content: generated,
 		timestamp,
-		duckId: data.duck,
+		parentId: data.parent,
 	}).returning();
 
 	// the answers row keeps the prompt beside the reply, for search later

@@ -29,14 +29,14 @@ async function pathOf(uuid: string): Promise<string> {
 }
 
 export async function GET({ url }) {
-	const duck = url.searchParams.get('duck');
-	if (!duck) return json({ quests: [] });
+	const parent = url.searchParams.get('parent');
+	if (!parent) return json({ quests: [] });
 
 	try {
-		const rows = await db.select().from(quests).where(eq(quests.duckId, duck)).orderBy(desc(quests.createdOn));
+		const rows = await db.select().from(quests).where(eq(quests.parentId, parent)).orderBy(desc(quests.createdOn));
 		const result = rows.map(r => new Quest(
 			r.id,
-			r.duckId,
+			r.parentId,
 			r.questParentId ?? '',
 			r.title ?? '',
 			r.description ?? '',
@@ -55,8 +55,8 @@ export async function GET({ url }) {
 export async function POST({ request }) {
 	const data = await request.json();
 
-	if (!data.duck || !data.title) {
-		return json({ error: 'Missing duck or title' }, { status: 400 });
+	if (!data.parent || !data.title) {
+		return json({ error: 'Missing parent or title' }, { status: 400 });
 	}
 
 	const [row] = await db.insert(quests).values({
@@ -67,12 +67,12 @@ export async function POST({ request }) {
 		done: false,
 		createdOn: new Date(),
 		questParentId: data.quest_parent || null,
-		duckId: data.duck,
+		parentId: data.parent,
 	}).returning();
 
 	const quest = new Quest(
 		row.id,
-		row.duckId,
+		row.parentId,
 		row.questParentId ?? '',
 		row.title ?? '',
 		row.description ?? '',
@@ -83,7 +83,7 @@ export async function POST({ request }) {
 		row.createdOn,
 	);
 
-	const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(row.id), 'was created'), data.duck);
+	const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(row.id), 'was created'), data.parent);
 	return json({ quest, systemMessage });
 }
 
@@ -100,8 +100,8 @@ export async function PATCH({ request }) {
 		updatedOn: new Date(),
 	}).where(eq(quests.id, data.uuid));
 
-	if (data.duck) {
-		const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.duck);
+	if (data.parent) {
+		const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.parent);
 		return json({ ok: true, systemMessage });
 	}
 

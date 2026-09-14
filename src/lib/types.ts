@@ -180,3 +180,7 @@ export class Badling {
         this.ducks = [];
     }
 }
+
+// messages, notes, and quests each belong to a duck or a badling - whichever is currently
+// selected. Both classes carry exactly uuid + name, so either can stand in here.
+export type Scope = Duck | Badling;

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
-	import type { Duck } from '$lib/types';
+	import type { Scope } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { fetchMessages } from '$lib/api';
 	import Message from './Message.svelte';
 	import Composer from './Composer.svelte';
 
-	export let duck: Duck;
+	export let scope: Scope;
 
 	const PAGE = 10; // matches the limit in GET /messages
 	const LOOKAHEAD = '300px'; // how far above the viewport the sentinel starts the next fetch
@@ -15,14 +15,14 @@
 	let sentinel: HTMLDivElement;
 	let observer: IntersectionObserver | undefined;
 	let loading = false;
-	let loadedDuck = '';
+	let loadedScope = '';
 	let exhausted = false;
 
-	$: if (duck.uuid !== loadedDuck) {
-		loadedDuck = duck.uuid;
+	$: if (scope.uuid !== loadedScope) {
+		loadedScope = scope.uuid;
 		exhausted = false;
 		seenTail = '';
-		load(duck.uuid);
+		load(scope.uuid);
 	}
 
 	async function load(uuid: string) {
@@ -55,17 +55,17 @@
 
 	/** Fetch the page before the one we have and splice it on the front. */
 	async function loadOlder() {
-		if (loading || exhausted || !loadedDuck || !chatbox) return;
+		if (loading || exhausted || !loadedScope || !chatbox) return;
 
 		loading = true;
-		const duckId = loadedDuck;
+		const scopeId = loadedScope;
 
 		try {
 			// every loaded row is a messages-table row now that AI replies are posted as messages,
 			// so the count is the offset - no filtering out a merged-in second source
 			const offset = $messages.length;
-			const data = await fetchMessages(duckId, offset);
-			if (loadedDuck !== duckId) return; // switched ducks mid-flight
+			const data = await fetchMessages(scopeId, offset);
+			if (loadedScope !== scopeId) return; // switched scope mid-flight
 
 			if (data.messages.length < PAGE) exhausted = true;
 
@@ -155,7 +155,7 @@
 		{/each}
 	</div>
 
-	<Composer {duck} />
+	<Composer {scope} />
 </div>
 
 <style>

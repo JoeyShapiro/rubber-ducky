@@ -39,7 +39,10 @@ export const messages = pgTable('messages', {
     content: text('content'),
     embedding: vector('embedding'),
     timestamp: timestamp('timestamp', { withTimezone: true }),
-    duckId: uuid('duck_id').notNull().references(() => ducks.id),
+    // a duck's or a badling's id - never a plain FK, since a column can't reference two tables.
+    // duck and badling ids are both defaultRandom() uuids from disjoint tables, so collision
+    // isn't a real risk, and every caller already knows which kind of id it is holding.
+    parentId: uuid('parent_id').notNull(),
 });
 
 export const attachments = pgTable('attachments', {
@@ -62,8 +65,8 @@ export const answers = pgTable('answers', {
     messageId: uuid('message_id').references(() => messages.id),
 });
 
-// many notes per duck. the title is a lookup key, and there is no completion state - a note is
-// true or stale, and stale notes get deleted. see docs/PLAN.md, W3.
+// many notes per duck or badling. the title is a lookup key, and there is no completion state -
+// a note is true or stale, and stale notes get deleted. see docs/PLAN.md, W3.
 export const notes = pgTable('notes', {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull().default(''),
@@ -71,7 +74,8 @@ export const notes = pgTable('notes', {
     createdOn: timestamp('created_on', { withTimezone: true }).notNull().defaultNow(),
     updatedOn: timestamp('updated_on', { withTimezone: true }),
     embedding: vector('embedding'),
-    duckId: uuid('duck_id').notNull().references(() => ducks.id),
+    // a duck's or a badling's id - see messages.parentId
+    parentId: uuid('parent_id').notNull(),
 });
 
 export const quests = pgTable('quests', {
@@ -84,5 +88,6 @@ export const quests = pgTable('quests', {
     createdOn: timestamp('created_on', { withTimezone: true }),
     updatedOn: timestamp('updated_on', { withTimezone: true }),
     questParentId: uuid('quest_parent_id').references((): AnyPgColumn => quests.id),
-    duckId: uuid('duck_id').notNull().references(() => ducks.id),
+    // a duck's or a badling's id - see messages.parentId
+    parentId: uuid('parent_id').notNull(),
 });

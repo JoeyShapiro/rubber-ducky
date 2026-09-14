@@ -102,7 +102,7 @@ async function doImport(request: Request) {
 				from: m.from ?? null,
 				content: m.content ?? null,
 				timestamp: m.timestamp ? new Date(m.timestamp) : null,
-				duckId: m.belongsToId,
+				parentId: m.belongsToId,
 			})),
 			500,
 		)) {
@@ -164,7 +164,7 @@ async function doImport(request: Request) {
 			cols.Note.map((n: any) => ({
 				id: n.uuid,
 				content: n.content ?? null,
-				duckId: n.belongsToId,
+				parentId: n.belongsToId,
 			})),
 			500,
 		)) {

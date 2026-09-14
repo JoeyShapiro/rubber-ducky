@@ -41,12 +41,12 @@ async function attachTo(msgs: Message[], ids: string[]) {
 }
 
 export async function GET({ url }) {
-	const duck = url.searchParams.get('duck');
+	const parent = url.searchParams.get('parent');
 	const offset = parseInt(url.searchParams.get('offset') || '0', 10);
-	if (!duck) return json({ messages: [] });
+	if (!parent) return json({ messages: [] });
 
 	const rows = await db.select().from(messagesTable)
-		.where(eq(messagesTable.duckId, duck))
+		.where(eq(messagesTable.parentId, parent))
 		.orderBy(desc(messagesTable.timestamp))
 		.limit(10)
 		.offset(offset);
@@ -74,7 +74,7 @@ export async function POST({ request }) {
 		from: 'user',
 		content: data.message,
 		timestamp,
-		duckId: data.duck,
+		parentId: data.parent,
 		...(embedding ? { embedding } : {}),
 	}).returning();
 

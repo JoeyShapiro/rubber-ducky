@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
-import { Duck, Message } from '$lib/types';
+import { Duck, Message, type Scope } from '$lib/types';
 
-// which duck is open. the sidebar writes it, everything else reads it
-export const duck = writable(new Duck('', ''));
+// which duck or badling is open. the sidebar writes it, everything else reads it
+export const scope = writable<Scope>(new Duck('', ''));
 
 // blur everything, for when someone is looking over your shoulder
 export const hidden = writable(false);

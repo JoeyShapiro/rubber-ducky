@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
-	import { Note, type Duck } from '$lib/types';
+	import { Note, type Scope } from '$lib/types';
 	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
 	import { messages } from '$lib/stores';
 	import { formatDate } from '$lib/format';
@@ -8,12 +8,12 @@
 	import AddButton from './AddButton.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 
-	export let duck: Duck;
+	export let scope: Scope;
 
 	let notes: Note[] = [];
 	let openUuid: string | null = null;
 	let loading = false;
-	let loadedDuck = '';
+	let loadedScope = '';
 	let confirmingDelete = false;
 	// a note is read far more often than it is written, so reading is the default mode
 	let editing = false;
@@ -26,12 +26,12 @@
 
 	const IDLE_COMMIT_MS = 15000;
 
-	$: if (duck.uuid !== loadedDuck) {
-		commit(); // captures the outgoing duck synchronously, before loadedDuck moves
-		loadedDuck = duck.uuid;
+	$: if (scope.uuid !== loadedScope) {
+		commit(); // captures the outgoing scope synchronously, before loadedScope moves
+		loadedScope = scope.uuid;
 		openUuid = null;
 		editing = false;
-		load(duck.uuid);
+		load(scope.uuid);
 	}
 
 	$: open = notes.find((n) => n.uuid === openUuid) ?? null;
@@ -56,7 +56,7 @@
 		loading = true;
 		try {
 			const list = await fetchNotes(uuid);
-			if (loadedDuck === uuid) notes = list;
+			if (loadedScope === uuid) notes = list;
 		} catch (err) {
 			console.error('notes', err);
 		} finally {
@@ -69,20 +69,20 @@
 	 * the log (T-27) without a save button and without autosave firing per keystroke. Cmd/Ctrl-S
 	 * commits without closing; a long idle timer catches you if you wander off mid-edit.
 	 *
-	 * Everything it needs is captured synchronously, so it stays correct if the duck changes
+	 * Everything it needs is captured synchronously, so it stays correct if the scope changes
 	 * while the request is in flight.
 	 */
 	async function commit() {
 		const note = open;
 		if (!note || !dirty) return;
 
-		const duckId = loadedDuck;
+		const scopeId = loadedScope;
 		const title = draftTitle;
 		const content = draftContent;
 
 		try {
 			const { note: saved, systemMessage } = await updateNote(note.uuid, title, content);
-			if (loadedDuck !== duckId) return; // moved on while saving
+			if (loadedScope !== scopeId) return; // moved on while saving
 			notes = notes.map((n) => (n.uuid === saved.uuid ? saved : n));
 			if (systemMessage) messages.update((list) => [...list, systemMessage]);
 		} catch (err) {
@@ -128,11 +128,11 @@
 	}
 
 	async function addNote() {
-		if (!duck.uuid) return;
+		if (!scope.uuid) return;
 		await commit();
 
 		try {
-			const note = await createNote(duck.uuid);
+			const note = await createNote(scope.uuid);
 			notes = [note, ...notes];
 			draftTitle = '';
 			draftContent = '';
@@ -251,7 +251,7 @@
 			{/if}
 			<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
 		{:else}
-			<AddButton title="New note" disabled={!duck.uuid} on:click={addNote} />
+			<AddButton title="New note" disabled={!scope.uuid} on:click={addNote} />
 		{/if}
 	</div>
 </div>

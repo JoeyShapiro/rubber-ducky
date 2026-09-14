@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { Attachment, Message, type Duck } from '$lib/types';
+	import { Attachment, Message, type Scope } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { askQuestion, sendMessage, uploadAttachment } from '$lib/api';
 	import { clearDraft, loadDraft, saveDraft } from '$lib/drafts';
 
-	export let duck: Duck;
+	export let scope: Scope;
 
 	let text = '';
 	let attachments: Attachment[] = [];
@@ -14,7 +14,7 @@
 	let dragDepth = 0;
 	let textarea: HTMLTextAreaElement;
 	let fileInput: HTMLInputElement;
-	let draftDuck = '';
+	let draftScope = '';
 	// shift+enter starts a multiline message: enter then makes newlines, and only a second enter
 	// at the very end sends. `armed` is that first enter waiting for its partner.
 	let multiline = false;
@@ -26,16 +26,16 @@
 
 	$: dragging = dragDepth > 0;
 
-	// drafts are per duck: switching away parks what you were writing and brings back whatever
-	// was waiting in the duck you moved to
-	$: if (duck.uuid !== draftDuck) {
-		if (draftDuck) saveDraft(draftDuck, text);
-		draftDuck = duck.uuid;
-		text = loadDraft(duck.uuid);
+	// drafts are per scope: switching away parks what you were writing and brings back whatever
+	// was waiting in the duck or badling you moved to
+	$: if (scope.uuid !== draftScope) {
+		if (draftScope) saveDraft(draftScope, text);
+		draftScope = scope.uuid;
+		text = loadDraft(scope.uuid);
 		tick().then(resize);
 	}
 
-	$: canSend = !sending && duck.uuid !== '' && (text.trim() !== '' || attachments.length > 0);
+	$: canSend = !sending && scope.uuid !== '' && (text.trim() !== '' || attachments.length > 0);
 
 	// every attachment, however it got here, goes through this
 	async function addFiles(files: File[]) {
@@ -83,7 +83,7 @@
 
 	function rememberDraft() {
 		clearTimeout(draftTimer);
-		draftTimer = setTimeout(() => saveDraft(draftDuck, text), 300);
+		draftTimer = setTimeout(() => saveDraft(draftScope, text), 300);
 	}
 
 	function resize() {
@@ -110,7 +110,7 @@
 		multiline = false;
 		armed = false;
 		clearTimeout(draftTimer);
-		clearDraft(draftDuck);
+		clearDraft(draftScope);
 	}
 
 	async function handleSubmit() {
@@ -127,14 +127,14 @@
 		// a bare attachment is a perfectly good message, but there is nothing to ask about
 		if (question && body !== '') {
 			question = false;
-			askQuestion(duck.uuid, body)
+			askQuestion(scope.uuid, body)
 				.then((data) => messages.update((list) => [...list, data.message]))
 				.catch((err) => console.error('qna', err));
 		}
 
 		let created;
 		try {
-			created = (await sendMessage(duck.uuid, body)).message;
+			created = (await sendMessage(scope.uuid, body)).message;
 		} catch (err) {
 			console.error('message', err);
 
@@ -275,7 +275,7 @@
 		// screen being the case this exists for. pagehide is the last synchronous chance to write.
 		function flushDraft() {
 			clearTimeout(draftTimer);
-			saveDraft(draftDuck, text);
+			saveDraft(draftScope, text);
 		}
 
 		document.addEventListener('paste', handlePaste);

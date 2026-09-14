@@ -36,6 +36,13 @@
       "when": 1789349638810,
       "tag": "0004_colossal_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789349638811,
+      "tag": "0005_badling_scoped_parent_id",
+      "breakpoints": true
     }
   ]
 }
