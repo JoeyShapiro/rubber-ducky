@@ -52,28 +52,6 @@ anywhere in the stack (`BODY_SIZE_LIMIT=Infinity` is set in the documented `.env
 
 ---
 
-## W2 — Composer / attachment UX
-
-### [ ] T-23 — Upload feedback and failure handling
-
-**Priority:** medium · **Blocked by:** none
-
-**Files:** [`src/lib/components/Composer.svelte`](../src/lib/components/Composer.svelte)
-
-**Problem:** T-06 gave attachments a visible tray, but the upload itself is still silent. The
-send button disables while sending and that is all: there is no per-file progress, and a failed
-upload only reaches `console.error` — the message posts, the attachment quietly does not, and
-nothing on screen says so. Large files make this obvious, since the whole base64 payload goes
-up in one JSON POST.
-
-**Acceptance criteria:**
-- Per-attachment pending / done / failed state shown on its card.
-- A failed upload is visible and offers a retry, or at minimum names the file that failed.
-- Sensible behaviour when some attachments in a batch succeed and others fail.
-- Fold in a client-side size limit when T-05 sets one.
-
----
-
 ## W3 — Notes
 
 The design brief — what a note is, why references rather than pinning, where a project fits, and

@@ -324,6 +324,9 @@ Choices already made, so later work does not re-open them.
 | 2026-09-13 | logging | Entries read as sentences: `Quest <path> was created`, `Quest <path> is completed`, `Note <title> was removed`. No quotes, no arrow. The **trailing word stays load-bearing** — `Message.svelte` colours entries by it — so any new phrase must end on created/added/modified/removed or a status. |
 | 2026-09-13 | logging | A quest logs its **full path** (`top / middle / this one`), walked server-side from `questParentId` rather than taken from the client's title. |
 | 2026-09-13 | quests | New quests start **inactive**. A quest exists before you decide to work on it; `active` is something you opt into. |
+| 2026-09-13 | messages | A message's bottom-left corner is reserved for status/errors (`Message.error`), mirroring the timestamp's bottom-right — same size, same placement, red instead of muted. Any future per-message status belongs in that one slot, not a new corner. |
+| 2026-09-13 | attachments | A failed (never-uploaded) attachment shows only its name and mime type, never its content. `Attachment.failed` is set in the same step as clearing `.content` — a data URL is arbitrarily large and there is no reason to keep one that is not going anywhere. |
+| 2026-09-13 | attachments | No per-attachment upload-progress indicator and no retry (T-23's original acceptance criteria, dropped). This app has one user on one connection who does not expect to send large files — anything that big goes on a thumb drive instead. Retry is retype-and-resend by hand. |
 | 2026-09-10 | logging | `postSystemMessage` is the only thing that writes a system entry, and it returns the message so the client can append it without refetching. A failed log never fails the action that caused it. |
 | 2026-09-10 | logging | Creating an empty note logs nothing; its first save logs `added`. Otherwise the log announces an Untitled note before anything is typed. |
 | 2026-09-12 | chat | Loading older messages is driven by an **IntersectionObserver on a sentinel** above the first message, not a scroll handler. A scroll handler fires continuously and re-triggers mid-fetch, which is how one flick pulled the whole log. The observer reports *transitions*, so `loadOlder` re-observes the sentinel afterwards — otherwise a page that does not fill the viewport never gets a second callback. |
@@ -348,6 +351,39 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-13 — T-23: a message now says when it failed to send
+
+Three silent failures got a visible one. A message's bottom-**right** corner has always been the
+timestamp; its bottom-**left** is now the mirror of that — same size and placement, reused for
+status and errors, in red. `Message.error` (empty string when there is nothing to report) drives
+it.
+
+- **The whole send fails** (`POST /messages` rejects): rather than leaving the text stranded in
+  the composer with only a `console.error`, it now renders as a real bubble in the stream with
+  `error = 'Failed to send'`, built client-side with a `local-<uuid>` id. The composer clears as
+  if it had sent, since the failed bubble is now where that content lives.
+- **Some attachments fail after the message sends**: the message posts and shows normally; each
+  failed attachment renders inline with a red border, and the bubble's `error` names what
+  happened — `Couldn't send "file.png"` for one, `N attachments couldn't send` for several.
+- **A file fails to even become an attachment** (unreadable, before anything is sent): red text
+  appears in the composer in the same slot as the multiline hint (`twice at the end sends`),
+  naming the file(s) that never made the tray.
+
+**A failed attachment shows its name and mime type, never its content.** The first pass rendered
+the in-memory data URL so a failed image could still preview — reverted once it was pointed out
+that a data URL can be arbitrarily large (T-05 has no client-side size limit yet) and there is no
+reason to keep holding a payload that is never going anywhere. `Attachment.failed` is now paired
+with clearing `.content` in the same step (`Composer.svelte`'s `markFailed`), so the bytes are
+dropped the instant they are known to be dead weight.
+
+All three states are client-only — `Attachment.failed` and `Message.error` are never sent to the
+server and never persisted, so a refresh loses them, same as any other front-end-only recovery
+of a failure the server was never told about.
+
+**Deliberately not built:** a pending/uploading indicator per attachment, and retry. This is a
+single-user tool, not a product with unknown users on unknown connections — see the decisions
+log. A failed send or attachment is retried by hand (retype, or re-attach and resend).
 
 ### 2026-09-13 — T-15: an AI reply is just a message
 
@@ -580,7 +616,7 @@ The composer gained a preview tray: image thumbnails, a generic card for other f
 size, and an always-visible remove button. Drag-and-drop with a drop overlay; the file picker
 gained `multiple`. A message can now be sent with attachments and no text.
 
-Still missing: per-file upload progress and failure surfacing (T-23).
+Failure surfacing followed later, see T-23 above.
 
 ### 2026-09-05 — T-03: attachments survive a reload
 
