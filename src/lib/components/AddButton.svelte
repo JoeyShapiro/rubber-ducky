@@ -52,4 +52,18 @@
 		width: 1.05rem;
 		height: 1.05rem;
 	}
+
+	/* bigger on mobile, same reasoning as the sidebar's own buttons (2026-09-14, see NOTES.md
+	   decisions log): tapped from arm's length, not clicked */
+	@media (max-width: 768px) {
+		.add-btn {
+			width: 2.75rem;
+			height: 2.75rem;
+		}
+
+		.add-btn svg {
+			width: 1.4rem;
+			height: 1.4rem;
+		}
+	}
 </style>

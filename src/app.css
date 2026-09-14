@@ -549,6 +549,11 @@ body {
 		/* a full-screen drawer never carries the desktop layout's inter-panel spacing - Quests.svelte's
 		   root has mt-2 to sit below Notes in the desktop column, which read as a gap at the top here */
 		margin: 0 !important;
+		/* nor the desktop card look (rounded corners, border, shadow) that Notes and Quests carry
+		   to sit as panels in the right column - full-bleed like Chat and Sidebar already are */
+		border: none !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
 	}
 
 	/* the sidebar and the chat/notes/quests area are siblings in .app - only one side is ever

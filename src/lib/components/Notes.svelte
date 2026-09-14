@@ -187,7 +187,7 @@
 </script>
 
 <div class="notes-container d-flex flex-column" data-screen="notes">
-	<MobileTopBar current="notes" title="Notes" />
+	<MobileTopBar current="notes" {scope} />
 	{#if open && editing}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="note-editor d-flex flex-column flex-fill p-3" on:keydown={handleKeydown}>

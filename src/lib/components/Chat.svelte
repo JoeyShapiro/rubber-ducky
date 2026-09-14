@@ -145,7 +145,7 @@
 </script>
 
 <div class="d-flex flex-column w-50 position-relative" data-screen="chat">
-	<MobileTopBar current="chat" title={scope.name} />
+	<MobileTopBar current="chat" {scope} />
 	<div bind:this={chatbox} id="chatbox" class="flex-column overflow-auto flex-fill fade-y">
 		{#if loading}
 			<div class="chat-loading">Loading…</div>

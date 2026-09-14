@@ -162,10 +162,14 @@ export class Quest {
 export class Duck {
     uuid: string;
     name: string;
+    // the badling this duck lives under - carried along so a duck-scoped view can show a
+    // "badling / duck" path without a second lookup. Empty when genuinely unknown.
+    badlingName: string;
 
-    constructor(uuid: string, name: string) {
+    constructor(uuid: string, name: string, badlingName = '') {
         this.uuid = uuid;
         this.name = name;
+        this.badlingName = badlingName;
     }
 }
 

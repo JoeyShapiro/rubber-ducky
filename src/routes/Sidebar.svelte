@@ -111,7 +111,7 @@
                 // add new duck to badling
                 badlings = badlings.map(b => {
                     if (b.uuid == badling) {
-                        b.ducks.push(new Duck(data.uuid, duckName));
+                        b.ducks.push(new Duck(data.uuid, duckName, b.name));
                     }
                     return b;
                 });

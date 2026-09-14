@@ -127,7 +127,7 @@
 </script>
 
 <div class="tasks-container mt-2 d-flex flex-column position-relative" data-screen="quests">
-	<MobileTopBar current="quests" title="Quests" />
+	<MobileTopBar current="quests" {scope} />
 	<!-- drilled into a quest: its own description sits above its subquests -->
 	{#if currentQuest && currentQuest.description.trim() !== ''}
 		{@const html = renderMarkdown(currentQuest.description)}

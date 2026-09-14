@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { mobileView, type MobileView } from '$lib/stores';
+	import { Badling, type Scope } from '$lib/types';
 
 	// which content screen this bar belongs to - the other two get a jump-to icon on the right
 	export let current: Exclude<MobileView, 'sidebar'>;
-	export let title = '';
+	export let scope: Scope;
 
 	// flat navigation, not a stack: every content screen is a peer, reachable from every other
 	// one, and back always retraces to the duck/badling list rather than the previous screen
@@ -15,6 +16,12 @@
 	];
 
 	$: others = SCREENS.filter((s) => s.id !== current);
+	$: currentLabel = SCREENS.find((s) => s.id === current)?.label ?? '';
+
+	// "badling / duck / screen" for a duck, "badling / screen" for a badling itself - a plain
+	// duck has no badling name to show (shouldn't happen once loaded through the sidebar, but
+	// nothing here assumes it).
+	$: crumbs = (scope instanceof Badling ? [scope.name] : [scope.badlingName, scope.name].filter(Boolean)).concat(currentLabel);
 </script>
 
 <!--
@@ -30,7 +37,12 @@
 	>
 		<img src="/bars-solid-full.svg" alt="" width="18" height="18" />
 	</button>
-	{#if title}<span class="mobile-topbar-title">{title}</span>{/if}
+	<span class="mobile-topbar-title">
+		{#each crumbs as crumb, i}
+			{#if i > 0}<span class="mobile-topbar-crumb-sep">/</span>{/if}
+			<span class="mobile-topbar-crumb" class:current={i === crumbs.length - 1}>{crumb}</span>
+		{/each}
+	</span>
 	<div class="mobile-topbar-spacer"></div>
 	{#each others as screen (screen.id)}
 		<button
@@ -54,6 +66,9 @@
 		background: var(--panel-surface);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
+		/* explicit, not inherited - a container this sits in (Quests' Futura Condensed, e.g.)
+		   must never change what the bar itself looks like. Same reasoning as font-size below. */
+		font-family: "GG Sans", Verdana, Tahoma;
 	}
 
 	/* the app.css media query flips this to display:flex below the breakpoint - kept here rather
@@ -91,12 +106,34 @@
 		background: var(--row-hover);
 	}
 
+	/* a single inline-flowing line rather than flex, so overflow can ellipsis the whole path at
+	   once instead of needing per-crumb truncation logic */
 	.mobile-topbar-title {
-		font-weight: 650;
-		font-size: 1rem;
+		min-width: 0;
+		flex-shrink: 1;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		font-size: 1rem;
+	}
+
+	/* ancestors (badling, duck) read as a path leading up to where you are; only the current
+	   screen is full weight - same idea as .breadcrumb-current in Quests.svelte's own trail */
+	.mobile-topbar-crumb {
+		font-size: 0.85em;
+		font-weight: 500;
+		opacity: 0.6;
+	}
+
+	.mobile-topbar-crumb.current {
+		font-size: 1em;
+		font-weight: 650;
+		opacity: 1;
+	}
+
+	.mobile-topbar-crumb-sep {
+		margin: 0 0.15rem;
+		opacity: 0.35;
 	}
 
 	.mobile-topbar-spacer {

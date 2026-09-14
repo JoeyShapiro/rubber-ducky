@@ -12,7 +12,7 @@ export async function GET() {
 		const badling = new Badling(b.id, b.name ?? '');
 		badling.ducks = allDucks
 			.filter(d => d.badlingId === b.id)
-			.map(d => new Duck(d.id, d.name ?? ''));
+			.map(d => new Duck(d.id, d.name ?? '', b.name ?? ''));
 		return badling;
 	});
 
