@@ -8,10 +8,10 @@
 	// flat navigation, not a stack: every content screen is a peer, reachable from every other
 	// one, and back always retraces to the duck/badling list rather than the previous screen
 	// (2026-09-14, see NOTES.md decisions log - this replaces the earlier chat-is-the-hub model)
-	const SCREENS: { id: Exclude<MobileView, 'sidebar'>; label: string }[] = [
-		{ id: 'chat', label: 'Messages' },
-		{ id: 'notes', label: 'Notes' },
-		{ id: 'quests', label: 'Quests' },
+	const SCREENS: { id: Exclude<MobileView, 'sidebar'>; label: string; icon: string }[] = [
+		{ id: 'chat', label: 'Messages', icon: '/message-regular-full.svg' },
+		{ id: 'notes', label: 'Notes', icon: '/pen-to-square-regular-full.svg' },
+		{ id: 'quests', label: 'Quests', icon: '/list-check-solid-full.svg' },
 	];
 
 	$: others = SCREENS.filter((s) => s.id !== current);
@@ -28,9 +28,7 @@
 		aria-label="Back to Ducks"
 		on:click={() => mobileView.set('sidebar')}
 	>
-		<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-			<path d="M10 13 5 8l5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-		</svg>
+		<img src="/bars-solid-full.svg" alt="" width="18" height="18" />
 	</button>
 	{#if title}<span class="mobile-topbar-title">{title}</span>{/if}
 	<div class="mobile-topbar-spacer"></div>
@@ -41,23 +39,7 @@
 			aria-label={screen.label}
 			on:click={() => mobileView.set(screen.id)}
 		>
-			{#if screen.id === 'chat'}
-				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-					<path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v6A1.5 1.5 0 0 1 12.5 11H6l-3 3v-3H3.5A1.5 1.5 0 0 1 2 9.5v-6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
-				</svg>
-			{:else if screen.id === 'notes'}
-				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-					<path d="M3 3h10M3 6.5h10M3 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
-			{:else}
-				<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-					<rect x="2" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
-					<path d="M2.7 4 3.4 4.7 4.5 3.4" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
-					<path d="M7 4h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					<rect x="2" y="9.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1.3" />
-					<path d="M7 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
-			{/if}
+			<img src={screen.icon} alt="" width="18" height="18" />
 		</button>
 	{/each}
 </div>
@@ -98,8 +80,8 @@
 		cursor: pointer;
 	}
 
-	.mobile-topbar-back svg,
-	.mobile-topbar-action svg {
+	.mobile-topbar-back img,
+	.mobile-topbar-action img {
 		width: 1.15rem;
 		height: 1.15rem;
 	}
