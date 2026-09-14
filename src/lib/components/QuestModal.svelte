@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import type { Quest } from '$lib/types';
 
 	export let parentTitle = '';
+	// set to edit that quest in place instead of creating a new one - same form, pre-filled
+	export let quest: Quest | null = null;
 
 	const dispatch = createEventDispatcher<{
 		accept: { title: string; description: string; due: string };
 		decline: void;
 	}>();
 
-	let title = '';
-	let description = '';
-	let due = '';
+	let title = quest?.title ?? '';
+	let description = quest?.description ?? '';
+	let due = quest?.due ?? '';
 
 	function accept() {
 		if (title.trim() === '') return;
@@ -19,9 +22,17 @@
 </script>
 
 <div class="task-modal-backdrop" on:click={(e) => e.target === e.currentTarget && dispatch('decline')} role="presentation">
-	<div class="task-modal card" role="dialog" aria-modal="true" aria-label="Create task">
+	<div class="task-modal card" role="dialog" aria-modal="true" aria-label={quest ? 'Edit task' : 'Create task'}>
 		<div class="task-modal-header d-flex justify-content-between align-items-center px-3 py-2">
-			<h2 class="task-modal-title m-0">{parentTitle ? `New Subquest of "${parentTitle}"` : 'Create New Quest'}</h2>
+			<h2 class="task-modal-title m-0">
+				{#if quest}
+					Edit "{quest.title}"
+				{:else if parentTitle}
+					New Subquest of "{parentTitle}"
+				{:else}
+					Create New Quest
+				{/if}
+			</h2>
 		</div>
 		<div class="task-modal-body p-3">
 			<label class="form-label mb-1" for="task-title">Title</label>
@@ -36,7 +47,7 @@
 		</div>
 		<div class="task-modal-footer d-flex justify-content-end gap-2 px-3 pb-3">
 			<button type="button" class="btn btn-outline-secondary" on:click={() => dispatch('decline')}>Decline</button>
-			<button type="button" class="btn btn-warning" on:click={accept} disabled={title.trim() === ''}>Accept</button>
+			<button type="button" class="btn btn-warning" on:click={accept} disabled={title.trim() === ''}>{quest ? 'Save' : 'Accept'}</button>
 		</div>
 	</div>
 </div>

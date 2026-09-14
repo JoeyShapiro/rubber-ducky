@@ -101,6 +101,18 @@ export function createQuest(
     return post('/quests', { parent, ...quest });
 }
 
+export function updateQuest(
+    uuid: string,
+    quest: { title: string; description: string; due: string },
+    parent: string,
+): Promise<{ quest: Quest; systemMessage: Message | null }> {
+    return request('/quests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid, ...quest, parent }),
+    });
+}
+
 export function setQuestStatus(
     uuid: string,
     status: QuestStatus,

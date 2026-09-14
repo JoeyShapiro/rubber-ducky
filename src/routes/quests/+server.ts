@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
 import { Quest, type QuestStatus } from '$lib/types.js';
 import { db } from '$lib/db';
 import { quests } from '$lib/db/schema';
@@ -90,20 +90,57 @@ export async function POST({ request }) {
 export async function PATCH({ request }) {
 	const data = await request.json();
 
-	if (!data.uuid || !data.status) {
-		return json({ error: 'Missing uuid or status' }, { status: 400 });
+	if (!data.uuid) {
+		return json({ error: 'Missing uuid' }, { status: 400 });
 	}
 
-	await db.update(quests).set({
-		status: data.status,
-		done: data.status === 'completed',
+	// two distinct actions share this route: a status change (existing), or an edit of the
+	// quest's own content. Kept apart rather than merged into one "arbitrary field update" so
+	// each can log its own, more honest phrase.
+	if (data.status) {
+		await db.update(quests).set({
+			status: data.status,
+			done: data.status === 'completed',
+			updatedOn: new Date(),
+		}).where(eq(quests.id, data.uuid));
+
+		if (data.parent) {
+			const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.parent);
+			return json({ ok: true, systemMessage });
+		}
+
+		return json({ ok: true });
+	}
+
+	if (!data.title) {
+		return json({ error: 'Missing status or title' }, { status: 400 });
+	}
+
+	const [row] = await db.update(quests).set({
+		title: data.title,
+		description: data.description ?? '',
+		due: data.due ?? '',
 		updatedOn: new Date(),
-	}).where(eq(quests.id, data.uuid));
+	}).where(eq(quests.id, data.uuid)).returning();
 
-	if (data.parent) {
-		const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.parent);
-		return json({ ok: true, systemMessage });
-	}
+	if (!row) return error(404, 'Quest not found');
 
-	return json({ ok: true });
+	const quest = new Quest(
+		row.id,
+		row.parentId,
+		row.questParentId ?? '',
+		row.title ?? '',
+		row.description ?? '',
+		row.due ?? '',
+		(row.status ?? 'active') as QuestStatus,
+		row.done ?? false,
+		row.updatedOn,
+		row.createdOn,
+	);
+
+	const systemMessage = data.parent
+		? await postSystemMessage(logLine('Quest', await pathOf(row.id), 'was modified'), data.parent)
+		: null;
+
+	return json({ quest, systemMessage });
 }

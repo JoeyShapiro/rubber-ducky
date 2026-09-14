@@ -184,38 +184,6 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 
 ---
 
-### [ ] T-10 — Task list interaction overhaul
-
-**Priority:** high · **Blocked by:** T-09
-
-**Files:** [`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte),
-[`src/lib/components/QuestModal.svelte`](../src/lib/components/QuestModal.svelte),
-[`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts)
-
-**Problem:** Partly addressed. Rows now expand on click to show the description, the status icon
-and the subquest count are visible at the same time, the due date is no longer hover-only, and the
-breadcrumbs are real buttons. What remains:
-- No edit and no delete — `PATCH` only accepts a status change
-  ([`quests/+server.ts`](../src/routes/quests/+server.ts)); there is no `DELETE`.
-- The only creation path is a modal.
-- The status dropdown is still `opacity: 0` until hover
-  ([`Quests.svelte:439`](../src/lib/components/Quests.svelte#L439)) — unusable on touch, and the
-  last hover-only control in this panel.
-- Five statuses (`active`/`inactive`/`completed`/`aborted`/`locked`) plus a `done` boolean that
-  only mirrors `status === 'completed'`. Confirm all five earn their place; the redundant column
-  should probably go.
-
-**Acceptance criteria:**
-- Inline quick-add (type a title, press Enter) alongside the full modal.
-- Edit and delete, with `PATCH` accepting arbitrary field updates and a `DELETE` handler that
-  handles sub-quests (cascade or re-parent — decide and record). Deleting confirms via
-  [`ConfirmDialog.svelte`](../src/lib/components/ConfirmDialog.svelte); deleting a quest with
-  subquests especially needs to say what else goes with it.
-- No control is hover-only; everything is reachable by tap.
-- Drag-to-reorder writing `sortOrder`.
-
----
-
 ## W5 — Route restructure and mobile
 
 The Discord-style answer to "each section gets its own page" also resolves most of the layout
@@ -285,11 +253,16 @@ and changing where `scope` comes from.
 - Hover-only affordances, including the sidebar's entire button bar
   (`div:hover > .bar-hidden`, [`Sidebar.svelte:348-357`](../src/routes/Sidebar.svelte#L348-L357)),
   which makes add-duck, add-badling, hide, dark mode, and import **completely unreachable by
-  touch**. The quest list has more of them — see T-10.
+  touch**.
+- The quest status dropdown is still `opacity: 0` until hover
+  ([`Quests.svelte`](../src/lib/components/Quests.svelte), `.task-status-select`) — the last
+  hover-only control in that panel.
 
 **Acceptance criteria:**
 - Sidebar becomes an off-canvas drawer below a breakpoint, with a visible trigger.
-- No functionality gated behind `:hover`.
+- No functionality gated behind `:hover`. In particular, the quest status dropdown becomes
+  **always visible**, not tap-to-reveal (2026-09-14, see decisions log) — it is not worth a
+  second interaction just to see it.
 - `dvh` units; the composer stays visible when the on-screen keyboard opens.
 - Tap targets ≥ 44px.
 - Verified at 390px wide.
@@ -303,7 +276,7 @@ Dependency-driven; W6 items are independent and can be interleaved.
 1. **T-09** — task schema (due date, sort order, priority, tags). Unblocks everything task-shaped;
    do it before building task UI.
 2. **T-11** — route split. Unblocks mobile and makes notes/tasks first-class.
-3. **T-10, T-12** — the UX work, now that the foundations hold.
+3. **T-12** — the mobile pass, now that the foundations hold.
 4. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
    notes stop feeling bolted on.
 5. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the

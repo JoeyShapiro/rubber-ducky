@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Scope, Quest, QuestStatus } from '$lib/types';
 	import { messages } from '$lib/stores';
-	import { createQuest, fetchQuests, setQuestStatus } from '$lib/api';
+	import { createQuest, fetchQuests, setQuestStatus, updateQuest } from '$lib/api';
 	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import { formatDate } from '$lib/format';
@@ -13,6 +13,7 @@
 	let quests: Quest[] = [];
 	let questPath: Quest[] = [];
 	let showModal = false;
+	let editingQuest: Quest | null = null;
 	let loadedScope = '';
 	let expanded = new Set<string>();
 
@@ -107,6 +108,21 @@
 
 		showModal = false;
 	}
+
+	async function handleEditAccept(event: CustomEvent<{ title: string; description: string; due: string }>) {
+		const target = editingQuest;
+		if (!target) return;
+
+		try {
+			const data = await updateQuest(target.uuid, event.detail, scope.uuid);
+			quests = quests.map(q => (q.uuid === target.uuid ? data.quest : q));
+			if (data.systemMessage) messages.update(list => [...list, data.systemMessage!]);
+		} catch (err) {
+			console.error('quests', err);
+		}
+
+		editingQuest = null;
+	}
 </script>
 
 <div class="tasks-container mt-2 d-flex flex-column position-relative">
@@ -184,6 +200,10 @@
 								{/each}
 							</ul>
 						{/if}
+
+						<div class="task-detail-actions">
+							<button type="button" class="task-edit-btn" on:click={() => (editingQuest = quest)}>Edit</button>
+						</div>
 					</div>
 				{/if}
 			</li>
@@ -224,6 +244,14 @@
 		parentTitle={questPath.length > 0 ? questPath[questPath.length - 1].title : ''}
 		on:accept={handleAccept}
 		on:decline={() => (showModal = false)}
+	/>
+{/if}
+
+{#if editingQuest}
+	<QuestModal
+		quest={editingQuest}
+		on:accept={handleEditAccept}
+		on:decline={() => (editingQuest = null)}
 	/>
 {/if}
 
@@ -347,6 +375,29 @@
 		font-size: calc(var(--quest-font-size) * 0.85);
 		font-style: italic;
 		color: rgba(108, 117, 125, 0.85);
+	}
+
+	.task-detail-actions {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 0.5rem;
+	}
+
+	/* same treatment as notes' .notes-btn, so the two panels' secondary actions read as one kind */
+	.task-edit-btn {
+		font-size: calc(var(--quest-font-size) * 0.78);
+		font-weight: 600;
+		padding: 0.2rem 0.7rem;
+		border-radius: 999px;
+		border: 1px solid rgba(94, 106, 158, 0.45);
+		background: rgba(255, 255, 255, 0.55);
+		color: rgba(58, 66, 104, 0.95);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.task-edit-btn:hover {
+		background: rgba(255, 255, 255, 0.9);
 	}
 
 	.task-child {
@@ -650,6 +701,16 @@
 	:global(:root[data-theme="dark"]) .quest-brief {
 		background: rgba(35, 35, 33, 0.7);
 		border-color: rgba(80, 80, 80, 0.45);
+	}
+
+	:global(:root[data-theme="dark"]) .task-edit-btn {
+		background: rgba(45, 45, 43, 0.8);
+		border-color: rgba(140, 150, 195, 0.45);
+		color: rgba(198, 205, 235, 0.95);
+	}
+
+	:global(:root[data-theme="dark"]) .task-edit-btn:hover {
+		background: rgba(60, 60, 58, 0.9);
 	}
 
 	:global(:root[data-theme="dark"]) .task-detail {
