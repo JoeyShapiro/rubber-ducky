@@ -229,6 +229,10 @@
 
 <style>
 	.tasks-container {
+		/* bump this to resize all text in the quest panel at once; everything below is a
+		   multiple of it */
+		--quest-font-size: 1.1rem;
+		font-family: "Futura Condensed", var(--bs-font-sans-serif, sans-serif);
 		background: var(--panel-surface);
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
@@ -239,6 +243,16 @@
 		min-height: 0;
 		/* was 2 against notes' 1, which left notes a third of the column */
 		flex: 1.5 1 0;
+	}
+
+	/* .panel-title and .meta are shared with Notes; overridden here rather than at the source so
+	   the size bump stays scoped to the quest panel */
+	.tasks-container :global(.panel-title) {
+		font-size: var(--quest-font-size);
+	}
+
+	.tasks-container :global(.meta) {
+		font-size: calc(var(--quest-font-size) * 0.72);
 	}
 
 	.tasks-header {
@@ -262,7 +276,7 @@
 	}
 
 	.task-empty-state {
-		font-size: 0.82rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		font-style: italic;
 		color: rgba(108, 117, 125, 0.85);
 		padding: 0.5rem 0.25rem;
@@ -279,7 +293,7 @@
 		margin: 0.5rem 0.5rem 0.5rem;
 		padding: 0.5rem 0.65rem;
 		flex-shrink: 0;
-		font-size: 0.84rem;
+		font-size: calc(var(--quest-font-size) * 0.9);
 		background: rgba(255, 255, 255, 0.45);
 		border: 1px solid rgba(212, 212, 250, 0.4);
 		border-radius: 6px;
@@ -323,20 +337,20 @@
 	}
 
 	.task-detail {
-		font-size: 0.84rem;
+		font-size: calc(var(--quest-font-size) * 0.9);
 		border-top: 1px solid rgba(212, 212, 250, 0.4);
 		padding-top: 0.5rem;
 		margin: 0 0.25rem;
 	}
 
 	.task-empty {
-		font-size: 0.8rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		font-style: italic;
 		color: rgba(108, 117, 125, 0.85);
 	}
 
 	.task-child {
-		font-size: 0.82rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		padding: 0.15rem 0;
 	}
 
@@ -408,7 +422,7 @@
 	}
 
 	.task-description {
-		font-size: 0.84rem;
+		font-size: calc(var(--quest-font-size) * 0.95);
 		line-height: 1.45;
 		color: rgba(58, 58, 70, 0.86);
 	}
@@ -416,7 +430,7 @@
 	.task-status-select {
 		width: 8rem;
 		flex-shrink: 0;
-		font-size: 0.78rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		line-height: 1.2;
 		padding-top: 0.25rem;
 		padding-bottom: 0.25rem;
@@ -495,7 +509,7 @@
 		background: none;
 		border: none;
 		padding: 0;
-		font-size: 0.8rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		font-weight: 600;
 		line-height: 1.5; /* without this the button box is shorter than the glyphs */
 		color: rgba(0, 0, 0, 0.55);
@@ -517,7 +531,7 @@
 	}
 
 	.breadcrumb-sep {
-		font-size: 0.8rem;
+		font-size: calc(var(--quest-font-size) * 0.85);
 		color: rgba(0, 0, 0, 0.3);
 		flex-shrink: 0;
 	}
