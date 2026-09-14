@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { Attachment, type Duck } from '$lib/types';
+	import { Attachment, Message, type Duck } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { askQuestion, sendMessage, uploadAttachment } from '$lib/api';
 	import { clearDraft, loadDraft, saveDraft } from '$lib/drafts';
@@ -20,6 +20,9 @@
 	let multiline = false;
 	let armed = false;
 	let draftTimer: ReturnType<typeof setTimeout>;
+	// a file that failed to even become an attachment (unreadable, before anything is sent) -
+	// shown in the same spot as the multiline hint, since neither can be up at once anyway
+	let attachError = '';
 
 	$: dragging = dragDepth > 0;
 
@@ -36,13 +39,22 @@
 
 	// every attachment, however it got here, goes through this
 	async function addFiles(files: File[]) {
+		const failedNames: string[] = [];
+
 		for (const file of files) {
 			try {
 				attachments = [...attachments, await Attachment.fromFile(file)];
 			} catch (err) {
 				console.error('attachment', err);
+				failedNames.push(file.name || 'file');
 			}
 		}
+
+		attachError = failedNames.length === 0
+			? ''
+			: failedNames.length === 1
+				? `Couldn't attach "${failedNames[0]}"`
+				: `Couldn't attach ${failedNames.length} files`;
 	}
 
 	function removeAttachment(target: Attachment) {
@@ -80,12 +92,36 @@
 		textarea.style.height = textarea.scrollHeight + 'px';
 	}
 
+	// an unsent attachment's data url can be arbitrarily large (T-05 has no client size limit
+	// yet); it only exists to become the upload body, so once that is never going to happen the
+	// bytes go with it. What is left is exactly what a lost attachment can safely still show:
+	// name and type.
+	function markFailed(attachment: Attachment) {
+		attachment.failed = true;
+		attachment.content = '';
+	}
+
+	// clears the composer the way a successful send does - used both there and when a failed
+	// send hands its content off to a bubble in the stream instead
+	function resetComposer() {
+		text = '';
+		attachments = [];
+		attachError = '';
+		multiline = false;
+		armed = false;
+		clearTimeout(draftTimer);
+		clearDraft(draftDuck);
+	}
+
 	async function handleSubmit() {
 		if (!canSend) {
 			return;
 		}
 
 		const body = text.trim();
+		// snapshot: attachments is free to change under us once the composer clears, but this
+		// send owns whichever files it was holding at the moment you hit send
+		const pendingAttachments = attachments;
 		sending = true;
 
 		// a bare attachment is a perfectly good message, but there is nothing to ask about
@@ -101,23 +137,36 @@
 			created = (await sendMessage(duck.uuid, body)).message;
 		} catch (err) {
 			console.error('message', err);
+
+			// nothing reached the server - render it as a failed bubble anyway, the way other
+			// chat apps do, rather than silently leaving it in the box. Every attachment goes
+			// down as failed with it, since none of them were ever sent either.
+			const failedMessage = new Message(`local-${crypto.randomUUID()}`, 'user', body, new Date());
+			failedMessage.error = 'Failed to send';
+			failedMessage.attachments = pendingAttachments.map((attachment) => {
+				markFailed(attachment);
+				return attachment;
+			});
+			messages.update((list) => [...list, failedMessage]);
+
+			resetComposer();
+			await tick();
+			resize();
 			sending = false;
 			return;
 		}
 
 		messages.update((list) => [...list, created]);
-		text = '';
-		multiline = false;
-		armed = false;
-		clearTimeout(draftTimer);
-		clearDraft(draftDuck);
+		resetComposer();
 		// svelte applies the clear on the next tick, so measuring before it means measuring the
 		// message you just sent - which is why the box never shrank back
 		await tick();
 		resize();
 
+		const failedAttachments: Attachment[] = [];
+
 		await Promise.all(
-			attachments.map(async (attachment) => {
+			pendingAttachments.map(async (attachment) => {
 				try {
 					const data = await uploadAttachment(created.uuid, attachment);
 					attachment.uuid = data.attachment.uuid;
@@ -133,11 +182,27 @@
 					);
 				} catch (err) {
 					console.error('attachment', err);
+					markFailed(attachment);
+					failedAttachments.push(attachment);
 				}
 			}),
 		);
 
-		attachments = [];
+		if (failedAttachments.length > 0) {
+			const errorText = failedAttachments.length === 1
+				? `Couldn't send "${failedAttachments[0].name}"`
+				: `${failedAttachments.length} attachments couldn't send`;
+
+			messages.update((list) =>
+				list.map((m) => {
+					if (m.uuid !== created.uuid) return m;
+					m.attachments = [...m.attachments, ...failedAttachments];
+					m.error = errorText;
+					return m;
+				}),
+			);
+		}
+
 		sending = false;
 	}
 
@@ -265,7 +330,9 @@
 		</div>
 	{/if}
 
-	{#if multiline}
+	{#if attachError}
+		<div class="composer-hint composer-hint-error">{attachError}</div>
+	{:else if multiline}
 		<div class="composer-hint" class:armed>
 			{#if armed}
 				press <kbd>enter</kbd> again to send
@@ -463,6 +530,11 @@
 
 	.composer-hint.armed {
 		color: #d39e00;
+		font-weight: 600;
+	}
+
+	.composer-hint-error {
+		color: #dc3545;
 		font-weight: 600;
 	}
 

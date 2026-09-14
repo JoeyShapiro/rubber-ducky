@@ -24,7 +24,16 @@
 			{#if message.attachments.length > 0}
 				<div class="attachments d-flex flex-column gap-2 mt-2">
 					{#each message.attachments as attachment}
-						{#if attachment.type.startsWith('image/')}
+						{#if attachment.failed}
+							<!-- never uploaded, so there is no /attachments?uuid= to link to - and the data
+							     url is dropped as soon as this fires (Composer.svelte), so only the name
+							     and type are ever shown, never the content itself -->
+							<div class="attachment-failed d-flex align-items-center gap-2 p-2" title="Failed to send">
+								<img src="/cute-doc.svg" alt="" width="28" height="28" />
+								<span class="attachment-file-name flex-fill">{attachment.name}</span>
+								<span class="attachment-file-type">{attachment.type || 'unknown'}</span>
+							</div>
+						{:else if attachment.type.startsWith('image/')}
 							<a href="/attachments?uuid={attachment.uuid}" target="_blank" rel="noreferrer" class="attachment-image-link">
 								<img src="/attachments?uuid={attachment.uuid}" alt={attachment.name} class="attachment-image" loading="lazy" />
 							</a>
@@ -42,6 +51,9 @@
 				</div>
 			{/if}
 		</div>
+		{#if message.error}
+			<small class="meta message-error">{message.error}</small>
+		{/if}
 		<small class="meta message-time">{formatDate(message.timestamp)}</small>
 	</div>
 {/if}
@@ -67,6 +79,20 @@
 		position: absolute;
 		right: 0.7rem;
 		bottom: 0.5rem;
+	}
+
+	/* same size and corner as the timestamp, mirrored to the opposite side and in red - status
+	   and errors get the other bottom corner, never the timestamp's */
+	.message-error {
+		position: absolute;
+		left: 0.7rem;
+		bottom: 0.5rem;
+		max-width: calc(100% - 5.5rem);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: #dc3545;
+		font-weight: 600;
 	}
 
 	.message-from {
@@ -110,6 +136,22 @@
 		border-color: rgba(255, 193, 7, 0.6);
 	}
 
+	/* the red border is the only place this failure is visible - there is no server record of an
+	   attachment that never made it, so this cannot survive a refresh */
+	.attachment-failed {
+		border-radius: 8px;
+		border: 1px solid rgba(220, 53, 69, 0.6);
+		background: rgba(220, 53, 69, 0.06);
+		opacity: 0.85;
+	}
+
+	.attachment-file-type {
+		flex-shrink: 0;
+		font-size: 0.7rem;
+		font-family: 'GG Mono', 'Courier New', monospace;
+		opacity: 0.6;
+	}
+
 	.attachment-file-name {
 		font-size: 0.85rem;
 		overflow: hidden;
@@ -127,6 +169,11 @@
 
 	:global(:root[data-theme="dark"]) .attachment-file {
 		border-color: rgba(88, 88, 88, 0.55);
+	}
+
+	:global(:root[data-theme="dark"]) .attachment-failed {
+		border-color: rgba(220, 53, 69, 0.5);
+		background: rgba(220, 53, 69, 0.1);
 	}
 
 	/* also in the stream, but subordinate: same geometry, no elevation */

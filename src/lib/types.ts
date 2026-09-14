@@ -14,6 +14,10 @@ export class Attachment {
     type: string;
     content: string;
     name: string;
+    // client-only: never sent to the server, never persisted. An attachment whose upload
+    // failed after the message itself sent - lost on refresh, but that is the best a
+    // front-end-only failure can do (see docs/PLAN.md, W2 T-23).
+    failed = false;
 
     constructor(uuid: string, type: string, name: string, content: string) {
         this.uuid = uuid;
@@ -59,6 +63,9 @@ export class Message {
     content: string;
     timestamp: Date;
     attachments: Attachment[] = [];
+    // client-only, same as Attachment.failed: names what went wrong with this message (the
+    // whole send, or some of its attachments). Empty means nothing to report.
+    error = '';
 
     constructor(uuid: string, from: string, content: string, timestamp: Date) {
         this.uuid = uuid;
