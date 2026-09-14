@@ -186,41 +186,40 @@ or range-filtered. There is no ordering, no priority, and no tags. The only sort
 
 ## W5 — Mobile
 
-### [ ] T-12 — Make it work on a phone
+### [~] T-12 — Make it work on a phone
 
 **Priority:** high · **Blocked by:** none
 
-**Files:** [`src/routes/+layout.svelte`](../src/routes/+layout.svelte),
-[`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte), [`src/app.css`](../src/app.css),
-[`src/routes/+page.svelte`](../src/routes/+page.svelte)
+**Files:** [`src/lib/stores.ts`](../src/lib/stores.ts),
+[`src/lib/components/MobileTopBar.svelte`](../src/lib/components/MobileTopBar.svelte),
+[`src/app.css`](../src/app.css), [`src/routes/+layout.svelte`](../src/routes/+layout.svelte),
+[`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte),
+[`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte),
+[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte),
+[`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte)
 
-**Problem:** There is essentially no responsive handling.
-- Hard `w-50` / `w-50` split ([`+page.svelte:16`](../src/routes/+page.svelte#L16),
-  [`Chat.svelte:50`](../src/lib/components/Chat.svelte#L50)) — two columns side by side does not
-  fit a phone screen, so only one of chat / notes / tasks can be visible at a time below the
-  breakpoint. No route split is needed for this (2026-09-14, see decisions log) — which pane is
-  showing is client state, the same way the selected duck or badling already is.
-- Fixed `280px` sidebar with no drawer ([`Sidebar.svelte:187`](../src/routes/Sidebar.svelte#L187)).
-- `max-height: 100vh` in [`+page.svelte`](../src/routes/+page.svelte) — wrong on mobile Safari,
-  needs `dvh`.
-- Hover-only affordances, including the sidebar's entire button bar
-  (`div:hover > .bar-hidden`, [`Sidebar.svelte:348-357`](../src/routes/Sidebar.svelte#L348-L357)),
-  which makes add-duck, add-badling, hide, dark mode, and import **completely unreachable by
-  touch**.
-- The quest status dropdown is still `opacity: 0` until hover
-  ([`Quests.svelte`](../src/lib/components/Quests.svelte), `.task-status-select`) — the last
-  hover-only control in that panel.
+**First pass landed 2026-09-14** (see decisions log) — a Discord-style drawer system, four
+full-screen "screens" below the 768px breakpoint instead of the desktop two/three-column layout:
+sidebar → chat → {notes, quests}. `mobileView` (`$lib/stores.ts`) tracks which one is showing;
+each screen's own root carries `data-screen="sidebar|chat|notes|quests"`, `.app` carries
+`data-mobile-view`, and `app.css`'s media query does the hide/show — no route, no new component
+state duplicated per screen. `MobileTopBar.svelte` is the back-arrow + title bar shown on chat
+(back → sidebar, plus notes/quests icons) and notes/quests (back → chat); the sidebar itself has
+no top bar. Desktop renders exactly as before — verified untouched by the same pass.
 
-**Acceptance criteria:**
-- Sidebar becomes an off-canvas drawer below a breakpoint, with a visible trigger.
-- Below the breakpoint, a bottom tab bar switches which one of chat / notes / tasks is showing —
-  a plain `activePanel` store, not a route change.
-- No functionality gated behind `:hover`. In particular, the quest status dropdown becomes
-  **always visible**, not tap-to-reveal (2026-09-14, see decisions log) — it is not worth a
-  second interaction just to see it.
-- `dvh` units; the composer stays visible when the on-screen keyboard opens.
-- Tap targets ≥ 44px.
-- Verified at 390px wide.
+Also done as part of this pass: hover-only controls (sidebar's bottom icon row, the per-badling
+add-duck button, the quest status dropdown) are always visible below the breakpoint instead of
+tap-to-reveal; `dvh` in place of `vh` through the app shell.
+
+**What's still open:**
+- Composer-stays-visible-when-the-keyboard-opens is unverified — `dvh` alone may not be enough on
+  iOS Safari; wants testing on a real device, not just a resized desktop browser.
+- Tap-target audit beyond the new top bar (existing rows, buttons elsewhere) — 44px was the target
+  for what this pass touched, not a sweep of the whole app.
+- The transition between screens is an instant swap, no animation. Fine for now; revisit once the
+  navigation itself has been used for a while and any rough edges are known.
+- Sidebar row density, spacing, and general phone-specific polish — deliberately deferred per
+  "get something out there, hash out design more after it works-ish."
 
 ---
 

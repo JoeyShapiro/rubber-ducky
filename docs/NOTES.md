@@ -38,7 +38,7 @@ global, scopeless list was considered and decided against (2026-09-14).
 
 ```
 src/lib/
-  stores.ts              scope (a Duck or a Badling), hidden, darkMode, messages
+  stores.ts              scope (a Duck or a Badling), mobileView, hidden, darkMode, messages
   api.ts                 every fetch to our own endpoints, plus one shared 401 handler
   markdown.ts            renderMarkdown + enhanceMarkdown - the one markdown path
   attachments.ts         reading the three attachment encodings; shared by both endpoints
@@ -53,6 +53,7 @@ src/lib/
     Quests.svelte        breadcrumbs + quest list
     QuestModal.svelte    create/edit quest dialog
     ConfirmDialog.svelte reusable destructive-action confirm
+    MobileTopBar.svelte  mobile-only back-arrow bar - see "Mobile: four drawers" below
 src/routes/
   +page.svelte           layout only - two columns, passes $scope down
 ```
@@ -67,6 +68,30 @@ Rules of thumb for anyone adding to this:
   and error shape stay in one place.
 - **Cross-panel state goes in `stores.ts`.** Today that is only `messages`, which both the
   composer and the quest list append to.
+
+### Mobile: four drawers
+
+Below 768px the desktop's two/three columns become four full-screen "drawers" — sidebar, chat,
+notes, quests — Discord-style, but client state rather than a route (2026-09-14; a route split
+was considered and dropped, see decisions log). `mobileView` (`$lib/stores.ts`) holds which one is
+showing. Navigation is a small stack, not a flat set of tabs: sidebar → chat is the only way in,
+chat → {notes, quests} branches off it, and back always retraces one step (notes/quests → chat →
+sidebar), never straight to sidebar from notes/quests.
+
+The mechanism is two attributes, not per-component conditionals:
+- Each screen's own root element carries `data-screen="sidebar" | "chat" | "notes" | "quests"`
+  (`Sidebar.svelte`, `Chat.svelte`, `Notes.svelte`, `Quests.svelte`).
+- `.app` (`+layout.svelte`) carries `data-mobile-view` set to the current `$mobileView`.
+- `app.css`'s media query hides every `[data-screen]` by default and re-shows only the one
+  matching `[data-mobile-view]`, full width and `100dvh`.
+
+`MobileTopBar.svelte` is the back-arrow bar shown on chat (back → sidebar, plus notes/quests
+icons on the right) and on notes/quests (back → chat); the sidebar has no top bar of its own —
+its existing bottom icon row is what you use instead, made always-visible rather than
+hover-reveal for the same reason (see below). A component always renders its `MobileTopBar`; it
+just has no width on desktop, since `.mobile-topbar` is `display: none` above the breakpoint.
+
+This first pass is deliberately not polished — see PLAN.md T-12 for what's still open.
 
 ---
 
@@ -355,7 +380,11 @@ Choices already made, so later work does not re-open them.
 | 2026-09-14 | quests | **No quest delete, decided against** (dropped from T-10). `aborted` is the delete equivalent — a quest that didn't happen is marked aborted, not removed. `PATCH /quests` gained a second mode instead: sending `title` (no `status`) edits the quest's own content and logs `was modified`, the same phrase notes use for the same thing. |
 | 2026-09-14 | quests | Editing opens the same `QuestModal` used to create one, pre-filled via an optional `quest` prop, header and button text swapping to "Edit …" / "Save". One form for both, rather than a second edit-only component. |
 | 2026-09-14 | frontend | **No route split, decided against** (T-11 dropped). Ids in the URL buy deep-linking, refresh-safety, and real browser back/forward — genuine, but nobody asked for them on a single-user local app, and dropping them removes a real cost: two ids (duck, badling) sharing one url space would need a lookup per page load just to know which table an id belongs to. Stays one route, scope kept in the `writable` store, restored via the `lastScope` cookie. Reversible later if a real need shows up — nothing here forecloses it. |
-| 2026-09-14 | frontend | Mobile does **not** need the route split either. What T-11 would have solved for mobile (only one of chat/notes/tasks visible at a time on a narrow screen) is a client-side `activePanel` toggle and a bottom tab bar, same mechanism as the sidebar's badling/duck selection — no URL segment required. |
+| 2026-09-14 | frontend | Mobile does **not** need the route split either. What T-11 would have solved for mobile (only one of chat/notes/tasks visible at a time on a narrow screen) is client-side state, same mechanism as the sidebar's badling/duck selection — no URL segment required. (Landed as a back-arrow drawer stack, not a bottom tab bar — see the next entries.) |
+| 2026-09-14 | frontend | Mobile navigation is a **stack, not four flat tabs**: sidebar → chat → {notes, quests}, back always retraces one step. A tab bar would suggest notes and quests are peers of chat rather than views *of* it, and would need its own "which of four am I in" state; the stack instead reuses the same back-button idea already familiar from every other app, and each screen only needs to know the one screen behind it (`MobileTopBar`'s `backTo` prop). |
+| 2026-09-14 | frontend | The four mobile screens are toggled by two DOM attributes, not per-component `{#if}` conditionals: each screen's root carries `data-screen="sidebar｜chat｜notes｜quests"`, `.app` carries `data-mobile-view` (from the `mobileView` store), and one `app.css` media query does the hiding. Keeps the show/hide logic in one place instead of four components each re-deriving it, and costs nothing on desktop, where the whole media query is inert. |
+| 2026-09-14 | frontend | `MobileTopBar.svelte` always renders (one instance per chat/notes/quests component) rather than being conditionally mounted - it is simply `display: none` above the breakpoint. Simpler than mounting/unmounting on resize, and there is nothing stateful in it to reset. |
+| 2026-09-14 | mobile | **Bug caught on a real device, not a resized desktop browser:** `mobileView` defaults to `'sidebar'`, and `app.css` hides `<main>` whenever it does, on the assumption `<Sidebar>` is showing instead. True everywhere except `/login`, which renders no `<Sidebar>` and has its whole form inside `<main>` - the login screen went **completely blank**. Fix: `+layout.svelte` only stamps `data-mobile-view` onto `.app` off the login route (`isLogin ? undefined : $mobileView`), so the whole drawer mechanism is inert there rather than special-cased per rule. **Testing note:** a Chromium window resized to 390px never caught this - it needs real WebKit plus an actual device profile (`playwright`'s `devices['iPhone 14']`: correct `deviceScaleFactor`, mobile UA, touch) to reproduce browser-specific and viewport-specific bugs. Default to that, not a resized desktop window, for any further mobile verification. |
 
 ---
 

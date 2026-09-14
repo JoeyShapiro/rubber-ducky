@@ -11,7 +11,7 @@
 </svelte:head>
 
 <!-- the background lives here, not on the chat pane, so both columns sit on one surface -->
-<section class="app-surface d-flex flex-row w-100" style="max-height: 100vh;">
+<section class="app-surface d-flex flex-row w-100" style="max-height: 100dvh;">
 	<Chat scope={$scope} />
 
 	<div class="d-flex flex-column w-50 p-2 right-panel">

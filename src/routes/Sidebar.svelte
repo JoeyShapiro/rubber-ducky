@@ -70,6 +70,7 @@
     function loadDuck(duck: Duck) {
         store.scope.set(duck);
         active_v = duck;
+        store.mobileView.set('chat'); // no-op on desktop; on mobile this is what "go to it" means
         document.cookie = `lastScope=duck:${duck.uuid}; path=/; max-age=31536000`;
     }
 
@@ -79,6 +80,7 @@
     function loadBadling(badling: Badling) {
         store.scope.set(badling);
         active_v = badling;
+        store.mobileView.set('chat');
         document.cookie = `lastScope=badling:${badling.uuid}; path=/; max-age=31536000`;
     }
 
@@ -200,7 +202,7 @@
     });
 </script>
 
-<div class="sidebar d-flex flex-column flex-shrink-0 p-3 position-relative">
+<div class="sidebar d-flex flex-column flex-shrink-0 p-3 position-relative" data-screen="sidebar">
 	<a
 		href="/"
 		class="d-flex align-items-center pb-3 mb-3 link-body-emphasis text-decoration-none border-bottom"
@@ -309,7 +311,7 @@
 /* duck names are short; 280px was mostly empty */
 .sidebar {
   width: 200px;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 

@@ -523,3 +523,56 @@ body {
 .app-surface {
 	background: linear-gradient(180deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Mobile: four full-screen drawers (sidebar, chat, notes, quests) instead of the desktop
+   two-column layout - Discord-style, but client state rather than a route (2026-09-14, see
+   NOTES.md decisions log: no route split). +layout.svelte stamps the current one onto
+   [data-mobile-view] on .app; every drawer's own root carries data-screen="sidebar|chat|notes|
+   quests" (Sidebar.svelte, Chat.svelte, Notes.svelte, Quests.svelte). Above the breakpoint none
+   of this applies - desktop keeps showing chat + notes + quests together exactly as before.
+   --------------------------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+	[data-screen] {
+		display: none !important;
+	}
+
+	.app[data-mobile-view="sidebar"] [data-screen="sidebar"],
+	.app[data-mobile-view="chat"] [data-screen="chat"],
+	.app[data-mobile-view="notes"] [data-screen="notes"],
+	.app[data-mobile-view="quests"] [data-screen="quests"] {
+		display: flex !important;
+		width: 100% !important;
+		height: 100dvh !important;
+		max-height: 100dvh !important;
+	}
+
+	/* the sidebar and the chat/notes/quests area are siblings in .app - only one side is ever
+	   showing, so the other has to go rather than sit there empty */
+	.app[data-mobile-view="sidebar"] main {
+		display: none !important;
+	}
+
+	.app-surface {
+		max-height: 100dvh !important;
+	}
+
+	/* lets notes/quests size themselves directly against .app-surface instead of being boxed
+	   into the w-50 column that only makes sense in the desktop side-by-side layout. !important
+	   because bootstrap's .d-flex is itself !important and would otherwise win. */
+	.right-panel {
+		display: contents !important;
+	}
+
+	.sidebar {
+		width: 100% !important;
+	}
+
+	/* the sidebar's hover-reveal controls (bottom icon row, per-badling add-duck button) - no
+	   functionality stays gated behind :hover on touch (2026-09-14, see decisions log) */
+	.bar-hidden {
+		opacity: 1 !important;
+		visibility: visible !important;
+	}
+}

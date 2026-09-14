@@ -7,6 +7,7 @@
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import AddButton from './AddButton.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
+	import MobileTopBar from './MobileTopBar.svelte';
 
 	export let scope: Scope;
 
@@ -185,7 +186,8 @@
 	});
 </script>
 
-<div class="notes-container d-flex flex-column">
+<div class="notes-container d-flex flex-column" data-screen="notes">
+	<MobileTopBar backTo="chat" title="Notes" />
 	{#if open && editing}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="note-editor d-flex flex-column flex-fill p-3" on:keydown={handleKeydown}>

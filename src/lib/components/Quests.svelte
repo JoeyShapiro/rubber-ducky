@@ -7,6 +7,7 @@
 	import { formatDate } from '$lib/format';
 	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
+	import MobileTopBar from './MobileTopBar.svelte';
 
 	export let scope: Scope;
 
@@ -125,7 +126,8 @@
 	}
 </script>
 
-<div class="tasks-container mt-2 d-flex flex-column position-relative">
+<div class="tasks-container mt-2 d-flex flex-column position-relative" data-screen="quests">
+	<MobileTopBar backTo="chat" title="Quests" />
 	<!-- drilled into a quest: its own description sits above its subquests -->
 	{#if currentQuest && currentQuest.description.trim() !== ''}
 		{@const html = renderMarkdown(currentQuest.description)}
@@ -521,6 +523,17 @@
 		visibility: visible;
 		transform: translateX(0);
 		pointer-events: auto;
+	}
+
+	/* no hover on touch - always visible below the mobile breakpoint rather than tap-to-reveal
+	   (2026-09-14, see NOTES.md decisions log) */
+	@media (max-width: 768px) {
+		.task-status-select {
+			opacity: 1;
+			visibility: visible;
+			transform: none;
+			pointer-events: auto;
+		}
 	}
 
 	.task-status-select:focus {
