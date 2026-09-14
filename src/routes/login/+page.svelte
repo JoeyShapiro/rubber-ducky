@@ -41,8 +41,8 @@
                 <div class="card-body p-md-5 mx-md-4">
   
                   <div class="text-center">
-                    <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/lotus.webp"
-                      style="width: 185px;" alt="logo">
+                    <!-- was a lotus from an mdb cdn, which made the login screen need the internet -->
+                    <img class="login-logo" src="/duck.svg" style="width: 110px;" alt="">
                     <h4 class="mt-1 mb-5 pb-1">Rubber Ducky</h4>
                   </div>
   
@@ -81,6 +81,12 @@
   </section>
 
 <style>
+    /* app.css inverts svg files in dark mode, but this card stays white in both themes -
+       inverting would leave a white duck on a white background */
+    .login-logo {
+        filter: none !important;
+    }
+
     .gradient-custom-2 {
     /* fallback for old browsers */
     background: #fccb90;

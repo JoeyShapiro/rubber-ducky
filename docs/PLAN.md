@@ -396,22 +396,6 @@ relationship to a duck — is untouched.
 
 ---
 
-### [ ] T-18 — Move Bootstrap out of a component and off the CDN
-
-**Priority:** medium · **Blocked by:** none
-
-**Files:** [`src/routes/Header.svelte`](../src/routes/Header.svelte#L8-L9),
-[`src/app.html`](../src/app.html)
-
-**Problem:** Bootstrap's CSS and JS bundle are loaded via `<link>`/`<script>` tags inside a
-component's `<header>` element. That is render-blocking, breaks offline/LAN use, and is an odd
-place for it. The `Header` component renders nothing else — its only content is commented out.
-
-**Acceptance criteria:** Bootstrap installed as a dependency and imported, or moved to
-`app.html`. Decide whether `Header.svelte` should exist at all.
-
----
-
 ### [ ] T-19 — Sidebar collapse IDs derive from user-supplied names
 
 **Priority:** medium · **Blocked by:** none
@@ -421,8 +405,13 @@ place for it. The `Header` component renders nothing else — its only content i
 **Problem:** `data-bs-target="#{badling.name}-collapse"` — a group named `"My Stuff"` yields an
 invalid selector, and two groups with the same name collide.
 
-**Acceptance criteria:** IDs derived from `badling.uuid`. Verified with a group whose name has
-spaces, punctuation, and a leading digit.
+**Worth knowing:** this collapse is the *only* thing in the app using Bootstrap's JavaScript.
+Replacing it with a Svelte-native toggle would fix this bug and drop the JS bundle entirely
+(T-18 left the CSS, which plenty still depends on).
+
+**Acceptance criteria:** IDs derived from `badling.uuid` — or no IDs at all, if the collapse
+becomes local state. Verified with a group whose name has spaces, punctuation, and a leading
+digit.
 
 ---
 

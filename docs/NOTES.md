@@ -348,6 +348,24 @@ Choices already made, so later work does not re-open them.
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
 
+### 2026-09-13 — T-18: bootstrap is a dependency
+
+Bootstrap's CSS and JS were two CDN `<link>`/`<script>` tags inside `Header.svelte`'s `<header>`
+element — render-blocking, and broken without internet. Both are now imports in
+[`+layout.svelte`](../src/routes/+layout.svelte): the CSS before `app.css` so overrides still win,
+and the JS dynamically in `onMount`, since the bundle touches `document` at module scope. Its
+data-api is a delegated listener, so arriving after first paint is fine.
+
+`Header.svelte` is deleted. It rendered nothing — its only markup was those two tags plus a
+commented-out div, and its three imports were all unused.
+
+The login page also pulled a decorative logo from an MDB CDN, so **the login screen needed the
+internet**. It uses the local `duck.svg` now, with the dark-mode SVG invert disabled for it (that
+card is white in both themes, so inverting would leave a white duck on white).
+
+Verified: a full page load now makes **zero off-site requests**, Bootstrap's CSS still applies, and
+the sidebar collapse — the one thing its JavaScript is for — still works.
+
 ### 2026-09-13 — T-14: sessions last four hours, and drafts outlive them
 
 `SESSION_HOURS` (default 4) replaces the one-minute lifetime, and the cookie's expiry is set from
