@@ -349,6 +349,30 @@ Choices already made, so later work does not re-open them.
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
 
+### 2026-09-13 — T-15: an AI reply is just a message
+
+`GET /messages` used to fetch a page, then select **every** row from `answers` and append the ones
+newer than that page's oldest message. The same answers came back on every page — with three
+answers across twenty pages, the newest was returned up to twenty times. The root cause was that
+`answers` had no relationship to a duck or a message, so they could only be correlated by
+timestamp window.
+
+The reply is now written straight into `messages` with `from = 'ai'`, and the `answers` row keeps
+the prompt beside it via a `message_id` foreign key. The whole merge block is deleted: a page is
+exactly the page, and AI replies paginate like everything else.
+
+Two follow-on simplifications: `msgs.sort()` became `msgs.reverse()`, since the query already
+orders by timestamp; and `Chat.svelte`'s offset stopped filtering out `from === 'ai'` rows — that
+filter existed *because* of the merge, and leaving it would have silently skipped messages.
+
+While in there: `answers.promt` is now `prompt`, and the unused `messages` text column is gone.
+The import maps the old misspelled field, since exports still carry it. Two migrations rather than
+one, because drizzle-kit needs an interactive answer to distinguish a rename from a drop-and-add,
+and the table was empty so it made no difference.
+
+Verified across 194 messages and 20 pages: 194 distinct rows, **zero duplicates**, each AI reply
+returned exactly once, every page ascending.
+
 ### 2026-09-13 — T-19: the sidebar collapse is ours
 
 The collapse targeted `#{badling.name}-collapse`, so a badling called *My Stuff* produced an

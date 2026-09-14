@@ -363,39 +363,6 @@ prop, so this is mostly moving files and changing where `duck` comes from.
 
 ---
 
-## W6 — Correctness, security, and jank
-
-Small independent fixes. Each is self-contained; they can be done in any order and in parallel
-with the workstreams above.
-
-### [ ] T-15 — Paginated message loads duplicate every AI answer
-
-**Priority:** high · **Blocked by:** none
-
-**Files:** [`src/routes/messages/+server.ts`](../src/routes/messages/+server.ts)
-
-**Problem:** After fetching a page of 10 messages, the handler selects **all** rows from
-`answers` and appends every one newer than the oldest message on that page. Paginating
-therefore re-appends the same answers on every page.
-
-**Root cause:** `answers` has no FK to a duck or a message
-([`schema.ts:54-60`](../src/lib/db/schema.ts#L54-L60)), so they are correlated by timestamp
-window instead of by relationship.
-
-**Partly masked, not fixed:** `Chat.svelte` drops messages whose uuid it has already seen, so
-duplicates do not render. The endpoint still returns them, and the root cause — `answers` having no
-relationship to a duck — is untouched.
-
-**Acceptance criteria:**
-- `answers` gains a proper relationship (a `duckId`, or a FK to the triggering message).
-- Answers are fetched with the same window/offset as the messages page, not globally.
-- Scrolling back through history shows each answer exactly once.
-- (While here: the schema's `promt` typo at [`schema.ts:56`](../src/lib/db/schema.ts#L56) is
-  also baked into [`import/+server.ts:139`](../src/routes/import/+server.ts#L139) — rename both
-  together or leave both alone.)
-
----
-
 ## Suggested order
 
 Dependency-driven; W6 items are independent and can be interleaved.
@@ -408,6 +375,4 @@ Dependency-driven; W6 items are independent and can be interleaved.
    notes stop feeling bolted on, but they need T-08 and T-28 underneath.
 5. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
    thing that turns the log into something you can look things up in.
-6. **T-15**, then the rest of W6, opportunistically.
-
 T-05 (attachment storage) is deferrable without blocking anything.

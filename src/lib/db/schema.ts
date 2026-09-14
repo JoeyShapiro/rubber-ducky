@@ -51,12 +51,15 @@ export const attachments = pgTable('attachments', {
     messageId: uuid('message_id').notNull().references(() => messages.id),
 });
 
+// The record of an AI exchange: the prompt, the reply, and the message the reply was posted as.
+// The reply itself lives in `messages` with from = 'ai', so the log is one table and pagination
+// needs no merging. This row exists to keep the prompt alongside it for later search.
 export const answers = pgTable('answers', {
     id: uuid('id').primaryKey().defaultRandom(),
-    promt: text('promt'),
+    prompt: text('prompt'),
     content: text('content'),
     timestamp: timestamp('timestamp', { withTimezone: true }),
-    messages: text('messages'),
+    messageId: uuid('message_id').references(() => messages.id),
 });
 
 // many notes per duck. the title is a lookup key, and there is no completion state - a note is

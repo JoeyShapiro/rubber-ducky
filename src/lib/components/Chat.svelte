@@ -53,12 +53,7 @@
 		}
 	}
 
-	/**
-	 * Fetch the page before the one we have and splice it on the front.
-	 *
-	 * The offset counts only rows that came from the messages table: GET /messages merges AI
-	 * answers in on top of its page, so `$messages.length` would over-skip (see T-15).
-	 */
+	/** Fetch the page before the one we have and splice it on the front. */
 	async function loadOlder() {
 		if (loading || exhausted || !loadedDuck || !chatbox) return;
 
@@ -66,12 +61,15 @@
 		const duckId = loadedDuck;
 
 		try {
-			const offset = $messages.filter((m) => m.from !== 'ai').length;
+			// every loaded row is a messages-table row now that AI replies are posted as messages,
+			// so the count is the offset - no filtering out a merged-in second source
+			const offset = $messages.length;
 			const data = await fetchMessages(duckId, offset);
 			if (loadedDuck !== duckId) return; // switched ducks mid-flight
 
 			if (data.messages.length < PAGE) exhausted = true;
 
+			// belt and braces; pages no longer overlap, but a duplicate would be worse than a check
 			const seen = new Set($messages.map((m) => m.uuid));
 			const older = data.messages.filter((m) => !seen.has(m.uuid));
 			if (older.length === 0) {

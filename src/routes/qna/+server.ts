@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { Message } from '$lib/types.js';
 import { db } from '$lib/db';
-import { answers } from '$lib/db/schema';
+import { answers, messages as messagesTable } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
@@ -33,14 +33,25 @@ export async function POST({ request }) {
 		return json({ error: `Ollama unreachable: ${e}` }, { status: 503 });
 	}
 
-	const [row] = await db.insert(answers).values({
-		promt: data.prompt,
+	// The reply is posted as a real message in the duck's log. It used to live only in `answers`
+	// and get stitched into every page of GET /messages by timestamp, which re-appended the same
+	// answers on each page (T-15). As a message it pages like everything else.
+	const [msg] = await db.insert(messagesTable).values({
+		from: 'ai',
 		content: generated,
 		timestamp,
-		messages: null,
+		duckId: data.duck,
 	}).returning();
 
-	return json({ message: new Message(row.id, 'ai', generated, timestamp) });
+	// the answers row keeps the prompt beside the reply, for search later
+	await db.insert(answers).values({
+		prompt: data.prompt,
+		content: generated,
+		timestamp,
+		messageId: msg.id,
+	});
+
+	return json({ message: new Message(msg.id, 'ai', generated, timestamp) });
 }
 
 export async function GET({ url }) {

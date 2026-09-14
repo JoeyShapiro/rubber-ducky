@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { Attachment, Message } from '$lib/types.js';
 import { db } from '$lib/db';
-import { messages as messagesTable, answers, attachments as attachmentsTable } from '$lib/db/schema';
+import { messages as messagesTable, attachments as attachmentsTable } from '$lib/db/schema';
 import { eq, desc, inArray, sql } from 'drizzle-orm';
 import { embed } from '$lib/embedding';
 import { mimeOf } from '$lib/attachments';
@@ -57,19 +57,9 @@ export async function GET({ url }) {
 
 	await attachTo(msgs, rows.map(r => r.id));
 
-	// Merge AI answers that fall within the same time window
-	if (msgs.length > 0) {
-		const oldest = msgs.reduce((a, b) => (a.timestamp < b.timestamp ? a : b)).timestamp;
-		const answerRows = await db.select().from(answers).orderBy(desc(answers.timestamp));
-		for (const a of answerRows) {
-			const ts = a.timestamp ?? new Date();
-			if (ts >= oldest) {
-				msgs.push(new Message(a.id, 'ai', a.content ?? '', ts));
-			}
-		}
-	}
-
-	msgs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+	// already ordered by the query; AI replies are ordinary rows here now, not a merged-in second
+	// source, so a page is exactly the page
+	msgs.reverse();
 	return json({ messages: msgs });
 }
 

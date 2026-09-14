@@ -142,12 +142,12 @@ async function doImport(request: Request) {
 	if (cols.Answer?.length) {
 		let n = 0;
 		for (const ch of chunk(
+			// the export carries the old misspelled field, and its `messages` text column is gone
 			cols.Answer.map((a: any) => ({
 				id: a.uuid,
-				promt: a.promt ?? null,
+				prompt: a.prompt ?? a.promt ?? null,
 				content: a.content ?? null,
 				timestamp: a.timestamp ? new Date(a.timestamp) : null,
-				messages: a.messages ?? null,
 			})),
 			500,
 		)) {
