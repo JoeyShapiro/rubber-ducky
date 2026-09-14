@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+  import { slide } from 'svelte/transition';
   import * as store from '$lib/stores';
   import { Duck, Badling } from '$lib/types';
 
@@ -12,6 +13,18 @@
 
   type ImportState = null | 'loading' | { imported: Record<string, number> } | { error: string };
   let importState: ImportState = null;
+
+  // Which badlings are folded shut. Tracked by uuid in local state rather than by bootstrap's
+  // collapse, which targeted `#{badling.name}-collapse` - a name with a space, punctuation or a
+  // leading digit produced an invalid selector, and two badlings sharing a name collided.
+  // Keyed on what is *closed* so the default is open with nothing to populate.
+  let collapsed = new Set<string>();
+
+  function toggleBadling(uuid: string) {
+    if (collapsed.has(uuid)) collapsed.delete(uuid);
+    else collapsed.add(uuid);
+    collapsed = collapsed; // a mutated Set needs the reassignment to be reactive
+  }
   let importFileInput: HTMLInputElement;
 
   async function handleImport(event: Event) {
@@ -179,7 +192,9 @@
 		href="/"
 		class="d-flex align-items-center pb-3 mb-3 link-body-emphasis text-decoration-none border-bottom"
 	>
-		<svg class="bi pe-none me-2" width="30" height="24"><use xlink:href="#bootstrap"></use></svg>
+		<!-- was <use xlink:href="#bootstrap">, a sprite from a bootstrap example that this app never
+		     defined - it rendered an empty 30x24 box -->
+		<img src="/duck.svg" alt="" class="me-2" width="22" height="22" />
 		<span class="fs-5 fw-semibold">Ducks</span>
 	</a>
 	<ul class="duck-list list-unstyled ps-0 flex-fill">
@@ -187,15 +202,15 @@
       <div class="position-relative">
       <li class="mb-1">
 			<button
-				class="btn btn-toggle d-inline-flex align-items-center rounded border-0 collapsed"
-				data-bs-toggle="collapse"
-				data-bs-target="#{badling.name}-collapse"
-                aria-expanded="true"
+				class="btn btn-toggle d-inline-flex align-items-center rounded border-0"
+				type="button"
+				aria-expanded={!collapsed.has(badling.uuid)}
+				on:click={() => toggleBadling(badling.uuid)}
 			>
 				{badling.name}
 			</button>
-			<div class="collapse show" id="{badling.name}-collapse">
-				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+			{#if !collapsed.has(badling.uuid)}
+				<ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small" transition:slide={{ duration: 180 }}>
           {#each badling.ducks as duck}
 					<li>
 						<!-- svelte-ignore a11y-invalid-attribute -->
@@ -215,7 +230,7 @@
 					</li>
           {/if}
 				</ul>
-			</div>
+			{/if}
 		</li>
     <button class="btn btn-hidden bar-hidden rounded border-0 position-absolute top-0 end-0" on:click={() => newDuckTo = badling.uuid}>
       <img src="/add.svg" alt="add" class="me-2" width="16" height="16" />

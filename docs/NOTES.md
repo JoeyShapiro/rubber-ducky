@@ -316,6 +316,7 @@ Choices already made, so later work does not re-open them.
 | 2026-09-09 | notes | Notes render as a read-only markdown document by default; Edit switches to the raw editor. Read-first suits read-many/write-few, keeps the rendered view clean, and makes each edit a discrete event. Chosen over live preview. |
 | 2026-09-13 | data | Data fix-ups go in a drizzle migration, not a hand-run script. `entrypoint.sh` migrates on every container start, so production is corrected by deploying; a script only helps if someone remembers it. |
 | 2026-09-13 | config | The database host stays hardcoded. Production is a single container talking to its own postgres on localhost, and the dev setup matches it — parameterising it would add configuration nobody sets. |
+| 2026-09-13 | ui | Interactive widgets are Svelte state, not Bootstrap JS. The collapse was the last holdout and its data-attribute targeting was the bug; Bootstrap is a stylesheet here now, nothing more. |
 | 2026-09-13 | composer | Shift+Enter switches the message into **multiline mode** rather than just inserting a newline: Enter then makes newlines and only a second Enter **at the end** sends. Double-Enter mid-message stays a blank line — stealing that would be worse than the problem this solves. Mode resets after sending. |
 | 2026-09-13 | auth | Sessions expire hard — no sliding renewal. Re-authenticating silently defeats the point of an expiry, so the app returns you to the login screen; the cost of that (a lost draft) is paid off by `$lib/drafts.ts` instead. |
 | 2026-09-13 | theming | Any translucent **white** surface has to be themed. `rgba(248,248,255,0.4)` reads as a soft wash over a light page and as a **mid-grey** over a dark one — that is what made the notes panel unreadable (note date measured 1.99:1). Panels use `--panel-surface`, which is near-white in light and `rgba(255,255,255,0.055)` in dark. |
@@ -347,6 +348,23 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-13 — T-19: the sidebar collapse is ours
+
+The collapse targeted `#{badling.name}-collapse`, so a badling called *My Stuff* produced an
+invalid selector, one called *2026 goals!* likewise, and two badlings sharing a name collided onto
+the same element. It is now local state — a `Set` of collapsed uuids in
+[`Sidebar.svelte`](../src/routes/Sidebar.svelte), keyed on what is *closed* so the default is open
+with nothing to populate — with Svelte's `slide` transition doing the animation.
+
+**That was the last user of Bootstrap's JavaScript, so the JS import is gone entirely.** The CSS
+stays; plenty still depends on it. Verified against exactly the names the task named: *My Stuff*
+and *2026 goals!* both collapse and reopen, two badlings named *My Stuff* collapse independently,
+no page errors, and still zero off-site requests.
+
+Also removed a `<use xlink:href="#bootstrap">` in the sidebar header — a sprite from a Bootstrap
+example that this app never defined, rendering an empty 30×24 box next to "Ducks". It shows the
+duck now.
 
 ### 2026-09-13 — T-18: bootstrap is a dependency
 

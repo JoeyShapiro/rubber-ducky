@@ -396,25 +396,6 @@ relationship to a duck — is untouched.
 
 ---
 
-### [ ] T-19 — Sidebar collapse IDs derive from user-supplied names
-
-**Priority:** medium · **Blocked by:** none
-
-**Files:** [`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte#L202-L207)
-
-**Problem:** `data-bs-target="#{badling.name}-collapse"` — a group named `"My Stuff"` yields an
-invalid selector, and two groups with the same name collide.
-
-**Worth knowing:** this collapse is the *only* thing in the app using Bootstrap's JavaScript.
-Replacing it with a Svelte-native toggle would fix this bug and drop the JS bundle entirely
-(T-18 left the CSS, which plenty still depends on).
-
-**Acceptance criteria:** IDs derived from `badling.uuid` — or no IDs at all, if the collapse
-becomes local state. Verified with a group whose name has spaces, punctuation, and a leading
-digit.
-
----
-
 ## Suggested order
 
 Dependency-driven; W6 items are independent and can be interleaved.
