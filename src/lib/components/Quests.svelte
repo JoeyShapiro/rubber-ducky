@@ -179,7 +179,7 @@
 								{#each children as child}
 									<li class="task-child d-flex align-items-center gap-2">
 										<span class="task-dot {toStatusClass(child.status)}" title={toStatusLabel(child.status)}></span>
-										<span class="{child.done ? 'task-done' : ''}">{child.title}</span>
+										<span class="{child.status === 'aborted' ? 'task-done' : ''}">{child.title}</span>
 									</li>
 								{/each}
 							</ul>
@@ -354,12 +354,19 @@
 		padding: 0.15rem 0;
 	}
 
+	/* hollow by default - only a completed subquest earns the filled dot */
 	.task-dot {
 		width: 0.55rem;
 		height: 0.55rem;
 		border-radius: 999px;
 		flex-shrink: 0;
+		background: transparent;
+		border: 1.5px solid currentColor;
+	}
+
+	.task-dot.task-status-completed {
 		background: currentColor;
+		border-color: currentColor;
 	}
 
 
