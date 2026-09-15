@@ -127,10 +127,49 @@ Also dead: `attachments.embedding` ([`schema.ts:50`](../src/lib/db/schema.ts#L50
 
 ---
 
+## W2 — Setup & ops
+
+### [ ] T-29 — Handle the login password at setup, not via a manual script
+
+**Priority:** low · **Blocked by:** none · **Fine as-is for now — single user, is also the deployer**
+
+**Files:** `entrypoint.sh`, `hash-password.ts`, `Dockerfile`, `src/routes/login/`, possibly
+`src/lib/db/schema.ts`
+
+**Problem:** Getting logged in today means running `bun hash-password.ts "<password>"` on a
+machine that has the repo and Bun, then hand-copying the two lines it prints into `.env` (see
+NOTES.md, 2026-09-15 — the whole PBKDF2 client / pepper+Argon2id server scheme, and the base64
+`PASSWORD_HASH` encoding, are settled; this task is only about *how the value gets set*). That's
+not how a real container handles a password — Postgres, Grafana, and friends all take a plain
+password (or generate one) at first boot and do their own hashing internally, no external tooling
+or manual `.env` surgery required.
+
+**Acceptance criteria (sketch — the actual shape isn't decided yet):**
+- Most likely: `entrypoint.sh` accepts a plaintext `PASSWORD` env var and computes
+  `PASSWORD_HASH`/`PASSWORD_PEPPER` itself at container startup if they aren't already set —
+  it already runs under Bun, so the same `deriveLoginKey()` / pepper / `Bun.password.hash()` path
+  `hash-password.ts` uses today could run automatically instead of needing to be invoked by hand.
+  Requires deciding whether `hash-password.ts` (or the logic it wraps) gets copied into the
+  runtime image after all, since it deliberately isn't today (see NOTES.md, 2026-09-15).
+- Decide where the computed `PASSWORD_HASH`/`PASSWORD_PEPPER` then live for *subsequent* boots,
+  so the plaintext `PASSWORD` doesn't have to keep being supplied (and re-hashed) every restart —
+  the Postgres data volume already persists across restarts, so the DB is one option; a file on a
+  mounted volume is another.
+- Alternative worth weighing: a first-run web setup screen (serve "set your password" instead of
+  the login form when nothing is configured yet) — nicer UX, more work, and sidesteps needing
+  anyone to pre-compute anything at all.
+- Whichever shape wins: the plaintext password must never end up in a log line, and this only
+  matters once, at first boot — every login after that keeps working exactly as it does today.
+- Record the decision and the reasoning once one is made; this entry is deliberately unopinionated
+  about which shape is right.
+
+---
+
 ## Suggested order
 
-What's left is three independent tasks — pick any order:
+What's left is four independent tasks — pick any order:
 
 - **T-24** — the reference table (backtracing, note↔quest links, scratchpads).
 - **T-26** — message search. The log has been write-only until this exists.
 - **T-05** — attachment storage cleanup. Deferrable without blocking anything.
+- **T-29** — password setup UX. Lowest priority of the four — works fine by hand today.
