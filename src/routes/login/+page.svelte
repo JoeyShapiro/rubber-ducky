@@ -11,10 +11,12 @@
         submitting = true;
 
         try {
-            // plain-JS hash, not window.crypto.subtle: SubtleCrypto only exists in a secure
-            // context (https, or http://localhost) - this app is served over plain http on a
-            // LAN, so a phone hitting it by IP address has no crypto.subtle at all, and the
-            // login silently threw before this ever reached the network. See NOTES.md, 2026-09-15.
+            // autocomplete="current-password" below is what a password manager needs to save/
+            // fill the field - it doesn't care what the network request itself carries. This
+            // app has no TLS (plain http on a LAN - see system.ts), so the wire still only ever
+            // sees a hash, never the real password: plain JS, not window.crypto.subtle, since
+            // that API is unavailable outside a secure context and a phone on the LAN isn't one.
+            // See NOTES.md, 2026-09-15.
             const hashHex = sha512(password);
 
             const res = await fetch('/login', {
@@ -56,7 +58,7 @@
   
                   <form on:submit|preventDefault={handleSubmit}>
                     <div data-mdb-input-init class="form-floating mb-4">
-                        <input bind:value={password} type="password" class="form-control {error ? 'is-invalid' : ''}" id="floatingPassword" placeholder="Password">
+                        <input bind:value={password} type="password" name="password" autocomplete="current-password" class="form-control {error ? 'is-invalid' : ''}" id="floatingPassword" placeholder="Password">
                         <label for="floatingPassword">Password</label>
                     </div>
 

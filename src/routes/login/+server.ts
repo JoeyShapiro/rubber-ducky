@@ -9,6 +9,9 @@ const SESSION_HOURS = Number(env.SESSION_HOURS ?? 4);
 
 export async function POST({ request, cookies, url }) {
 	const data = await request.json();
+
+	// the client hashes before this ever reaches the network (see login/+page.svelte) - this app
+	// has no TLS, so the wire must never carry the real password. env.PASSWORD is that same hash.
 	if (data.password !== env.PASSWORD) {
 		return error(401, { message: 'Unauthorized' });
 	}
