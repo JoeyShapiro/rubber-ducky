@@ -19,8 +19,14 @@ export async function POST({ request, cookies, url }) {
 	// - PASSWORD_HASH - via Bun's built-in Bun.password (no dependency; Argon2id is what OWASP
 	// currently recommends for storage, and it embeds its own random salt).
 	// hash-password.ts computes PASSWORD_HASH/PASSWORD_PEPPER the same way; see NOTES.md, 2026-09-15.
+	//
+	// PASSWORD_HASH is stored base64-encoded, not as the raw $argon2id$v=19$... string: Bun loads
+	// .env itself before this module even runs, and expands $word as a variable reference - every
+	// $-delimited field in a PHC hash reads as one, all undefined, silently stripped. Decode back
+	// to the real PHC string before verifying against it.
+	const storedHash = Buffer.from(env.PASSWORD_HASH ?? '', 'base64').toString('utf8');
 	const peppered = createHmac('sha256', env.PASSWORD_PEPPER ?? '').update(data.password ?? '').digest('hex');
-	const ok = await Bun.password.verify(peppered, env.PASSWORD_HASH ?? '');
+	const ok = await Bun.password.verify(peppered, storedHash);
 	if (!ok) {
 		return error(401, { message: 'Unauthorized' });
 	}

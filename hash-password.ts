@@ -29,8 +29,17 @@ const derived = await deriveLoginKey(password);
 const peppered = createHmac('sha256', pepper).update(derived).digest('hex');
 const hash = await Bun.password.hash(peppered, 'argon2id');
 
+// base64, not the raw $argon2id$v=19$... string: Bun loads .env itself, before dotenv ever runs,
+// and expands $word as a variable reference - every $-delimited field in a PHC hash string reads
+// as one to it. All of them are undefined, so they silently become empty and the stored hash
+// comes out mangled with no error at load time - only a confusing PASSWORD_UNSUPPORTED_ALGORITHM
+// once login/+server.ts tries to verify against it. Escaping every $ by hand works too but is one
+// missed backslash from breaking again; base64 has no $ in its alphabet, so the problem can't
+// recur. login/+server.ts decodes it back before handing it to Bun.password.verify.
+const hashForEnv = Buffer.from(hash, 'utf8').toString('base64');
+
 console.log('Set these in .env:\n');
-console.log(`PASSWORD_HASH=${hash}`);
+console.log(`PASSWORD_HASH=${hashForEnv}`);
 console.log(`PASSWORD_PEPPER=${pepper}`);
 if (isNewPepper) {
 	console.log('\n(no PASSWORD_PEPPER was found in .env - this is a freshly generated one)');
