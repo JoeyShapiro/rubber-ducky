@@ -442,10 +442,14 @@ Landed in this pass:
   than Svelte transition directives, since all four screens stay mounted the whole time - nothing
   to key off an `{#if}` block's mount/destroy. 260ms, `cubic-bezier(0.22, 1, 0.36, 1)`.
 
-**Still not swept:** whether `dvh` alone keeps the composer visible when the on-screen keyboard
-opens; tap targets beyond what this pass touched; general phone-specific density/spacing polish
-beyond what came up in review. Not blocking — another pass once the navigation has been lived
-with for a while.
+**Still not swept:** tap targets beyond what this pass touched; general phone-specific
+density/spacing polish beyond what came up in review. Not blocking — another pass once the
+navigation has been lived with for a while.
+
+**Confirmed 2026-09-15, on a real device (not the simulator):** `dvh` alone is enough - the
+composer stays visible when the on-screen keyboard opens, and messaging works end to end over a
+real LAN connection (see the login and stacking-context bug fixes, same date, both caught this
+way).
 
 ### 2026-09-13 — T-23: a message now says when it failed to send
 
