@@ -27,7 +27,14 @@
             });
 
             if (!res.ok) {
-                error = res.status === 401 ? 'Incorrect password' : `Login failed (${res.status})`;
+                if (res.status === 401) {
+                    error = 'Incorrect password';
+                } else if (res.status === 429) {
+                    const body = await res.json().catch(() => null);
+                    error = body?.message ?? 'Too many attempts: try again later';
+                } else {
+                    error = `Login failed (${res.status})`;
+                }
                 return;
             }
 

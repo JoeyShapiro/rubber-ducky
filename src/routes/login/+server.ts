@@ -3,12 +3,31 @@ import { createHmac } from 'node:crypto';
 import { env } from '$lib/env';
 import { db } from '$lib/db';
 import { sessions } from '$lib/db/schema';
+import { rateLimitedFor, recordFailedAttempt, clearAttempts } from '$lib/rateLimit';
 
 // How long a login lasts. Deliberately not renewed on activity: an expired session means logging
 // in again, not a silent refresh. The draft you were typing is preserved across it ($lib/drafts).
 const SESSION_HOURS = Number(env.SESSION_HOURS ?? 4);
 
-export async function POST({ request, cookies, url }) {
+function formatWait(seconds: number): string {
+	return seconds < 60 ? `${seconds}s` : `${Math.ceil(seconds / 60)}m`;
+}
+
+export async function POST({ request, cookies, url, getClientAddress }) {
+	// Checked first, before touching the request body or spending an Argon2id verify on it - the
+	// point is to stop an attacker from getting unlimited offline-speed guesses over the network,
+	// so the cheapest possible rejection matters. Per client address, not global, so one bad actor
+	// can't lock out a legitimate login too - see NOTES.md, 2026-09-15 for why that address is
+	// only as trustworthy as ADDRESS_HEADER is configured to be in front of a reverse proxy/tunnel.
+	const client = getClientAddress();
+	const retryAfter = rateLimitedFor(client);
+	if (retryAfter > 0) {
+		return json(
+			{ message: `Too many attempts: try again in ${formatWait(retryAfter)}` },
+			{ status: 429, headers: { 'Retry-After': String(retryAfter) } },
+		);
+	}
+
 	const data = await request.json();
 
 	// The client sends a PBKDF2 derivation of the password, not the password itself (see
@@ -28,8 +47,10 @@ export async function POST({ request, cookies, url }) {
 	const peppered = createHmac('sha256', env.PASSWORD_PEPPER ?? '').update(data.password ?? '').digest('hex');
 	const ok = await Bun.password.verify(peppered, storedHash);
 	if (!ok) {
+		recordFailedAttempt(client);
 		return error(401, { message: 'Unauthorized' });
 	}
+	clearAttempts(client);
 
 	const expires = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000);
 	const [session] = await db.insert(sessions).values({
