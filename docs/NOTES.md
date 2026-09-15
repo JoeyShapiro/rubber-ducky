@@ -89,8 +89,10 @@ The mechanism is two attributes, not per-component conditionals:
 - Each screen's own root element carries `data-screen="sidebar" | "chat" | "notes" | "quests"`
   (`Sidebar.svelte`, `Chat.svelte`, `Notes.svelte`, `Quests.svelte`).
 - `.app` (`+layout.svelte`) carries `data-mobile-view` set to the current `$mobileView`.
-- `app.css`'s media query hides every `[data-screen]` by default and re-shows only the one
-  matching `[data-mobile-view]`, full width and `100dvh`.
+- `app.css`'s media query positions every `[data-screen]` as a full-viewport `position: fixed`
+  layer and pans it in or out with `transform: translateX(...)` off `data-mobile-view` - chat
+  stays put as the stationary base, the other three slide over it from their home edge. See the
+  2026-09-14 decisions-log entry for why this is plain CSS and not a Svelte transition.
 
 The sidebar has no top bar of its own — its existing bottom icon row is what you use instead,
 made always-visible rather than hover-reveal for the same reason (see below). A component always
@@ -399,6 +401,10 @@ Choices already made, so later work does not re-open them.
 | 2026-09-14 | mobile | `AddButton.svelte`'s yellow "+" grows to the same 2.75rem/44px as every other mobile tap target below the breakpoint, same reasoning as the sidebar's own buttons. |
 | 2026-09-14 | quests | **No sorting, filtering, or priority, decided against** (T-09 dropped). Not enough quests will ever exist at once to need them - `createdOn DESC` is enough. `due` stays plain `text`; nothing sorts or range-filters on it. Revisit only if the quest list actually becomes long enough that finding something in it is hard, not preemptively. |
 | 2026-09-14 | notes | **No "distil a message into a note" action, decided against** (T-25 dropped). Turning something worth keeping into a note is done by hand - open a note, retype or paste it in. Not worth a dedicated UI action and a reference-table dependency (T-24) yet. |
+| 2026-09-14 | mobile | Screen-to-screen motion is plain CSS (`transform` + `transition` on each `[data-screen]`, values keyed off `data-mobile-view`), not Svelte's `transition:`/`in:`/`out:` directives. All four screens stay mounted the whole time - visibility is an attribute toggle, not `{#if}` mount/destroy - so there is no enter/leave lifecycle event for a Svelte transition to hook. Chat is a stationary base (`transform: none`, always) that the other three slide over from their home edge and back off to; direction is literal, matching how it was specified: sidebar enters left-to-right and exits right-to-left, notes/quests do the mirror on the right edge. 260ms, `cubic-bezier(0.22, 1, 0.36, 1)` - snappy, not a design system, tune by feel. |
+| 2026-09-15 | auth | **Real bug:** login was broken on any real phone reachable only by LAN IP (worked fine on a simulator, which uses `localhost`). The login form hashed the password with `window.crypto.subtle`, which only exists in a *secure context* - `https:`, or `http://localhost` as a special case - never a bare `http://192.168.x.x`. On a non-secure origin `crypto.subtle` is `undefined`, so `.digest(...)` threw before the request ever left the browser, and the button just did nothing. Fixed by hashing with `js-sha512` (`sha512()`, plain JS, no Web Crypto) instead - same SHA-512 hex digest, verified byte-for-byte against `crypto.subtle`/Node's `crypto` for several inputs, but works on any origin. **The server-side comparison and the "never send the plaintext password" property are unchanged** - this only replaces *how* the client computes the hash, not what gets sent or compared. |
+| 2026-09-15 | auth | The login form now shows a real error - `is-invalid` on the input plus red text below it - instead of a swallowed `console.error`. 401 reads "Incorrect password"; anything else reads "Login failed (`status`)"; a thrown/network error reads a generic retry message. The submit button disables and reads "Logging in…" while a request is in flight. |
+| 2026-09-15 | mobile | **Real bug:** every `[data-screen]` overlay (sidebar, notes, quests) went `position: fixed` stacked over Chat (2026-09-14's slide-over-a-stationary-base design) with no opaque background of its own - Sidebar never had one (nothing was ever behind it on desktop), Notes/Quests carry the translucent `--panel-surface` meant to show the *desktop* gradient through it as a frosted panel. On a real phone this read as Chat's message list bleeding through the sidebar/notes/quests UI, overlapping and hard to read - caught from a user screenshot, not simulator testing. Fixed with one rule: `[data-screen] { background: var(--bg-primary) !important; }` inside the mobile media query only - every full-screen overlay is opaque now, and desktop's translucent panel look and gradient background are untouched (verified: `.app-surface`'s gradient and `.notes-container`'s `rgba(248,248,255,0.4)` are unchanged outside the breakpoint). |
 
 ---
 
@@ -424,16 +430,22 @@ Landed in this pass:
   regardless of what special font the screen it sits in uses.
 - Bigger text, buttons, and tap targets throughout the sidebar and top bar (44px), and the
   hover-only controls that existed nowhere on mobile now made always-visible.
-- Two real regressions caught only by testing on real WebKit with an iPhone device profile,
-  not a resized Chromium window: the login screen going fully blank, and Quests carrying its
-  desktop card framing (border/radius/shadow/margin) into the mobile view as a stray top gap.
+- Two real regressions caught by testing on real WebKit with an iPhone device profile (the user
+  was testing on a simulator throughout, not a resized Chromium window): the login screen going
+  fully blank, and Quests carrying its desktop card framing (border/radius/shadow/margin) into
+  the mobile view as a stray top gap.
+- **A pan between screens, not an instant swap** — added same day once it was pointed out that
+  skipping it wasn't a deliberate call, just not done yet. Chat is the stationary base: it never
+  itself animates, sidebar/notes/quests slide over it from their home edge (sidebar from the
+  left, notes/quests from the right) and back off there when something else becomes active. Pure
+  CSS (`transform` + `transition` on each `[data-screen]`, keyed off `data-mobile-view`) rather
+  than Svelte transition directives, since all four screens stay mounted the whole time - nothing
+  to key off an `{#if}` block's mount/destroy. 260ms, `cubic-bezier(0.22, 1, 0.36, 1)`.
 
-**Deliberately left rough** (see PLAN.md's now-removed T-12 for the original sketch): whether
-`dvh` alone keeps the composer visible when the on-screen keyboard opens is unverified on a real
-device; no tap-target sweep beyond what this pass touched; screen transitions are an instant
-swap, no animation; general phone-specific density/spacing polish beyond what came up in review.
-None of these are blocking — worth another pass once the navigation itself has been lived with
-for a while.
+**Still not swept:** whether `dvh` alone keeps the composer visible when the on-screen keyboard
+opens; tap targets beyond what this pass touched; general phone-specific density/spacing polish
+beyond what came up in review. Not blocking — another pass once the navigation has been lived
+with for a while.
 
 ### 2026-09-13 — T-23: a message now says when it failed to send
 

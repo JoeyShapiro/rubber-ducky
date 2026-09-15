@@ -534,43 +534,65 @@ body {
    --------------------------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
+	/* chat is the stationary base: always in place, never itself animates. Sidebar and
+	   notes/quests are overlays that slide over it from their home edge - sidebar from the left,
+	   notes/quests from the right - and slide back off there when something else becomes active.
+	   Discord-style pan, not an instant display:none/flex swap (2026-09-14, see NOTES.md decisions
+	   log). Direction is literal: entering sidebar moves left-to-right (-100% -> 0), leaving it
+	   moves right-to-left (0 -> -100%); notes/quests do the mirror image on the right edge. */
+	.app {
+		overflow: hidden;
+	}
+
 	[data-screen] {
-		display: none !important;
+		position: fixed !important;
+		inset: 0 !important;
+		width: 100% !important;
+		height: 100dvh !important;
+		max-height: 100dvh !important;
+		margin: 0 !important;
+		/* the desktop card look (rounded corners, border, shadow) Notes and Quests carry to sit as
+		   panels in the right column doesn't belong on a full-bleed screen */
+		border: none !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		/* opaque - Sidebar has no background of its own (nothing was ever behind it on desktop,
+		   a plain flex sibling of main) and Notes/Quests carry a translucent --panel-surface meant
+		   to show the app-surface gradient through it as a frosted panel. Stacked as a fixed
+		   full-screen layer over Chat, either one left Chat legible/bleeding through underneath -
+		   every screen needs its own solid base now that they're overlays, not siblings. */
+		background: var(--bg-primary) !important;
+		transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+		pointer-events: none;
+	}
+
+	[data-screen="chat"] {
+		transform: none;
+		z-index: 1;
+	}
+
+	[data-screen="sidebar"] {
+		transform: translateX(-100%);
+		z-index: 2;
+	}
+
+	[data-screen="notes"],
+	[data-screen="quests"] {
+		transform: translateX(100%);
+		z-index: 2;
+	}
+
+	.app[data-mobile-view="sidebar"] [data-screen="sidebar"],
+	.app[data-mobile-view="notes"] [data-screen="notes"],
+	.app[data-mobile-view="quests"] [data-screen="quests"] {
+		transform: translateX(0);
 	}
 
 	.app[data-mobile-view="sidebar"] [data-screen="sidebar"],
 	.app[data-mobile-view="chat"] [data-screen="chat"],
 	.app[data-mobile-view="notes"] [data-screen="notes"],
 	.app[data-mobile-view="quests"] [data-screen="quests"] {
-		display: flex !important;
-		width: 100% !important;
-		height: 100dvh !important;
-		max-height: 100dvh !important;
-		/* a full-screen drawer never carries the desktop layout's inter-panel spacing - Quests.svelte's
-		   root has mt-2 to sit below Notes in the desktop column, which read as a gap at the top here */
-		margin: 0 !important;
-		/* nor the desktop card look (rounded corners, border, shadow) that Notes and Quests carry
-		   to sit as panels in the right column - full-bleed like Chat and Sidebar already are */
-		border: none !important;
-		border-radius: 0 !important;
-		box-shadow: none !important;
-	}
-
-	/* the sidebar and the chat/notes/quests area are siblings in .app - only one side is ever
-	   showing, so the other has to go rather than sit there empty */
-	.app[data-mobile-view="sidebar"] main {
-		display: none !important;
-	}
-
-	.app-surface {
-		max-height: 100dvh !important;
-	}
-
-	/* lets notes/quests size themselves directly against .app-surface instead of being boxed
-	   into the w-50 column that only makes sense in the desktop side-by-side layout. !important
-	   because bootstrap's .d-flex is itself !important and would otherwise win. */
-	.right-panel {
-		display: contents !important;
+		pointer-events: auto !important;
 	}
 
 	.sidebar {

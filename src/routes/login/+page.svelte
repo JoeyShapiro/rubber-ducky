@@ -1,33 +1,41 @@
 <script lang="ts">
+    import { sha512 } from 'js-sha512';
+
     let password = '';
+    let error = '';
+    let submitting = false;
 
     async function handleSubmit(event: Event) {
         event.preventDefault();
+        error = '';
+        submitting = true;
 
-        const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(password));
-        const hashArray = Array.from(new Uint8Array(hash));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        try {
+            // plain-JS hash, not window.crypto.subtle: SubtleCrypto only exists in a secure
+            // context (https, or http://localhost) - this app is served over plain http on a
+            // LAN, so a phone hitting it by IP address has no crypto.subtle at all, and the
+            // login silently threw before this ever reached the network. See NOTES.md, 2026-09-15.
+            const hashHex = sha512(password);
 
-        fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                  'password' : hashHex,
-                })
-        })
-            .then(res => {
-                if (!res.ok) throw new Error('Invalid password');
-                return res.json();
-            })
-            .then(data => {
-                // the session cookie is set by the server; nothing to do here but go
-                window.location.href = `${window.location.origin}/`;
-            })
-            .catch(err => {
-                console.error(err);
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: hashHex }),
             });
+
+            if (!res.ok) {
+                error = res.status === 401 ? 'Incorrect password' : `Login failed (${res.status})`;
+                return;
+            }
+
+            // the session cookie is set by the server; nothing to do here but go
+            window.location.href = `${window.location.origin}/`;
+        } catch (err) {
+            console.error(err);
+            error = 'Login failed - check your connection and try again';
+        } finally {
+            submitting = false;
+        }
     }
 </script>
 
@@ -48,16 +56,20 @@
   
                   <form on:submit|preventDefault={handleSubmit}>
                     <div data-mdb-input-init class="form-floating mb-4">
-                        <input bind:value={password} type="password" class="form-control" id="floatingPassword" placeholder="Password">
+                        <input bind:value={password} type="password" class="form-control {error ? 'is-invalid' : ''}" id="floatingPassword" placeholder="Password">
                         <label for="floatingPassword">Password</label>
                     </div>
-  
+
+                    {#if error}
+                      <p class="login-error mb-4" role="alert">{error}</p>
+                    {/if}
+
                     <div class="text-center pt-1 mb-5 pb-1">
-                        <button  data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-block fa-lg gradient-custom-2 mb-3" type="submit">
-                            Login
+                        <button  data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-block fa-lg gradient-custom-2 mb-3" type="submit" disabled={submitting}>
+                            {submitting ? 'Logging in…' : 'Login'}
                         </button>
                     </div>
-  
+
                   </form>
   
                 </div>
@@ -85,6 +97,14 @@
        inverting would leave a white duck on a white background */
     .login-logo {
         filter: none !important;
+    }
+
+    .login-error {
+        margin-top: -1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #dc3545;
+        text-align: center;
     }
 
     .gradient-custom-2 {
