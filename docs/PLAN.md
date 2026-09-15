@@ -87,32 +87,6 @@ scratchpad. Building them separately produces four half-mechanisms. See the desi
 
 ---
 
-### [ ] T-25 — Distil a note from the log
-
-**Priority:** medium · **Blocked by:** T-07, T-24
-
-**Files:** [`src/lib/components/Message.svelte`](../src/lib/components/Message.svelte),
-[`src/routes/notes/+server.ts`](../src/routes/notes/+server.ts),
-[`src/lib/api.ts`](../src/lib/api.ts)
-
-**Problem:** Step 5 of the intended flow — after finishing a quest, distil the part worth
-keeping — has no support. Anything worth keeping must be retyped, so it mostly is not.
-
-**This is not pinning.** It creates a *new* note, authored deliberately, which happens to cite
-the message it came from. It does not flag the message or add it to a pinned list; see the
-design brief for why that was rejected.
-
-**Acceptance criteria:**
-- A per-message action that opens a new note seeded with that message's content, editable before
-  saving — the note is written, not copied.
-- The note records a reference back to the source message (T-24), so the original context and
-  its surrounding conversation stay findable.
-- Works on a message with attachments — decide and record whether attachments come along or are
-  only referenced.
-- Confirmation is a small inline acknowledgement, not a dialog.
-
----
-
 ### [ ] T-26 — Search messages
 
 **Priority:** high · **Blocked by:** none
@@ -153,87 +127,10 @@ Also dead: `attachments.embedding` ([`schema.ts:50`](../src/lib/db/schema.ts#L50
 
 ---
 
-## W4 — Tasks / quests
-
-The stated goal: one task system usable for everything — projects, a plain todo list, work — with
-a per-duck list and a per-badling list. Today both exist: a quest carries `parent_id`, a duck's or
-a badling's uuid, `NOT NULL` (2026-09-14; see decisions log). **No global, scopeless list** — a
-task belongs to a duck or a badling, always. If an all-up view is wanted later it reads *across*
-existing scopes rather than needing a scope of its own; see *decisions log*.
-
-See *Where a "project" fits* and *Where a loose task lives* in W3 before starting here.
-
-### [ ] T-09 — Sortable, filterable task fields
-
-**Priority:** high · **Blocked by:** none
-
-**Files:** [`src/lib/db/schema.ts`](../src/lib/db/schema.ts#L69-L80),
-[`src/routes/quests/+server.ts`](../src/routes/quests/+server.ts), a migration
-
-**Problem:** "I want to sort and separate" is not currently possible.
-`due` is a `text` column ([`schema.ts:73`](../src/lib/db/schema.ts#L73)) — it cannot be sorted
-or range-filtered. There is no ordering, no priority, and no tags. The only sort is
-`createdOn DESC`.
-
-**Acceptance criteria:**
-- `dueAt` as `timestamp with time zone`, migrated from the existing text values (log any rows
-  that fail to parse rather than dropping them).
-- `sortOrder` for manual arrangement, `priority`, and tags (a join table, or `text[]` — decide
-  and record).
-- Sort and filter available on the API, not only client-side.
-
----
-
-## W5 — Mobile
-
-### [~] T-12 — Make it work on a phone
-
-**Priority:** high · **Blocked by:** none
-
-**Files:** [`src/lib/stores.ts`](../src/lib/stores.ts),
-[`src/lib/components/MobileTopBar.svelte`](../src/lib/components/MobileTopBar.svelte),
-[`src/app.css`](../src/app.css), [`src/routes/+layout.svelte`](../src/routes/+layout.svelte),
-[`src/routes/Sidebar.svelte`](../src/routes/Sidebar.svelte),
-[`src/lib/components/Chat.svelte`](../src/lib/components/Chat.svelte),
-[`src/lib/components/Notes.svelte`](../src/lib/components/Notes.svelte),
-[`src/lib/components/Quests.svelte`](../src/lib/components/Quests.svelte)
-
-**First pass landed 2026-09-14, navigation flattened same day** (see decisions log) — a
-Discord-style drawer system, four full-screen "screens" below the 768px breakpoint instead of the
-desktop two/three-column layout. `mobileView` (`$lib/stores.ts`) tracks which one is showing; each
-screen's own root carries `data-screen="sidebar|chat|notes|quests"`, `.app` carries
-`data-mobile-view`, and `app.css`'s media query does the hide/show — no route, no new component
-state duplicated per screen. `MobileTopBar.svelte` is the back-arrow + title bar shown on chat,
-notes, and quests: back always goes straight to the sidebar, and the two icons on the right jump
-directly to the other two screens (chat ↔ notes ↔ quests, all peers - not a stack routed through
-chat). The sidebar itself has no top bar. Desktop renders exactly as before — verified untouched
-by the same pass.
-
-Also done as part of this pass: hover-only controls (sidebar's bottom icon row, the per-badling
-add-duck button, the quest status dropdown) are always visible below the breakpoint instead of
-tap-to-reveal; `dvh` in place of `vh` through the app shell.
-
-**What's still open:**
-- Composer-stays-visible-when-the-keyboard-opens is unverified — `dvh` alone may not be enough on
-  iOS Safari; wants testing on a real device, not just a resized desktop browser.
-- Tap-target audit beyond the new top bar (existing rows, buttons elsewhere) — 44px was the target
-  for what this pass touched, not a sweep of the whole app.
-- The transition between screens is an instant swap, no animation. Fine for now; revisit once the
-  navigation itself has been used for a while and any rough edges are known.
-- Sidebar row density, spacing, and general phone-specific polish — deliberately deferred per
-  "get something out there, hash out design more after it works-ish."
-
----
-
 ## Suggested order
 
-Dependency-driven; W6 items are independent and can be interleaved.
+What's left is three independent tasks — pick any order:
 
-1. **T-09** — task schema (due date, sort order, priority, tags). Unblocks everything task-shaped;
-   do it before building task UI.
-2. **T-12** — the mobile pass. No longer waits on anything.
-3. **T-24, T-25** — the reference table, then distilling notes from the log. These are what make
-   notes stop feeling bolted on.
-4. **T-26** — message search. Independent of all the above and can be pulled earlier; it is the
-   thing that turns the log into something you can look things up in.
-T-05 (attachment storage) is deferrable without blocking anything.
+- **T-24** — the reference table (backtracing, note↔quest links, scratchpads).
+- **T-26** — message search. The log has been write-only until this exists.
+- **T-05** — attachment storage cleanup. Deferrable without blocking anything.

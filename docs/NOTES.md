@@ -97,7 +97,8 @@ made always-visible rather than hover-reveal for the same reason (see below). A 
 renders its `MobileTopBar`; it just has no width on desktop, since `.mobile-topbar` is
 `display: none` above the breakpoint.
 
-This first pass is deliberately not polished — see PLAN.md T-12 for what's still open.
+Shipped 2026-09-14 (see the Completed section) — deliberately not fully polished; what's left
+rough is noted there rather than tracked as an open task.
 
 ---
 
@@ -396,6 +397,8 @@ Choices already made, so later work does not re-open them.
 | 2026-09-14 | mobile | `MobileTopBar` no longer takes a plain `title` string - it takes `scope` and builds a breadcrumb itself: `badling / duck / screen` (or `badling / screen` when the badling itself is the scope), ancestors dimmed, current segment full weight - mirroring `.breadcrumb-current` in Quests.svelte's own quest-drilldown trail. Requires a duck to know its badling's name, so `Duck` gained a `badlingName` field, populated wherever a `Duck` is constructed from a badling context (`GET /ducks`, `Sidebar.svelte`'s `addDuck`). Discriminating `Badling` vs `Duck` scope uses a plain `instanceof Badling` check, since both are real classes, not just shapes. |
 | 2026-09-14 | mobile | `.mobile-topbar` sets `font-family` explicitly rather than inheriting it - Quests' `.tasks-container` sets `"Futura Condensed"` for its own body content, and the bar (nested inside it in the DOM) was silently inheriting that, reading as a mismatched, differently-sized title next to Chat's and Notes' default-font one. The quest body keeps its special font; only the bar itself is pinned to the app default. |
 | 2026-09-14 | mobile | `AddButton.svelte`'s yellow "+" grows to the same 2.75rem/44px as every other mobile tap target below the breakpoint, same reasoning as the sidebar's own buttons. |
+| 2026-09-14 | quests | **No sorting, filtering, or priority, decided against** (T-09 dropped). Not enough quests will ever exist at once to need them - `createdOn DESC` is enough. `due` stays plain `text`; nothing sorts or range-filters on it. Revisit only if the quest list actually becomes long enough that finding something in it is hard, not preemptively. |
+| 2026-09-14 | notes | **No "distil a message into a note" action, decided against** (T-25 dropped). Turning something worth keeping into a note is done by hand - open a note, retype or paste it in. Not worth a dedicated UI action and a reference-table dependency (T-24) yet. |
 
 ---
 
@@ -403,6 +406,34 @@ Choices already made, so later work does not re-open them.
 
 What has been finished and what actually changed. Kept because the *why* is often not obvious
 from the diff.
+
+### 2026-09-14 — T-12: mobile
+
+Four full-screen drawers below 768px — sidebar, chat, notes, quests — Discord-style but client
+state, not a route. `mobileView` (`$lib/stores.ts`) plus a `data-screen`/`data-mobile-view`
+attribute pair and one `app.css` media query is the whole mechanism; see "Mobile: four drawers"
+in Architecture, above, and the run of 2026-09-14 decisions-log entries for the individual calls
+(flat navigation instead of a stack, no route split, the icon and breadcrumb choices, the two
+real bugs a resized desktop browser never would have caught).
+
+Landed in this pass:
+- Sidebar (no top bar, always-visible bottom icons) → tap a duck or badling → chat, with a top
+  bar on chat/notes/quests: hamburger always returns to the sidebar, two icons jump directly to
+  the other two screens.
+- `MobileTopBar` shows a breadcrumb (`badling / duck / screen`), pinned to the app's default font
+  regardless of what special font the screen it sits in uses.
+- Bigger text, buttons, and tap targets throughout the sidebar and top bar (44px), and the
+  hover-only controls that existed nowhere on mobile now made always-visible.
+- Two real regressions caught only by testing on real WebKit with an iPhone device profile,
+  not a resized Chromium window: the login screen going fully blank, and Quests carrying its
+  desktop card framing (border/radius/shadow/margin) into the mobile view as a stray top gap.
+
+**Deliberately left rough** (see PLAN.md's now-removed T-12 for the original sketch): whether
+`dvh` alone keeps the composer visible when the on-screen keyboard opens is unverified on a real
+device; no tap-target sweep beyond what this pass touched; screen transitions are an instant
+swap, no animation; general phone-specific density/spacing polish beyond what came up in review.
+None of these are blocking — worth another pass once the navigation itself has been lived with
+for a while.
 
 ### 2026-09-13 — T-23: a message now says when it failed to send
 
