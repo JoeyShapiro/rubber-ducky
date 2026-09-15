@@ -6,8 +6,13 @@ if [ -z "$POSTGRES_PASSWORD" ]; then
   exit 1
 fi
 
-if [ -z "$PASSWORD" ]; then
-  echo "ERROR: PASSWORD is required" >&2
+if [ -z "$PASSWORD_HASH" ]; then
+  echo "ERROR: PASSWORD_HASH is required (bun hash-password.ts \"<password>\" to generate it)" >&2
+  exit 1
+fi
+
+if [ -z "$PASSWORD_PEPPER" ]; then
+  echo "ERROR: PASSWORD_PEPPER is required (bun hash-password.ts \"<password>\" to generate it)" >&2
   exit 1
 fi
 

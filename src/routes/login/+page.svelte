@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { sha512 } from 'js-sha512';
+    import { deriveLoginKey } from '$lib/authConfig';
 
     let password = '';
     let error = '';
@@ -12,17 +12,18 @@
 
         try {
             // autocomplete="current-password" below is what a password manager needs to save/
-            // fill the field - it doesn't care what the network request itself carries. This
-            // app has no TLS (plain http on a LAN - see system.ts), so the wire still only ever
-            // sees a hash, never the real password: plain JS, not window.crypto.subtle, since
-            // that API is unavailable outside a secure context and a phone on the LAN isn't one.
-            // See NOTES.md, 2026-09-15.
-            const hashHex = sha512(password);
+            // fill the field - it doesn't care what the network request itself carries. The wire
+            // only ever sees a PBKDF2 derivation of the password, never the password itself: the
+            // server peppers and Argon2ids whatever it receives before comparing. deriveLoginKey
+            // throws a clear, specific error (rather than silently degrading) if crypto.subtle
+            // isn't available, which is surfaced below rather than papered over with a generic
+            // message. See NOTES.md, 2026-09-15, and $lib/authConfig.ts.
+            const derived = await deriveLoginKey(password);
 
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: hashHex }),
+                body: JSON.stringify({ password: derived }),
             });
 
             if (!res.ok) {
@@ -34,7 +35,7 @@
             window.location.href = `${window.location.origin}/`;
         } catch (err) {
             console.error(err);
-            error = 'Login failed - check your connection and try again';
+            error = err instanceof Error ? err.message : 'Login failed: check your connection and try again';
         } finally {
             submitting = false;
         }
