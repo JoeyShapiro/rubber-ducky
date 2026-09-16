@@ -16,6 +16,16 @@ export function toStatusClass(status: QuestStatus): string {
     return `task-status-${status}`;
 }
 
+/**
+ * A parent's status from its children's: active if any child is active, otherwise whatever
+ * status all of them share, otherwise inactive (the "in progress but nothing active" case, e.g.
+ * some completed and the rest untouched).
+ */
+export function inferQuestStatus(childStatuses: QuestStatus[]): QuestStatus {
+    if (childStatuses.some(status => status === 'active')) return 'active';
+    return childStatuses.every(status => status === childStatuses[0]) ? childStatuses[0] : 'inactive';
+}
+
 // system messages read "Quest "foo" -> completed", so the status is the last word
 export function statusFromSystemMessage(content: string): string {
     const match = content.match(/(\w+)$/);

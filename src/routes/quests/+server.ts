@@ -1,9 +1,12 @@
 import { json, error } from '@sveltejs/kit';
-import { Quest, type QuestStatus } from '$lib/types.js';
+import { Quest, type QuestStatus, type Message } from '$lib/types.js';
 import { db } from '$lib/db';
 import { quests } from '$lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { logLine, postSystemMessage } from '$lib/system';
+import { inferQuestStatus } from '$lib/quests';
+
+type QuestStatusUpdate = { uuid: string; status: QuestStatus; done: boolean };
 
 /**
  * "top level / middle / this one" - the trail of titles down to a quest.
@@ -26,6 +29,53 @@ async function pathOf(uuid: string): Promise<string> {
 	}
 
 	return names.join(' / ');
+}
+
+/**
+ * Walks up from a quest that just changed, recomputing each ancestor's status from its own
+ * children and stopping as soon as one is already correct (its ancestors can't have changed
+ * either). A quest with children never has a status of its own to preserve, so this is always
+ * safe to overwrite.
+ */
+async function propagateStatusUpward(startId: string, scopeParentId: string | undefined): Promise<{
+	updatedQuests: QuestStatusUpdate[];
+	ancestorMessages: Message[];
+}> {
+	const updatedQuests: QuestStatusUpdate[] = [];
+	const ancestorMessages: Message[] = [];
+
+	let current = startId;
+	for (let hops = 0; hops < 20; hops++) {
+		const [row] = await db
+			.select({ questParentId: quests.questParentId })
+			.from(quests)
+			.where(eq(quests.id, current));
+		const parentId = row?.questParentId;
+		if (!parentId) break;
+
+		const siblings = await db.select({ status: quests.status }).from(quests).where(eq(quests.questParentId, parentId));
+		const inferred = inferQuestStatus(siblings.map(s => (s.status ?? 'inactive') as QuestStatus));
+
+		const [parent] = await db.select().from(quests).where(eq(quests.id, parentId));
+		if (!parent || parent.status === inferred) break;
+
+		await db.update(quests).set({
+			status: inferred,
+			done: inferred === 'completed',
+			updatedOn: new Date(),
+		}).where(eq(quests.id, parentId));
+
+		updatedQuests.push({ uuid: parentId, status: inferred, done: inferred === 'completed' });
+
+		if (scopeParentId) {
+			const message = await postSystemMessage(logLine('Quest', await pathOf(parentId), `is ${inferred}`), scopeParentId);
+			if (message) ancestorMessages.push(message);
+		}
+
+		current = parentId;
+	}
+
+	return { updatedQuests, ancestorMessages };
 }
 
 export async function GET({ url }) {
@@ -84,7 +134,14 @@ export async function POST({ request }) {
 	);
 
 	const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(row.id), 'was created'), data.parent);
-	return json({ quest, systemMessage });
+
+	// a new subquest can change its parent's inferred status (e.g. a completed parent is no
+	// longer all-completed), so recompute up the chain even though the quest itself just started
+	const { updatedQuests, ancestorMessages } = row.questParentId
+		? await propagateStatusUpward(row.id, data.parent)
+		: { updatedQuests: [], ancestorMessages: [] };
+
+	return json({ quest, systemMessage, updatedQuests, ancestorMessages });
 }
 
 export async function PATCH({ request }) {
@@ -98,18 +155,25 @@ export async function PATCH({ request }) {
 	// quest's own content. Kept apart rather than merged into one "arbitrary field update" so
 	// each can log its own, more honest phrase.
 	if (data.status) {
+		// a quest with subquests has its status inferred from them, not set directly - see
+		// propagateStatusUpward
+		const children = await db.select({ id: quests.id }).from(quests).where(eq(quests.questParentId, data.uuid));
+		if (children.length > 0) {
+			return json({ error: 'Status is inferred from subquests and cannot be set directly' }, { status: 400 });
+		}
+
 		await db.update(quests).set({
 			status: data.status,
 			done: data.status === 'completed',
 			updatedOn: new Date(),
 		}).where(eq(quests.id, data.uuid));
 
-		if (data.parent) {
-			const systemMessage = await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.parent);
-			return json({ ok: true, systemMessage });
-		}
+		const systemMessage = data.parent
+			? await postSystemMessage(logLine('Quest', await pathOf(data.uuid), `is ${data.status}`), data.parent)
+			: null;
+		const { updatedQuests, ancestorMessages } = await propagateStatusUpward(data.uuid, data.parent);
 
-		return json({ ok: true });
+		return json({ ok: true, systemMessage, updatedQuests, ancestorMessages });
 	}
 
 	if (!data.title) {

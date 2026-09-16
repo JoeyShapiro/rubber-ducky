@@ -94,10 +94,12 @@ export function fetchQuests(parent: string): Promise<{ quests: Quest[] }> {
     return request(`/quests?parent=${parent}`);
 }
 
+type QuestStatusUpdate = { uuid: string; status: QuestStatus; done: boolean };
+
 export function createQuest(
     parent: string,
     quest: { title: string; description: string; due: string; quest_parent: string },
-): Promise<{ quest: Quest; systemMessage: Message | null }> {
+): Promise<{ quest: Quest; systemMessage: Message | null; updatedQuests: QuestStatusUpdate[]; ancestorMessages: Message[] }> {
     return post('/quests', { parent, ...quest });
 }
 
@@ -118,7 +120,7 @@ export function setQuestStatus(
     status: QuestStatus,
     parent: string,
     title?: string,
-): Promise<{ ok: boolean; systemMessage?: Message }> {
+): Promise<{ ok: boolean; systemMessage?: Message; updatedQuests: QuestStatusUpdate[]; ancestorMessages: Message[] }> {
     return request('/quests', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

@@ -69,6 +69,18 @@
 		questPath = questPath.slice(0, index);
 	}
 
+	// a quest with children has its status inferred, so any status change to one quest can cascade
+	// up and change several ancestors at once - applied here as a uuid -> {status, done} patch
+	// rather than a full quest object, since that's all the server sends back for them
+	function applyStatusUpdates(updates: { uuid: string; status: QuestStatus; done: boolean }[]) {
+		if (updates.length === 0) return;
+		const byId = new Map(updates.map(u => [u.uuid, u]));
+		quests = quests.map(q => {
+			const update = byId.get(q.uuid);
+			return update ? { ...q, status: update.status, done: update.done } : q;
+		});
+	}
+
 	async function changeStatus(questUuid: string, status: QuestStatus) {
 		const quest = quests.find(q => q.uuid === questUuid);
 
@@ -82,8 +94,13 @@
 				quests = [...quests];
 			}
 
+			applyStatusUpdates(result.updatedQuests);
+
 			if (result.systemMessage) {
 				messages.update(list => [...list, result.systemMessage!]);
+			}
+			if (result.ancestorMessages?.length) {
+				messages.update(list => [...list, ...result.ancestorMessages]);
 			}
 		} catch (err) {
 			console.error('quests', err);
@@ -102,7 +119,9 @@
 		try {
 			const data = await createQuest(scope.uuid, { ...event.detail, quest_parent: currentParentId });
 			quests = [data.quest, ...quests];
+			applyStatusUpdates(data.updatedQuests);
 			if (data.systemMessage) messages.update(list => [...list, data.systemMessage!]);
+			if (data.ancestorMessages?.length) messages.update(list => [...list, ...data.ancestorMessages]);
 		} catch (err) {
 			console.error('quests', err);
 		}
@@ -170,6 +189,8 @@
 					<select
 						class="form-select form-select-sm task-status-select {toStatusClass(quest.status)} ms-2"
 						value={quest.status}
+						disabled={children.length > 0}
+						title={children.length > 0 ? 'Inferred from subquests' : ''}
 						on:change={(e) => handleStatusChange(quest.uuid, e)}
 					>
 						{#each QUEST_STATUSES as status}
