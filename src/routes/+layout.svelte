@@ -6,6 +6,13 @@
 	import Sidebar from './Sidebar.svelte';
 	import { page } from '$app/stores';
 	import { darkMode, mobileView } from '$lib/stores';
+	import { onMount } from 'svelte';
+
+	onMount(() => {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/service-worker.js');
+		}
+	});
 
 	// Apply dark mode to the root element
 	$: if (typeof document !== 'undefined') {
