@@ -25,5 +25,10 @@ export default defineConfig({
 	server: {
 		proxy: {}
 	},
-	plugins: [sveltekit(), basicSsl()]
+	// VITE_NO_SSL=1 bun run dev drops the self-signed cert for plain http://localhost - useful
+	// when a client can't be told to trust a self-signed cert (e.g. the Wails desktop shell's
+	// WKWebView, which has no "click through" warning and just fails silently). Still a secure
+	// context for crypto.subtle per the note above, so nothing behaves differently - just don't
+	// use this for the LAN/mobile case, which is the whole reason basicSsl() is here.
+	plugins: [sveltekit(), ...(process.env.VITE_NO_SSL ? [] : [basicSsl()])]
 });
