@@ -2,18 +2,24 @@
 	import type { Scope, Quest, QuestStatus } from '$lib/types';
 	import { messages } from '$lib/stores';
 	import { createQuest, fetchQuests, setQuestStatus, updateQuest } from '$lib/api';
-	import { QUEST_STATUSES, iconForStatus, toStatusClass, toStatusLabel } from '$lib/quests';
+	import { QUEST_STATUSES, iconForStatus, isClosedQuestStatus, toStatusClass, toStatusLabel } from '$lib/quests';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
 	import { formatDate } from '$lib/format';
 	import AddButton from './AddButton.svelte';
 	import QuestModal from './QuestModal.svelte';
+	import ClosedQuestsModal from './ClosedQuestsModal.svelte';
 	import MobileTopBar from './MobileTopBar.svelte';
+
+	// how many recently-closed (completed/aborted) quests stay visible inline before the
+	// rest move behind the "view closed" modal
+	const RECENT_CLOSED_LIMIT = 3;
 
 	export let scope: Scope;
 
 	let quests: Quest[] = [];
 	let questPath: Quest[] = [];
 	let showModal = false;
+	let showClosedModal = false;
 	let editingQuest: Quest | null = null;
 	let loadedScope = '';
 	let expanded = new Set<string>();
@@ -32,7 +38,16 @@
 		}
 		return acc;
 	}, new Map<string, number>());
-	$: visibleQuests = quests.filter(q => (q.quest_parent_id || '') === currentParentId);
+	$: levelQuests = quests.filter(q => (q.quest_parent_id || '') === currentParentId);
+	$: openLevelQuests = levelQuests.filter(q => !isClosedQuestStatus(q.status));
+	// most-recently-closed first, using updated_on as a stand-in for "time completed" - there's
+	// no dedicated closedOn field, and updated_on already moves whenever status changes
+	$: closedLevelQuests = levelQuests
+		.filter(q => isClosedQuestStatus(q.status))
+		.sort((a, b) => updatedOnMillis(b) - updatedOnMillis(a));
+	$: recentClosedQuests = closedLevelQuests.slice(0, RECENT_CLOSED_LIMIT);
+	$: olderClosedQuests = closedLevelQuests.slice(RECENT_CLOSED_LIMIT);
+	$: visibleQuests = [...openLevelQuests, ...recentClosedQuests];
 	$: currentQuest = currentParentId
 		? quests.find(q => q.uuid === currentParentId) ?? questPath[questPath.length - 1]
 		: null;
@@ -53,6 +68,12 @@
 
 	function childrenOf(uuid: string): Quest[] {
 		return quests.filter((q) => q.quest_parent_id === uuid);
+	}
+
+	// updated_on arrives over JSON as a string, not a real Date, despite the Quest type's claim -
+	// route through `new Date(...)` rather than calling .getTime() on it directly
+	function updatedOnMillis(quest: Quest): number {
+		return quest.updated_on ? new Date(quest.updated_on).getTime() : 0;
 	}
 
 	function toggle(uuid: string) {
@@ -154,7 +175,10 @@
 	{/if}
 
 	<ul class="tasks-list list-unstyled m-0 p-2">
-		{#each visibleQuests as quest}
+		{#each visibleQuests as quest, i}
+			{#if i === openLevelQuests.length && recentClosedQuests.length > 0}
+				<li class="task-section-divider">Recently closed</li>
+			{/if}
 			{@const children = childrenOf(quest.uuid)}
 			{@const isOpen = expanded.has(quest.uuid)}
 			<li class="task-item panel-row-wrap d-flex flex-column">
@@ -245,6 +269,11 @@
 			title={questPath.length > 0 ? 'New subquest' : 'New quest'}
 			on:click={() => (showModal = true)}
 		/>
+		{#if olderClosedQuests.length > 0}
+			<button type="button" class="closed-more-btn" on:click={() => (showClosedModal = true)}>
+				{olderClosedQuests.length} more closed quest{olderClosedQuests.length === 1 ? '' : 's'}
+			</button>
+		{/if}
 		{#if questPath.length > 0}
 			<nav class="breadcrumb-nav d-flex align-items-center gap-1" aria-label="Quest trail">
 				<button class="breadcrumb-btn" type="button" on:click={() => breadcrumbTo(0)}>Quests</button>
@@ -275,6 +304,10 @@
 		on:accept={handleEditAccept}
 		on:decline={() => (editingQuest = null)}
 	/>
+{/if}
+
+{#if showClosedModal}
+	<ClosedQuestsModal quests={olderClosedQuests} on:close={() => (showClosedModal = false)} />
 {/if}
 
 <style>
@@ -330,6 +363,31 @@
 		font-style: italic;
 		color: rgba(108, 117, 125, 0.85);
 		padding: 0.5rem 0.25rem;
+	}
+
+	.task-section-divider {
+		font-size: calc(var(--quest-font-size) * 0.7);
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: rgba(108, 117, 125, 0.85);
+		padding: 0.6rem 0.35rem 0.2rem;
+	}
+
+	.closed-more-btn {
+		font-size: calc(var(--quest-font-size) * 0.78);
+		font-weight: 600;
+		padding: 0.2rem 0.7rem;
+		border-radius: 999px;
+		border: 1px solid rgba(94, 106, 158, 0.45);
+		background: rgba(255, 255, 255, 0.55);
+		color: rgba(58, 66, 104, 0.95);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.closed-more-btn:hover {
+		background: rgba(255, 255, 255, 0.9);
 	}
 
 	/* caps at a third of the card and scrolls, so a long description can never crowd out the
@@ -751,8 +809,19 @@
 	}
 
 	:global(:root[data-theme="dark"]) .task-empty,
-	:global(:root[data-theme="dark"]) .task-empty-state {
+	:global(:root[data-theme="dark"]) .task-empty-state,
+	:global(:root[data-theme="dark"]) .task-section-divider {
 		color: rgba(175, 180, 195, 0.8);
+	}
+
+	:global(:root[data-theme="dark"]) .closed-more-btn {
+		background: rgba(45, 45, 43, 0.8);
+		border-color: rgba(140, 150, 195, 0.45);
+		color: rgba(198, 205, 235, 0.95);
+	}
+
+	:global(:root[data-theme="dark"]) .closed-more-btn:hover {
+		background: rgba(60, 60, 58, 0.9);
 	}
 
 

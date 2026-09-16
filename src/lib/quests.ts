@@ -2,6 +2,16 @@ import type { QuestStatus } from '$lib/types';
 
 export const QUEST_STATUSES: QuestStatus[] = ['active', 'inactive', 'completed', 'aborted', 'locked'];
 
+// these two pile up over time and never need action again - "closed", as opposed to the "open"
+// active/inactive/locked quests still worth looking at. locked is deliberately not here: it
+// means blocked/pending (not accessible yet), not finished, so it stays visible like the rest of
+// the open work rather than getting swept into the archive.
+export const CLOSED_QUEST_STATUSES: QuestStatus[] = ['completed', 'aborted'];
+
+export function isClosedQuestStatus(status: QuestStatus): boolean {
+    return (CLOSED_QUEST_STATUSES as string[]).includes(status);
+}
+
 export function toStatusLabel(status: QuestStatus): string {
     switch (status) {
         case 'active': return 'Active';
