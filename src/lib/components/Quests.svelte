@@ -189,8 +189,7 @@
 					<select
 						class="form-select form-select-sm task-status-select {toStatusClass(quest.status)} ms-2"
 						value={quest.status}
-						disabled={children.length > 0}
-						title={children.length > 0 ? 'Inferred from subquests' : ''}
+						title={children.length > 0 ? 'Inferred from subquests — pick one to override' : ''}
 						on:change={(e) => handleStatusChange(quest.uuid, e)}
 					>
 						{#each QUEST_STATUSES as status}

@@ -34,8 +34,8 @@ async function pathOf(uuid: string): Promise<string> {
 /**
  * Walks up from a quest that just changed, recomputing each ancestor's status from its own
  * children and stopping as soon as one is already correct (its ancestors can't have changed
- * either). A quest with children never has a status of its own to preserve, so this is always
- * safe to overwrite.
+ * either). This is a suggestion, not a lock: a parent's status can still be set by hand, and the
+ * next child change will happily recompute over that manual value.
  */
 async function propagateStatusUpward(startId: string, scopeParentId: string | undefined): Promise<{
 	updatedQuests: QuestStatusUpdate[];
@@ -68,7 +68,7 @@ async function propagateStatusUpward(startId: string, scopeParentId: string | un
 		updatedQuests.push({ uuid: parentId, status: inferred, done: inferred === 'completed' });
 
 		if (scopeParentId) {
-			const message = await postSystemMessage(logLine('Quest', await pathOf(parentId), `is ${inferred}`), scopeParentId);
+			const message = await postSystemMessage(logLine('Quest', await pathOf(parentId), `looks ${inferred}`), scopeParentId);
 			if (message) ancestorMessages.push(message);
 		}
 
@@ -155,13 +155,6 @@ export async function PATCH({ request }) {
 	// quest's own content. Kept apart rather than merged into one "arbitrary field update" so
 	// each can log its own, more honest phrase.
 	if (data.status) {
-		// a quest with subquests has its status inferred from them, not set directly - see
-		// propagateStatusUpward
-		const children = await db.select({ id: quests.id }).from(quests).where(eq(quests.questParentId, data.uuid));
-		if (children.length > 0) {
-			return json({ error: 'Status is inferred from subquests and cannot be set directly' }, { status: 400 });
-		}
-
 		await db.update(quests).set({
 			status: data.status,
 			done: data.status === 'completed',
