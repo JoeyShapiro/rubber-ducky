@@ -7,7 +7,7 @@ version: '3'
 info:
   companyName: "Joseph Shapiro" # The name of the company
   productName: "Rubber Ducky" # The name of the application
-  productIdentifier: "com.joeshapiro.rubberducky" # The unique product identifier
+  productIdentifier: "dev.joeyshapiroj.rubberducky" # The unique product identifier
   description: "Native shell for the rubber-ducky web app" # The application description
   copyright: "(c) 2026, Joseph Shapiro" # Copyright text
   comments: "Native window for the self-hosted rubber-ducky server" # Comments

@@ -5,19 +5,19 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "webapp"
+    !define INFO_PROJECTNAME "rubber-ducky"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "JoeyShpairo"
+    !define INFO_COMPANYNAME "Joseph Shapiro"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "My Product"
+    !define INFO_PRODUCTNAME "Rubber Ducky"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "0.1.0"
+    !define INFO_PRODUCTVERSION "0.0.1"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "© 2026, JoeyShpairo"
+    !define INFO_COPYRIGHT "(c) 2026, Joseph Shapiro"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

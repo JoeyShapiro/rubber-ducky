@@ -8,29 +8,29 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="webapp"
+        Path="rubber-ducky"
         Arguments=""
-        InstallLocation="C:\Program Files\JoeyShpairo\My Product">
+        InstallLocation="C:\Program Files\JoeyShpairo\Rubber Ducky">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
+        PackageName="Rubber Ducky"
+        PackageDisplayName="Rubber Ducky"
         PublisherName="CN=JoeyShpairo"
         PublisherDisplayName="JoeyShpairo"
         Version="0.1.0.0"
-        PackageDescription="A webapp application">
+        PackageDescription="Native shell for the rubber-ducky web app">
         <Capabilities>
             <Capability Name="runFullTrust" />
-            
+
         </Capabilities>
         <Applications>
             <Application
-                Id="dev.JoeyShapiro.webapp"
-                Description="A webapp application"
-                DisplayName="My Product"
-                ExecutableName="webapp"
+                Id="com.joeshapiro.rubber-ducky"
+                Description="Native shell for the rubber-ducky web app"
+                DisplayName="Rubber Ducky"
+                ExecutableName="rubber-ducky"
                 EntryPoint="Windows.FullTrustApplication">
-                
+
             </Application>
         </Applications>
         <Resources>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
+            <DisplayName>Rubber Ducky</DisplayName>
             <PublisherDisplayName>JoeyShpairo</PublisherDisplayName>
-            <Description>A webapp application</Description>
+            <Description>Native shell for the rubber-ducky web app</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="webapp.msix" />
+    <SaveLocation PackagePath="rubber-ducky.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

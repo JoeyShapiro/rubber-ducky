@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=My Product
-Comment=A webapp application
+Name=Rubber Ducky
+Comment=Native shell for the rubber-ducky web app
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/webapp %u
+Exec=/usr/local/bin/rubber-ducky %u
 Terminal=false
 Type=Application
-Icon=webapp
+Icon=rubber-ducky
 Categories=Utility;
-StartupWMClass=webapp
+StartupWMClass=rubber-ducky
 
  

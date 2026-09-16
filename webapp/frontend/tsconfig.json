@@ -11,6 +11,12 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
+    // Without this, TS auto-includes every @types/* package from any ancestor
+    // node_modules - including the root rubber-ducky repo's @types/bun, whose
+    // syntax this project's older typescript can't parse. Keep this project's
+    // type scanning limited to what it actually imports.
+    "types": [],
+
     "lib": [
       "DOM",
       "DOM.Iterable",
