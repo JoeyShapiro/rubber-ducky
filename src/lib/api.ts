@@ -86,7 +86,9 @@ export async function updateNote(
     return { note: Note.fromJSON(data.note), systemMessage: data.systemMessage };
 }
 
-export function deleteNote(uuid: string): Promise<{ ok: boolean; systemMessage: Message | null }> {
+// tearing a note removes it from the notes list and drops its content into the message log as
+// a new message - see notes/+server.ts DELETE.
+export function tearNote(uuid: string): Promise<{ ok: boolean; message: Message | null; systemMessage: Message | null }> {
     return request(`/notes?uuid=${uuid}`, { method: 'DELETE' });
 }
 

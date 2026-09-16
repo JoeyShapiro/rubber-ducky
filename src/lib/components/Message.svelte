@@ -266,6 +266,13 @@
 		border-left-color: rgba(220, 53, 69, 0.4);
 	}
 
+	/* torn is a relocation, not a removal - amber, same family as .notes-btn-tear */
+	.system-log-torn {
+		background: rgba(200, 140, 20, 0.06);
+		border-color: rgba(120, 120, 130, 0.18);
+		border-left-color: rgba(200, 140, 20, 0.45);
+	}
+
 	:global(:root[data-theme="dark"]) .system-log-entry {
 		background: rgba(80, 80, 90, 0.15);
 		border-color: rgba(160, 160, 170, 0.18);
@@ -311,5 +318,10 @@
 	:global(:root[data-theme="dark"]) .system-log-removed {
 		background: rgba(220, 53, 69, 0.1);
 		border-left-color: rgba(220, 53, 69, 0.45);
+	}
+
+	:global(:root[data-theme="dark"]) .system-log-torn {
+		background: rgba(220, 165, 60, 0.1);
+		border-left-color: rgba(220, 165, 60, 0.5);
 	}
 </style>

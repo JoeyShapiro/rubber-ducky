@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, tick } from 'svelte';
 	import { Note, type Scope } from '$lib/types';
-	import { createNote, deleteNote, fetchNotes, updateNote } from '$lib/api';
+	import { createNote, fetchNotes, tearNote, updateNote } from '$lib/api';
 	import { messages } from '$lib/stores';
 	import { formatDate } from '$lib/format';
 	import { enhanceMarkdown, renderMarkdown } from '$lib/markdown';
@@ -15,7 +15,7 @@
 	let openUuid: string | null = null;
 	let loading = false;
 	let loadedScope = '';
-	let confirmingDelete = false;
+	let confirmingTear = false;
 	// a note is read far more often than it is written, so reading is the default mode
 	let editing = false;
 
@@ -147,27 +147,27 @@
 		}
 	}
 
-	// notes are meant to be near-permanent, and there is no undo and no history behind them,
-	// so deletion asks first
-	async function removeNote() {
+	// tearing is not deletion - the words survive, just relocated to the log - but it still
+	// leaves the notes list for good, so it still asks first
+	async function tear() {
 		const note = open;
-		confirmingDelete = false;
+		confirmingTear = false;
 		if (!note) return;
 
 		clearTimeout(idleTimer);
 		try {
-			const { systemMessage } = await deleteNote(note.uuid);
+			const { message, systemMessage } = await tearNote(note.uuid);
 			notes = notes.filter((n) => n.uuid !== note.uuid);
 			openUuid = null;
 			editing = false;
-			if (systemMessage) messages.update((list) => [...list, systemMessage]);
+			messages.update((list) => [...list, ...(message ? [message] : []), ...(systemMessage ? [systemMessage] : [])]);
 		} catch (err) {
 			console.error('notes', err);
 		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (confirmingDelete) return; // the dialog owns the keyboard while it is up
+		if (confirmingTear) return; // the dialog owns the keyboard while it is up
 
 		if ((event.ctrlKey || event.metaKey) && event.key === 's') {
 			event.preventDefault();
@@ -251,20 +251,20 @@
 			{:else}
 				<button class="notes-btn" type="button" on:click={startEditing}>Edit</button>
 			{/if}
-			<button class="notes-btn notes-btn-danger" type="button" on:click={() => (confirmingDelete = true)}>Delete</button>
+			<button class="notes-btn notes-btn-tear" type="button" on:click={() => (confirmingTear = true)}>Tear</button>
 		{:else}
 			<AddButton title="New note" disabled={!scope.uuid} on:click={addNote} />
 		{/if}
 	</div>
 </div>
 
-{#if confirmingDelete && open}
+{#if confirmingTear && open}
 	<ConfirmDialog
-		title="Delete “{displayTitle(open)}”?"
-		body="Notes are kept because you will want them again. This one goes for good — there is no undo."
-		confirmLabel="Delete note"
-		on:confirm={removeNote}
-		on:cancel={() => (confirmingDelete = false)}
+		title="Tear “{displayTitle(open)}” out?"
+		body="It leaves the notes list and lands back in the chat as a message — kept, just no longer a note. There is no undo."
+		confirmLabel="Tear note"
+		on:confirm={tear}
+		on:cancel={() => (confirmingTear = false)}
 	/>
 {/if}
 
@@ -305,9 +305,11 @@
 		cursor: default;
 	}
 
-	.notes-btn-danger {
-		border-color: rgba(220, 53, 69, 0.4);
-		color: rgba(150, 40, 50, 0.95);
+	/* amber, not the delete-red of a real destructive action - nothing is actually lost, it just
+	   moves to the log */
+	.notes-btn-tear {
+		border-color: rgba(200, 140, 20, 0.45);
+		color: rgba(150, 100, 10, 0.95);
 	}
 
 	.notes-btn-primary {
@@ -320,8 +322,8 @@
 		background: rgba(78, 89, 138, 1);
 	}
 
-	.notes-btn-danger:hover {
-		background: rgba(220, 53, 69, 0.12);
+	.notes-btn-tear:hover {
+		background: rgba(200, 140, 20, 0.12);
 	}
 
 	.notes-dirty {
