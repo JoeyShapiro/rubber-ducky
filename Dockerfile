@@ -52,7 +52,6 @@ COPY --from=builder /app/src/lib/db/run-migrate.ts ./run-migrate.ts
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# TODO i dont think this does anything. and you dont really need it
 ENV PORT=80
 
 EXPOSE 80 5432

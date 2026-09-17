@@ -1,90 +1,135 @@
-# create-svelte
+# rubber-ducky
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+A self-hosted, single-user workspace for tracking projects as conversations: post messages,
+distill notes, track quests (tasks), and optionally ask a local LLM questions about what's going
+on. Built with SvelteKit 2 + Svelte 4, Postgres (pgvector) via Drizzle, Bootstrap 5. Ships as one
+Docker image with Postgres bundled inside it.
 
-## Use the public container
+## Concepts
+
+- **Badling** — a top-level group/workspace.
+- **Duck** — a channel within a badling. Everything else is scoped to a duck or a badling.
+- **Message** — the log. Plain text, with attachments, posted by `user`, `ai`, or `system`.
+- **Note** — something currently true and worth having at hand, looked up by title. Not a
+  transcript; deleting one ("tearing" it) folds its content back into the message log rather than
+  discarding it.
+- **Quest** — a task, with a status (`active`, `inactive`, `completed`, `aborted`, `locked`) and
+  optional subquests. A parent quest's status is inferred from its children (active if any child
+  is active, otherwise the shared status, otherwise inactive) and can still be overridden by hand.
+  `locked` means blocked/pending, not finished — it stays with the open work, not the archive.
+- **Attachment** — files/images on a message, stored inline in Postgres as base64.
+- **Answer** — the record of an AI Q&A exchange (prompt + reply); the reply itself is also posted
+  as an ordinary `ai` message so it appears in the log and pages like everything else.
+
+Every message, note, and quest belongs to exactly one duck or badling (`parent_id`, `NOT NULL`) —
+nothing exists outside that scope.
+
+## Features
+
+- Per-duck/badling message log with Markdown rendering, code highlighting, and image/file
+  attachments (paste or file picker).
+- Notes and quests scoped per duck/badling, with quest hierarchies and automatic status rollup.
+- Optional local AI: point it at [Ollama](https://ollama.com) for a `/qna` endpoint (chat-style Q&A
+  against a model of your choice) and automatic embeddings (`nomic-embed-text`) on messages and
+  notes for future semantic search — embeddings are stored even if Ollama is never configured.
+- Single-password auth (this is a single-user app): client-side PBKDF2, server-side pepper +
+  Argon2id, no plaintext password ever sent over the wire — safe even without TLS on the app
+  itself (see Deployment).
+- Per-client login rate limiting (5 failed attempts / 5 minute lockout).
+- Responsive layout: two/three columns on desktop, four full-screen drawers (sidebar, chat, notes,
+  quests) on mobile.
+- Bulk import from a JSON export (`/import`) — built for migrating off an earlier Weaviate-backed
+  version of this app (see "Migrating from Weaviate" below), but it's a generic
+  collections-keyed-by-name importer.
+
+## Running it
+
+The published image bundles Postgres + pgvector and the app in one container; Postgres data
+persists on a mounted volume.
+
 ```bash
-bun run build
-docker build -t rubber-ducky .
+docker run -d \
+  -v rddata:/var/lib/postgresql/data \
+  -p 80:80 \
+  --env-file .env \
+  joeyshapiro/rubber-ducky
+```
 
+Put this behind a reverse proxy (nginx, Caddy, a Cloudflare Tunnel, ...) that terminates real TLS.
+The container only ever speaks plain HTTP on port 80 — that's expected, not a gap: the browser's
+connection to your proxy is what needs to be `https://` (client-side password hashing uses
+`crypto.subtle`, which requires a secure context — the proxy's TLS is what provides it).
+
+Database migrations run automatically on every container start (`entrypoint.sh` runs
+`run-migrate.ts`, which only applies migrations not already recorded) — pulling a new image and
+restarting against the same volume is enough to pick up schema changes.
+
+### Generating the password
+
+The app has one password, stored as a peppered Argon2id hash, never as plaintext:
+
+```bash
+bun run password:hash "<your password>"
+```
+
+This prints `PASSWORD_HASH` and `PASSWORD_PEPPER` — put both in `.env`. Run it wherever you have
+this repo checked out (it's not part of the image); re-running it with the same `PASSWORD_PEPPER`
+already in `.env` regenerates only the hash, since rotating the pepper invalidates every existing
+hash.
+
+### `.env`
+
+```bash
+# required
+PASSWORD_HASH=???       # from `bun run password:hash`
+PASSWORD_PEPPER=???     # from `bun run password:hash`
+POSTGRES_PASSWORD=???   # sets/rotates the in-container postgres superuser password on every start
+
+# optional
+PORT=80                          # must match the -p mapping and any reverse-proxy upstream
+SESSION_HOURS=4                  # how long a login lasts; expiry means logging in again, not a silent refresh
+OLLAMA_URL=http://host.docker.internal:11434   # omit to run without AI features
+OLLAMA_MODEL=llama3.2            # model used for /qna
+BODY_SIZE_LIMIT=Infinity         # raise this for large imports via /import
+ADDRESS_HEADER=x-forwarded-for   # only if your proxy sets it; affects login rate-limit bucketing
+PROTOCOL_HEADER=x-forwarded-proto
+```
+
+If you want AI features, pull the models on the Ollama host first:
+
+```bash
+ollama pull llama3.2
 ollama pull nomic-embed-text
-docker run -d -v rddata:/var/lib/postgresql/data -p 80:80 --env-file .env joeyshapiro/rubber-ducky
 ```
+
+## Development
 
 ```bash
-# .env
-PASSWORD=??? # should be pre hashed
-PORT=80
-SESSION_HOURS=4 # how long a login lasts; expiry means logging in again, not a silent refresh
-POSTGRES_PASSWORD=???
-OLLAMA_URL=http://host.docker.internal:11434
-# for proper importing of data
-BODY_SIZE_LIMIT=Infinity
+bun install
+bun run dev          # https, self-signed cert, so crypto.subtle works when testing over LAN too
 ```
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
+Needs a local Postgres with pgvector — `docker-compose.yml` provides one (`docker compose up -d`),
+matched against `POSTGRES_HOST`/`POSTGRES_PASSWORD` in your `.env`.
 
 ```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
+bun run db:generate   # generate a Drizzle migration from schema.ts changes
+bun run db:migrate    # apply migrations (this is also what the container does on boot)
+bun run db:seed       # seed data
+bun run check         # svelte-check
+bun run lint          # prettier + eslint
 ```
 
-## Developing
+## Migrating from Weaviate
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Earlier versions of this app stored data in Weaviate. `export-weaviate.js` dumps its collections
+to JSON, matching the shape `/import` expects:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# run against a container that still has Weaviate configured (WEAVIATE in .env)
+docker cp export-weaviate.js <container>:/app/export-weaviate.js
+docker exec -it <container> node export-weaviate.js
 ```
 
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
-
-## Export Weaviate data
-
-This project includes a helper script to export all app collections from Weaviate into flat files that are easy to import into Postgres.
-
-Run the export:
-
-```bash
-# export in docker
-docker cp export-weaviate.js rubber-ducky-web-1:/app/export-weaviate.js
-docker exec -it rubber-ducky-web-1 node export-weaviate.js
-```
-
-```bash
-npm run export:weaviate
-```
-
-Optional flags:
-
-```bash
-node export-weaviate.js --format=json,csv --outDir=exports --collections=Session,Badling,Duck,Message,Attachment,Answer,Note --pageSize=200
-```
-
-What it writes:
-
-- `exports/weaviate-export-<timestamp>/weaviate-export.json`
-- `exports/weaviate-export-<timestamp>/csv/<Collection>.csv`
-
-Notes:
-
-- Requires `WEAVIATE` in your `.env`.
-- For related collections (`Duck`, `Message`, `Attachment`, `Note`), it adds a flattened `belongsToId` column in the output.
+Then `POST` the resulting `weaviate-export.json`'s `collections` object to `/import` on the new
+Postgres-backed deployment.
