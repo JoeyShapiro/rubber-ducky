@@ -60,7 +60,7 @@
   
                   <div class="text-center">
                     <!-- was a lotus from an mdb cdn, which made the login screen need the internet -->
-                    <img class="login-logo" src="/duck.svg" style="width: 110px;" alt="">
+                    <img class="login-logo" src="/icon.png" style="width: 110px;" alt="">
                     <h4 class="mt-1 mb-5 pb-1">Rubber Ducky</h4>
                   </div>
   
