@@ -64,6 +64,51 @@ Database migrations run automatically on every container start (`entrypoint.sh` 
 `run-migrate.ts`, which only applies migrations not already recorded) — pulling a new image and
 restarting against the same volume is enough to pick up schema changes.
 
+### Upgrading a running container
+
+Migrations aren't always additive — some have renamed or dropped columns (e.g.
+`0005_badling_scoped_parent_id.sql`), so once a new image's migrations apply, the *previous*
+image can no longer run against that same volume. Treat every upgrade as one-way and back up
+first, not as something you can undo by just starting the old container again.
+
+1. Note the running container's exact mounts/ports/env, so you can reproduce them:
+   ```bash
+   docker inspect <container> --format '{{json .Mounts}}{{"\n"}}{{json .Config.Env}}{{"\n"}}{{json .HostConfig.PortBindings}}'
+   ```
+2. Back up the database (this, not the old image, is the real rollback path):
+   ```bash
+   docker exec <container> su -c "pg_dump -U postgres rubber_ducky" postgres > rubber_ducky_backup_$(date +%F).sql
+   ```
+3. Update `.env` for anything the new version needs (new required vars fail loudly on boot if
+   missing — see `.env` below).
+4. Pull a pinned version, not `latest`, so you know exactly what's running:
+   ```bash
+   docker pull joeyshapiro/rubber-ducky:<version>
+   ```
+5. Stop the old container without removing it yet:
+   ```bash
+   docker stop <container>
+   docker rename <container> <container>-old
+   ```
+6. Start the new one against the same volume (same `-v`/`-p` as step 1):
+   ```bash
+   docker run -d \
+     --name <container> \
+     -v rddata:/var/lib/postgresql/data \
+     -p 80:80 \
+     --env-file .env \
+     joeyshapiro/rubber-ducky:<version>
+   ```
+7. Watch the logs for a clean migration + boot, then confirm login actually works in the browser:
+   ```bash
+   docker logs -f <container>
+   ```
+8. Only once confirmed healthy, clean up: `docker rm <container>-old`.
+
+If it fails *before* migrations run (e.g. a missing env var — `entrypoint.sh` fails fast on those),
+just fix `.env` and re-run step 6; nothing touched the DB yet. If it fails *after* migrations run,
+restore from the step 2 backup rather than trying to run the old image again.
+
 ### Generating the password
 
 The app has one password, stored as a peppered Argon2id hash, never as plaintext:

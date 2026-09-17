@@ -6,7 +6,7 @@ bun run build
 # ── Configuration ─────────────────────────────────────────────────────────────
 USERNAME="joeyshapiro"
 IMAGE="rubber-ducky"
-VERSION="2.0.1"
+VERSION="3.0.0"
 # ──────────────────────────────────────────────────────────────────────────────
 
 FULL_IMAGE="docker.io/${USERNAME}/${IMAGE}"
